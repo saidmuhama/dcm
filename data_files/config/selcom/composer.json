@@ -1,0 +1,5 @@
+{
+    "require": {
+        "selcom/selcom-apigw-client": "^1.0"
+    }
+}

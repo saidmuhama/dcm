@@ -1,0 +1,29 @@
+# Claude Code local config
+.claude/
+
+# TCPDF library (110 MB — install separately: https://tcpdf.org)
+data_files/print/tcpdf/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+error_log.txt
+data_files/error_log.txt
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# XAMPP / server
+cgi-bin/
+
+# Uploads (large binary files — restore separately)
+# Uncomment the lines below if uploads folder is too large
+# assets/uploads/
+# invitees/uploads/

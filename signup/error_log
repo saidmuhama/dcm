@@ -1,0 +1,16 @@
+[24-Mar-2026 13:54:07 UTC] PHP Warning:  include(../config/db.php): Failed to open stream: No such file or directory in /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php on line 65
+[24-Mar-2026 13:54:07 UTC] PHP Warning:  include(): Failed opening '../config/db.php' for inclusion (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php on line 65
+[24-Mar-2026 13:54:07 UTC] PHP Warning:  Undefined variable $db in /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php on line 69
+[24-Mar-2026 13:54:07 UTC] PHP Fatal error:  Uncaught TypeError: mysqli_query(): Argument #1 ($mysql) must be of type mysqli, null given in /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php:69
+Stack trace:
+#0 /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php(69): mysqli_query()
+#1 {main}
+  thrown in /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php on line 69
+[24-Mar-2026 13:54:48 UTC] PHP Warning:  include(../config/db.php): Failed to open stream: No such file or directory in /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php on line 65
+[24-Mar-2026 13:54:48 UTC] PHP Warning:  include(): Failed opening '../config/db.php' for inclusion (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php on line 65
+[24-Mar-2026 13:54:48 UTC] PHP Warning:  Undefined variable $db in /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php on line 69
+[24-Mar-2026 13:54:48 UTC] PHP Fatal error:  Uncaught TypeError: mysqli_query(): Argument #1 ($mysql) must be of type mysqli, null given in /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php:69
+Stack trace:
+#0 /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php(69): mysqli_query()
+#1 {main}
+  thrown in /home/kji07ruum9j6/public_html/app.digitalclassmedia.com/signup/reset-password.php on line 69
