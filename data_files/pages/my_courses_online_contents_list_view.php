@@ -61,77 +61,120 @@
     </div>
 </div>
 
+<style>
+.course-card { transition: transform .18s ease, box-shadow .18s ease; border-radius: 14px !important; overflow: hidden; }
+.course-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.12) !important; }
+.course-thumb { height: 170px; background-color: #e9ecef; position: relative; }
+.course-thumb .status-badge { position: absolute; top: 10px; left: 10px; }
+.course-thumb .price-badge  { position: absolute; top: 10px; right: 10px; }
+.stat-pill { display: flex; align-items: center; gap: 5px; font-size: .78rem; color: #64748b; }
+.stat-pill i { font-size: .85rem; }
+.rating-stars { color: #f59e0b; font-size: .8rem; }
+</style>
+
 <script>
-document.addEventListener("DOMContentLoaded", function(){
-
+document.addEventListener("DOMContentLoaded", function () {
     loadCourses();
+});
 
-    function loadCourses(){
+function loadCourses() {
+    const container = document.getElementById("coursesContainer");
+    container.innerHTML = `
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted small mt-2">Loading courses…</p>
+        </div>`;
 
-        fetch("ajax/ajax_get_courses.php")
-        .then(res => res.json())
+    fetch("ajax/ajax_get_courses.php")
+        .then(r => r.json())
         .then(res => {
-
-            let container = document.getElementById("coursesContainer");
             container.innerHTML = "";
 
-            if(res.status === "success"){
-
-                if(res.data.length === 0){
-                    container.innerHTML = `<p class="text-center">No courses found</p>`;
-                    return;
-                }
-
-                res.data.forEach(course => {
-
-                    let card = `
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <div class="card adminuiux-card shadow-sm mb-4">
-                            <div class="card-body">
-                                <div class="row align-items-center mb-3">
-                                    <div class="col-auto">
-                                        <div class="avatar avatar-50 coverimg rounded">
-                                            <img src="./${course.thumbnail}">
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <h6 class="mb-0">${course.title}</h6>
-                                        <p class="small">Instructor ID: ${course.instructor_id}</p>
-                                    </div>
-                                </div>
-
-                                <div class="row gx-4 align-items-center">
-                                    <div class="col">
-                                        <p class="text-secondary small mb-0">0 chapters</p>
-                                        <p class="text-secondary small mb-0">0 assignments</p>
-                                    </div>
-                                    <div class="col-auto">
-                                        <a href="./?view=course_contents_management&course_id=${course.id}&courseTitle=${course.title}" class="btn btn-theme btn-sm">
-                                            View Course <i class="bi bi-play"></i>
-                                        </a>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                    `;
-
-                    container.innerHTML += card;
-
-                });
-
-            } else {
-                container.innerHTML = `<p class="text-danger">${res.message}</p>`;
+            if (res.status !== "success" || !res.data.length) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-collection fs-1 text-muted opacity-50 d-block mb-3"></i>
+                        <p class="text-muted">No courses yet. Create your first course to get started.</p>
+                    </div>`;
+                return;
             }
 
+            res.data.forEach(c => {
+                const thumb  = c.thumbnail
+                    ? `uploads/${c.thumbnail.split('/').pop()}`
+                    : 'uploads/course_default.png';
+
+                const status = { active: ['bg-success','Published'], is_draft: ['bg-secondary','Draft'], inactive: ['bg-danger','Inactive'] }[c.status] ?? ['bg-secondary','Unknown'];
+                const price  = parseFloat(c.price) > 0
+                    ? `TZS ${Number(c.price).toLocaleString()}`
+                    : 'Free';
+                const priceClass = parseFloat(c.price) > 0 ? 'bg-dark' : 'bg-success';
+
+                const rating = c.avg_rating
+                    ? `<span class="rating-stars">${'★'.repeat(Math.round(c.avg_rating))}${'☆'.repeat(5 - Math.round(c.avg_rating))}</span>
+                       <span class="ms-1 fw-medium text-dark">${c.avg_rating}</span>
+                       <span class="text-muted">(${c.rating_count})</span>`
+                    : `<span class="text-muted">No ratings yet</span>`;
+
+                const created = c.created_at
+                    ? new Date(c.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+                    : '—';
+
+                container.innerHTML += `
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card shadow-sm course-card mb-4">
+
+                        <!-- Thumbnail -->
+                        <div class="course-thumb"
+                             style="background:url('${thumb}') center/cover no-repeat;">
+                            <span class="badge ${status[0]} status-badge">${status[1]}</span>
+                            <span class="badge text-white ${priceClass} price-badge">${price}</span>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="card-body pb-2 pt-3">
+                            <h6 class="fw-semibold mb-1 lh-sm">${c.title}</h6>
+                            <div class="d-flex align-items-center gap-1 mb-3 small">
+                                ${rating}
+                            </div>
+
+                            <!-- Stats row -->
+                            <div class="d-flex flex-wrap gap-3 pb-3 border-bottom">
+                                <div class="stat-pill">
+                                    <i class="bi bi-collection text-primary"></i>
+                                    <span><strong>${c.chapters}</strong> Chapter${c.chapters != 1 ? 's' : ''}</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <i class="bi bi-play-circle text-info"></i>
+                                    <span><strong>${c.lessons}</strong> Lesson${c.lessons != 1 ? 's' : ''}</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <i class="bi bi-people text-success"></i>
+                                    <span><strong>${c.enrolled}</strong> Enrolled</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <i class="bi bi-journal-bookmark text-warning"></i>
+                                    <span><strong>${c.study_notes}</strong> Note${c.study_notes != 1 ? 's' : ''}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-2">
+                            <span class="small text-muted"><i class="bi bi-calendar3 me-1"></i>${created}</span>
+                            <a href="./?view=course_contents_management&course_id=${c.id}"
+                               class="btn btn-theme btn-sm px-3">
+                                Manage <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+
+                    </div>
+                </div>`;
+            });
         })
         .catch(() => {
             document.getElementById("coursesContainer").innerHTML =
-                `<p class="text-danger">Failed to load courses</p>`;
+                `<p class="text-danger text-center py-4">Failed to load courses.</p>`;
         });
-
-    }
-
-});
+}
 </script>

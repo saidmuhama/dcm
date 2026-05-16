@@ -13,10 +13,31 @@ $chapters_count = mysqli_num_rows(mysqli_query($db,"SELECT * FROM tbl_course_cha
 ?>
 
 <style>
-    button[aria-expanded="true"] i {
-    transform: rotate(180deg);
-    transition: 0.3s;
+button[aria-expanded="true"] i { transform: rotate(180deg); transition: 0.3s; }
+
+/* ── Study Notes ──────────────────────────────────────────────────────── */
+.sn-card { border-radius: 12px; overflow: hidden; transition: box-shadow .15s ease; }
+.sn-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.09) !important; }
+.sn-card.important { border-left: 4px solid #f59e0b !important; }
+.sn-header { cursor: pointer; user-select: none; }
+.sn-chevron { transition: transform .25s ease; font-size: .75rem; flex-shrink: 0; }
+.sn-card.open .sn-chevron { transform: rotate(180deg); }
+.sn-answer {
+    display: none;
+    border-top: 1px solid rgba(0,0,0,.06);
+    background: rgba(var(--bs-primary-rgb), .02);
+    white-space: pre-wrap;
+    line-height: 1.75;
 }
+.sn-answer.open { display: block; }
+.sn-bm-btn { color: #cbd5e1; transition: color .15s ease; padding: 0; border: none; background: none; }
+.sn-bm-btn.saved { color: #f59e0b; }
+.sn-search .input-group-text { border-right: none; background: transparent; }
+.sn-search .form-control { border-left: none; }
+.sn-search .form-control:focus { box-shadow: none; border-color: #dee2e6; }
+.sn-highlight { background: #fef08a; border-radius: 2px; padding: 0 2px; }
+#studyNotesSection { animation: snFadeIn .25s ease; }
+@keyframes snFadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
 </style>
 <div class="container mt-4">
     <div class="row align-items-center">
@@ -75,13 +96,14 @@ $chapters_count = mysqli_num_rows(mysqli_query($db,"SELECT * FROM tbl_course_cha
                                         <p class="h6 mb-0">About Course</p>
                                     </div>
                                 </a></li>
-                            <li class="nav-item"><a class="nav-link" href="#review">
-                                    <div class="avatar avatar-28 icon"><i class="bi bi-chat-left-quote fs-4"></i></div>
+                            <li class="nav-item d-none" id="snNavTab">
+                                <a class="nav-link" href="#studyNotesSection">
+                                    <div class="avatar avatar-28 icon"><i class="bi bi-journal-bookmark-fill fs-4"></i></div>
                                     <div class="col text-truncated">
-                                        <p class="h6 mb-0">Reviews <span class="badge text-bg-theme-1 ms-1">256</span>
-                                        </p>
+                                        <p class="h6 mb-0">Study Notes <span class="badge text-bg-theme-1 ms-1" id="snBadgeCount">0</span></p>
                                     </div>
-                                </a></li>
+                                </a>
+                            </li>
                             <li class="nav-item"><a class="nav-link" href="#discussion">
                                     <div class="avatar avatar-28 icon"><i class="bi bi-chat-right-text fs-4"></i></div>
                                     <div class="col text-truncated">
@@ -109,8 +131,11 @@ $chapters_count = mysqli_num_rows(mysqli_query($db,"SELECT * FROM tbl_course_cha
                 </div>
             </div>
 
+            <!-- ── Study Notes Section ─────────────────────────────────────── -->
+            <div id="studyNotesSection" class="d-none mb-4"></div>
+
             <div class="card adminuiux-card shadow-sm mb-4" id="discussion">
-                
+
             </div>
 
         </div>
@@ -195,11 +220,12 @@ button[aria-expanded="true"] .transition-icon {
  let currentLessonId = null;
 
 function playLesson(path, lessonId){
-
     if(currentLessonId === lessonId){
         currentLessonId = null;
+        loadStudyNotes(null);
     } else {
         currentLessonId = lessonId;
+        loadStudyNotes(lessonId);
     }
 
     const player = document.getElementById("videoPlayer");
@@ -370,13 +396,13 @@ function loadLessons(){
 
         html += `</div>`;
 
-        // ✅ AUTO LOAD FIRST VIDEO
+        // ✅ AUTO LOAD FIRST VIDEO + STUDY NOTES
         if(firstPlayableLesson){
             const player = document.getElementById("videoPlayer");
-
             if(player && firstPlayableLesson.file_path){
                 player.src = firstPlayableLesson.file_path;
             }
+            loadStudyNotes(firstPlayableLesson.id);
         }
 
         // ✅ PROGRESS CALCULATION
@@ -434,6 +460,236 @@ function markCompleted(lesson_id){
         console.error(err);
     });
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STUDY NOTES
+// ══════════════════════════════════════════════════════════════════════════════
+let snNotes   = [];
+let snTab     = 'all';
+let snSearch  = '';
+
+async function loadStudyNotes(lessonId) {
+    const section = document.getElementById('studyNotesSection');
+    const navTab  = document.getElementById('snNavTab');
+
+    if (!lessonId) {
+        section.classList.add('d-none');
+        section.innerHTML = '';
+        navTab.classList.add('d-none');
+        return;
+    }
+
+    const res = await fetch(`ajax/ajax_study_notes.php?action=list&lesson_id=${lessonId}`).then(r => r.json());
+    snNotes = res.data || [];
+
+    if (!snNotes.length) {
+        section.classList.add('d-none');
+        navTab.classList.add('d-none');
+        return;
+    }
+
+    // Show tab + badge
+    document.getElementById('snBadgeCount').textContent = snNotes.length;
+    navTab.classList.remove('d-none');
+
+    section.classList.remove('d-none');
+    section.innerHTML = snBuildShell();
+    snUpdateCounts();
+    snRender();
+}
+
+function snBuildShell() {
+    return `
+    <div class="card adminuiux-card shadow-sm overflow-hidden">
+        <!-- Header -->
+        <div class="card-header py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <h6 class="fw-semibold mb-0">
+                    <i class="bi bi-journal-bookmark-fill text-primary me-2"></i>Study Notes
+                </h6>
+                <p class="small text-muted mb-0 mt-1">Click any question to expand the answer</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" onclick="snExpandAll()">
+                    <i class="bi bi-arrows-expand me-1"></i>Expand All
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="snCollapseAll()">
+                    <i class="bi bi-arrows-collapse me-1"></i>Collapse All
+                </button>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="card-body py-2 border-bottom bg-light bg-opacity-50">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <div class="input-group sn-search flex-grow-1" style="max-width:300px">
+                    <span class="input-group-text"><i class="bi bi-search text-muted small"></i></span>
+                    <input id="snSearchInput" type="text" class="form-control form-control-sm"
+                           placeholder="Search notes…" oninput="snFilterInput(this.value)">
+                </div>
+                <div class="btn-group btn-group-sm ms-auto" role="group">
+                    <button id="snBtnAll"      class="btn btn-primary"        onclick="snSetTab('all')">
+                        All <span class="badge bg-white text-primary ms-1" id="snCntAll">0</span>
+                    </button>
+                    <button id="snBtnBookmarked" class="btn btn-outline-primary" onclick="snSetTab('bookmarked')">
+                        <i class="bi bi-bookmark-fill me-1"></i>Saved
+                        <span class="badge ms-1" id="snCntBookmarked">0</span>
+                    </button>
+                    <button id="snBtnImportant"  class="btn btn-outline-warning" onclick="snSetTab('important')">
+                        <i class="bi bi-star-fill me-1"></i>Key
+                        <span class="badge ms-1" id="snCntImportant">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes list -->
+        <div class="card-body pt-3" id="snNotesList"></div>
+
+        <!-- Empty state -->
+        <div id="snEmpty" class="text-center py-5 d-none px-3">
+            <i class="bi bi-journal-x fs-2 text-muted opacity-50 d-block mb-2"></i>
+            <p class="text-muted small mb-0" id="snEmptyMsg">No notes match your search.</p>
+        </div>
+    </div>`;
+}
+
+function snUpdateCounts() {
+    document.getElementById('snCntAll').textContent       = snNotes.length;
+    document.getElementById('snCntBookmarked').textContent = snNotes.filter(n => n.bookmarked == 1).length;
+    document.getElementById('snCntImportant').textContent  = snNotes.filter(n => n.is_important == 1).length;
+}
+
+function snFilterInput(val) {
+    snSearch = val.trim().toLowerCase();
+    snRender();
+}
+
+function snSetTab(tab) {
+    snTab = tab;
+    const map = {
+        all:        ['snBtnAll',       'btn-primary',        'btn-outline-primary'],
+        bookmarked: ['snBtnBookmarked','btn-primary',        'btn-outline-primary'],
+        important:  ['snBtnImportant', 'btn-warning text-dark','btn-outline-warning'],
+    };
+    document.getElementById('snBtnAll').className        = 'btn btn-sm ' + (tab==='all'        ? 'btn-primary'         : 'btn-outline-primary');
+    document.getElementById('snBtnBookmarked').className = 'btn btn-sm ' + (tab==='bookmarked' ? 'btn-primary'         : 'btn-outline-primary');
+    document.getElementById('snBtnImportant').className  = 'btn btn-sm ' + (tab==='important'  ? 'btn-warning text-dark' : 'btn-outline-warning');
+    snRender();
+}
+
+function snRender() {
+    const list  = document.getElementById('snNotesList');
+    const empty = document.getElementById('snEmpty');
+    const msg   = document.getElementById('snEmptyMsg');
+    if (!list) return;
+
+    let filtered = snNotes.filter(n => {
+        if (snTab === 'bookmarked' && !n.bookmarked)   return false;
+        if (snTab === 'important'  && !n.is_important) return false;
+        if (snSearch) return (n.question + ' ' + n.answer).toLowerCase().includes(snSearch);
+        return true;
+    });
+
+    if (!filtered.length) {
+        list.innerHTML = '';
+        empty.classList.remove('d-none');
+        msg.textContent = snSearch ? 'No notes match your search.' :
+                          snTab === 'bookmarked' ? 'No saved notes yet.' : 'No key notes in this lesson.';
+        return;
+    }
+    empty.classList.add('d-none');
+
+    list.innerHTML = filtered.map((n, i) => {
+        const q = snHl(n.question);
+        const a = snHl(n.answer);
+        return `
+        <div class="sn-card mb-3 border shadow-sm ${n.is_important ? 'important' : ''}" data-id="${n.id}">
+            <div class="sn-header d-flex align-items-start gap-3 p-3" onclick="snToggle(this.closest('.sn-card'))">
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1 rounded-2 flex-shrink-0 mt-1">${i+1}</span>
+                <div class="flex-grow-1 min-w-0">
+                    ${n.is_important
+                        ? `<span class="badge bg-warning text-dark me-2 mb-1">
+                               <i class="bi bi-star-fill me-1"></i>Key Point
+                           </span>`
+                        : ''}
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary me-1 mb-1 small">${n.language}</span>
+                    <p class="fw-semibold mb-0 lh-sm mt-1">${q}</p>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-shrink-0 pt-1">
+                    <button class="sn-bm-btn ${n.bookmarked ? 'saved' : ''}"
+                            title="${n.bookmarked ? 'Remove bookmark' : 'Save note'}"
+                            onclick="snBookmark(event, ${n.id}, this)">
+                        <i class="bi ${n.bookmarked ? 'bi-bookmark-fill' : 'bi-bookmark'} fs-5"></i>
+                    </button>
+                    <i class="bi bi-chevron-down sn-chevron text-muted"></i>
+                </div>
+            </div>
+            <div class="sn-answer px-4 pb-4 pt-3">
+                <div class="d-flex gap-2 mb-2">
+                    <i class="bi bi-lightbulb-fill text-primary mt-1 flex-shrink-0"></i>
+                    <div class="text-secondary small">${a}</div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function snToggle(card) {
+    const answer = card.querySelector('.sn-answer');
+    const isOpen = card.classList.contains('open');
+    card.classList.toggle('open', !isOpen);
+    if (!isOpen) {
+        answer.style.display = 'block';
+        $(answer).hide().slideDown(200);
+    } else {
+        $(answer).slideUp(180, () => { answer.style.display = 'none'; });
+    }
+}
+
+function snExpandAll() {
+    document.querySelectorAll('.sn-card:not(.open)').forEach(c => {
+        c.classList.add('open');
+        const a = c.querySelector('.sn-answer');
+        a.style.display = 'block';
+        $(a).hide().slideDown(200);
+    });
+}
+
+function snCollapseAll() {
+    document.querySelectorAll('.sn-card.open').forEach(c => {
+        c.classList.remove('open');
+        const a = c.querySelector('.sn-answer');
+        $(a).slideUp(180, () => { a.style.display = 'none'; });
+    });
+}
+
+async function snBookmark(e, noteId, btn) {
+    e.stopPropagation();
+    const res = await fetch('ajax/ajax_study_notes.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ action: 'toggle_bookmark', note_id: noteId })
+    }).then(r => r.json());
+
+    if (res.status === 'success') {
+        const note = snNotes.find(n => n.id == noteId);
+        if (note) note.bookmarked = res.bookmarked ? 1 : 0;
+        btn.classList.toggle('saved', res.bookmarked);
+        btn.querySelector('i').className = `bi ${res.bookmarked ? 'bi-bookmark-fill' : 'bi-bookmark'} fs-5`;
+        snUpdateCounts();
+        if (snTab === 'bookmarked') snRender();
+    }
+}
+
+function snHl(text) {
+    const safe = String(text ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if (!snSearch) return safe;
+    const re = new RegExp(`(${snSearch.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+    return safe.replace(re, '<mark class="sn-highlight">$1</mark>');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 
 function toggleAnswer(id){
     $("#answerBox"+id).collapse('toggle');

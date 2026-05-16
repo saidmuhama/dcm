@@ -1214,9 +1214,12 @@ function showLessonContents(lessonId){
                 </div>
 
                 <!-- FOOTER -->
-                <div class="card-footer">
+                <div class="card-footer d-flex flex-wrap gap-2">
                     <button id="updateLessonBtn" class="btn btn-theme">Update Lesson</button>
                     <button id="deleteLessonBtn" class="btn btn-danger">Delete Lesson</button>
+                    <a href="../data_files/?view=study_notes_manager&lesson_id=${lesson.id}&course_id=${lesson.course_id}&chapter_id=${lesson.chapter_id}" class="btn btn-outline-secondary ms-auto">
+                        <i class="bi bi-journal-bookmark me-1"></i>Q&amp;A Notes
+                    </a>
                 </div>
 
             </div>

@@ -67,6 +67,18 @@ switch ($view) {
         include('pages/view_bunny_library_details.php');
         break;
 
+    case 'study_notes_manager':
+        include('pages/study_notes_manager.php');
+        break;
+
+    case 'study_notes_viewer':
+        include('pages/study_notes_viewer.php');
+        break;
+
+    case 'teacher_study_notes':
+        include('pages/teacher_study_notes.php');
+        break;
+
     case 'invitation_COntroller_Page':
         include('pages/invitation_COntroller_Page.php');
         break;

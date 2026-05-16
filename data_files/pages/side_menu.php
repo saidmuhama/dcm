@@ -2,6 +2,7 @@
 $cv = $_GET['view'] ?? '';
 
 $groups = [
+    'menuCourseMgmt'  => ['my_courses_online_contents_list_view','course_contents_management','view_course_details','teacher_study_notes','study_notes_manager'],
     'menuTaxonomy'    => ['qb_subjects','qb_levels','qb_chapters','qb_subtopics','qb_bloom_levels','qb_difficulty_levels','qb_sections'],
     'menuQuestions'   => ['qb_all_questions','qb_add_question','qb_bulk_upload','qb_draft_questions','qb_review_queue','qb_approved_questions','qb_published_questions','qb_archived_questions','qb_question_media'],
     'menuExamBuilder' => ['qb_create_exam','qb_exam_templates','qb_random_exam','qb_cbt_exams','qb_print_exams'],
@@ -40,11 +41,35 @@ $lc = function(string $view) use ($cv): string {
 
     <!-- Dashboard -->
     <li class="nav-item">
-        <a href="../data_files/?view=3002" class="nav-link<?= $cv === '3002' ? ' active' : '' ?>">
+        <a href="../data_files/?view=3002" class="nav-link<?= in_array($cv, ['3002','study_notes_viewer','read_course_details_data','learning-student-home']) ? ' active' : '' ?>">
             <i class="menu-icon bi bi-columns-gap"></i>
             <span class="menu-name">Dashboard</span>
         </a>
     </li>
+
+    <!-- Course Management (Instructors & Institutions only) -->
+    <?php if (in_array($user_role, ['3','4'])): ?>
+    <li class="nav-item">
+        <a href="#menuCourseMgmt" class="<?= $pc('menuCourseMgmt') ?>" data-bs-toggle="collapse" aria-expanded="<?= $ae('menuCourseMgmt') ?>">
+            <i class="menu-icon bi bi-collection-play"></i>
+            <span class="menu-name">Course Management </span><i class="bi bi-chevron-down qb-chevron"></i>
+        </a>
+        <div class="<?= $cc('menuCourseMgmt') ?>" id="menuCourseMgmt">
+            <ul class="nav flex-column qb-submenu">
+                <li class="nav-item">
+                    <a href="../data_files/?view=my_courses_online_contents_list_view" class="<?= $lc('my_courses_online_contents_list_view') ?>">
+                        <i class="bi bi-collection"></i><span>My Courses</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="../data_files/?view=teacher_study_notes" class="<?= $lc('teacher_study_notes') ?>">
+                        <i class="bi bi-journal-bookmark"></i><span>Manage Study Notes</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </li>
+    <?php endif; ?>
 
     <!-- Taxonomy Management -->
     <li class="nav-item">
