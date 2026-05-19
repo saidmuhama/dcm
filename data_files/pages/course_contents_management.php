@@ -1097,11 +1097,30 @@ function showLessonContents(lessonId){
             if (!lesson.file_path) return '';
             if (lesson.content_type === 'audio') {
                 const mime = lesson.file_path.toLowerCase().endsWith('.mp4') ? 'audio/mp4' : 'audio/mpeg';
+                const thumbUrl = lesson.lesson_thumbnail ? lesson.lesson_thumbnail : '';
                 return `
                 <div class="mb-3">
+                    ${thumbUrl ? `<div class="rounded mb-2 overflow-hidden" style="max-height:220px;background:#000">
+                        <img src="${thumbUrl}" class="w-100 d-block" style="max-height:220px;object-fit:cover;opacity:.9" alt="Audio cover">
+                    </div>` : ''}
                     <audio id="lesson-audio-player" controls crossorigin playsinline style="width:100%">
                         <source src="${lesson.file_path}" type="${mime}">
                     </audio>
+                </div>
+                <!-- Audio Thumbnail Upload -->
+                <div class="mb-3 p-3 border rounded bg-light">
+                    <label class="form-label small fw-medium mb-2">
+                        <i class="bi bi-image me-1 text-primary"></i>Audio Cover Image
+                        <span class="text-muted fw-normal">(optional — shown above the player)</span>
+                    </label>
+                    <input type="file" id="audio_thumbnail_input" class="form-control form-control-sm"
+                           accept="image/*" onchange="previewAudioThumb(this)">
+                    <div id="audioThumbPreview" class="mt-2 ${thumbUrl ? '' : 'd-none'}">
+                        <img id="audioThumbImg" src="${thumbUrl}" class="rounded" style="max-height:100px;max-width:200px;object-fit:cover">
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeAudioThumb()">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </div>
                 </div>`;
             }
             return `
@@ -1114,6 +1133,24 @@ function showLessonContents(lessonId){
                     allowfullscreen>
                 </iframe>
             </div>`;
+        }
+
+        window._removeAudioThumb = false;
+        function previewAudioThumb(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('audioThumbImg').src = e.target.result;
+                    document.getElementById('audioThumbPreview').classList.remove('d-none');
+                };
+                reader.readAsDataURL(input.files[0]);
+                window._removeAudioThumb = false;
+            }
+        }
+        function removeAudioThumb() {
+            document.getElementById('audioThumbPreview').classList.add('d-none');
+            document.getElementById('audio_thumbnail_input').value = '';
+            window._removeAudioThumb = true;
         }
 
         // Inject HTML
@@ -1278,6 +1315,15 @@ document.addEventListener("click", function(e){
         formData.append("isDownloadable", isDownloadable);
         formData.append("enableDiscussions", enableDiscussions);
         formData.append("isFreePreviewLesson", isFreePreviewLesson);
+
+        // Audio thumbnail
+        const thumbInput = document.getElementById('audio_thumbnail_input');
+        if (thumbInput && thumbInput.files[0]) {
+            formData.append("lesson_thumbnail", thumbInput.files[0]);
+        }
+        if (window._removeAudioThumb) {
+            formData.append("remove_thumbnail", "1");
+        }
 
         Swal.fire({
             title: "Uploading Media File...",

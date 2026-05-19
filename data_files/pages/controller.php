@@ -1,5 +1,13 @@
 <?php
 $view = $_GET['view'];
+$user_perms = $user_perms ?? [];   // defined by index.php; default silences static-analysis warnings
+
+// ── Module-level access gate (skip for super admin and non-module views) ──
+$_gated_module = viewModule($view);
+if ($_gated_module && !canAccessModule($user_perms, $_gated_module)) {
+    include('pages/403.php');
+    return;
+}
 
 switch ($view) {
     case 3002:
@@ -83,6 +91,35 @@ switch ($view) {
         include('pages/invitation_COntroller_Page.php');
         break;
 
+    // ── SUPER ADMIN ────────────────────────────────────────────
+    case 'admin_dashboard':
+        include('pages/admin_dashboard.php');
+        break;
+
+    case 'admin_courses':
+        include('pages/admin_courses.php');
+        break;
+
+    case 'admin_course_detail':
+        include('pages/admin_course_detail.php');
+        break;
+
+    case 'admin_users':
+        include('pages/admin_users.php');
+        break;
+
+    case 'admin_roles':
+        include('pages/admin_roles.php');
+        break;
+
+    case 'admin_permissions':
+        include('pages/admin_permissions.php');
+        break;
+
+    case 'admin_2fa':
+        include('pages/admin_2fa.php');
+        break;
+
     // ── QUESTION BANK ─────────────────────────────────────────
     // Taxonomy
     case 'qb_subjects':
@@ -109,13 +146,47 @@ switch ($view) {
         include('pages/qb_add_question.php');
         break;
 
-    case 'qb_question_media':
-    case 'qb_bulk_upload':
-    case 'qb_create_exam':
     case 'qb_exam_templates':
+        include('pages/qb_exam_templates.php');
+        break;
+
+    case 'qb_create_exam':
+        include('pages/qb_create_exam.php');
+        break;
+
     case 'qb_random_exam':
+        include('pages/qb_random_exam.php');
+        break;
+
     case 'qb_cbt_exams':
+        include('pages/qb_cbt_exams.php');
+        break;
+
     case 'qb_print_exams':
+        include('pages/qb_print_exams.php');
+        break;
+
+    case 'qb_bulk_upload':
+        include('pages/qb_bulk_upload.php');
+        break;
+
+    // ── STUDENT EXAM MODULE ────────────────────────────────────
+    case 'student_exams':
+        include('pages/student_exams.php');
+        break;
+
+    case 'student_take_exam':
+        include('pages/student_take_exam.php');
+        break;
+
+    case 'student_exam_results':
+        include('pages/student_exam_results.php');
+        break;
+
+    case 'qb_question_media':
+        include('pages/qb_question_media.php');
+        break;
+
     case 'qb_competencies':
     case 'qb_learning_outcomes':
     case 'qb_curriculum_references':

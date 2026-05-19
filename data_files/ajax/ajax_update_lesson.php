@@ -26,6 +26,28 @@ if(empty($lesson_id))
     exit;
 }
 
+// ── AUDIO THUMBNAIL (handled before main file logic) ────────
+$thumbnail_set_sql = '';
+$thumbnail_url_val = null;
+
+if (!empty($_FILES['lesson_thumbnail']['tmp_name'])) {
+    $tfile     = $_FILES['lesson_thumbnail'];
+    $tExt      = strtolower(pathinfo($tfile['name'], PATHINFO_EXTENSION));
+    $allowedImg = ['jpg','jpeg','png','webp','gif'];
+    if (in_array($tExt, $allowedImg) && $tfile['size'] < 5 * 1024 * 1024) {
+        $tName = 'thumb_' . $lesson_id . '_' . time() . '.' . $tExt;
+        $tDir  = __DIR__ . '/../uploads/lessons/';
+        if (!is_dir($tDir)) mkdir($tDir, 0755, true);
+        if (move_uploaded_file($tfile['tmp_name'], $tDir . $tName)) {
+            $thumbnail_url_val = 'uploads/lessons/' . $tName;
+            $thumbnail_set_sql = ', lesson_thumbnail = ?';
+        }
+    }
+} elseif (!empty($_POST['remove_thumbnail'])) {
+    $thumbnail_url_val = '';
+    $thumbnail_set_sql = ', lesson_thumbnail = ?';
+}
+
 if($content_type == "video")
 {
     // ===== GET LESSON + COURSE =====
@@ -88,20 +110,19 @@ if($content_type == "video")
     $video_url = "https://iframe.mediadelivery.net/embed/$library_id/$video_id";
 
     // ===== UPDATE DB =====
-    $stmt = $db->prepare("UPDATE tbl_course_chapter_lessons 
-    SET lesson_title=?, description=?, file_path=?, isDownloadable=?, enableDiscussions=?, isFreePreviewLesson=?
+    $stmt = $db->prepare("UPDATE tbl_course_chapter_lessons
+    SET lesson_title=?, description=?, file_path=?, isDownloadable=?, enableDiscussions=?, isFreePreviewLesson=? {$thumbnail_set_sql}
     WHERE id=? AND instructor_id=?");
 
-    $stmt->bind_param("sssiiiis", 
-                        $title, 
-                        $description, 
-                        $video_url, 
-                        $isDownloadable, 
-                        $enableDiscussions, 
-                        $isFreePreviewLesson, 
-                        $lesson_id, 
-                        $instructor_id
-                    );
+    if ($thumbnail_url_val !== null) {
+        $stmt->bind_param("sssiiisis",
+            $title, $description, $video_url, $isDownloadable, $enableDiscussions, $isFreePreviewLesson,
+            $thumbnail_url_val, $lesson_id, $instructor_id);
+    } else {
+        $stmt->bind_param("sssiiiis",
+            $title, $description, $video_url, $isDownloadable, $enableDiscussions, $isFreePreviewLesson,
+            $lesson_id, $instructor_id);
+    }
     if($stmt->execute()){
         echo json_encode([
             "status"=>"success",
@@ -189,39 +210,30 @@ else
 
     // ===== UPDATE DB =====
     $stmt = $db->prepare("
-        UPDATE tbl_course_chapter_lessons 
-        SET lesson_title=?,
-            description=?,
-            file_path=?,
-            isDownloadable=?,
-            enableDiscussions=?,
-            isFreePreviewLesson=?
-        WHERE id=? 
-        AND instructor_id=?
+        UPDATE tbl_course_chapter_lessons
+        SET lesson_title=?, description=?, file_path=?,
+            isDownloadable=?, enableDiscussions=?, isFreePreviewLesson=?
+            {$thumbnail_set_sql}
+        WHERE id=? AND instructor_id=?
     ");
 
-    $stmt->bind_param(
-        "sssiiiis",
-        $title,
-        $description,
-        $file_url,
-        $isDownloadable,
-        $enableDiscussions,
-        $isFreePreviewLesson,
-        $lesson_id,
-        $instructor_id
-    );
+    if ($thumbnail_url_val !== null) {
+        $stmt->bind_param("sssiiisis",
+            $title, $description, $file_url, $isDownloadable, $enableDiscussions, $isFreePreviewLesson,
+            $thumbnail_url_val, $lesson_id, $instructor_id);
+    } else {
+        $stmt->bind_param("sssiiiis",
+            $title, $description, $file_url, $isDownloadable, $enableDiscussions, $isFreePreviewLesson,
+            $lesson_id, $instructor_id);
+    }
 
     if($stmt->execute()){
-
         echo json_encode([
             "status"=>"success",
             "message"=>"File uploaded & lesson updated",
             "file_url"=>$file_url
         ]);
-
     }else{
-
         echo json_encode([
             "status"=>"error",
             "message"=>"DB update failed",

@@ -5,23 +5,41 @@ ini_set('display_errors', 1);
 ini_set('error_log', 'error_log.txt');
 
 session_start();
-include('config/db.php'); 
+include('config/db.php');
 include('config/header-config.php');
 include('config/dump.php');
+include('config/modules.php');
 
 // App::sendSMS('255765131788', 'Testing if message get Sent');
 $username       = $_SESSION['usr_code'];
 $fullname       = $_SESSION['name'];
 
-$user_role      = $_SESSION['user_role']; 
+$user_role      = $_SESSION['user_role'];
 $usr_code       = $_SESSION['usr_code'];
 $signup_success = App::signupStatus($usr_code);
 $roleTitle      = App::getWhatFromWHere('role_title','tbl_user_roles', 'id',$user_role);
-$userProfileImage = @App::getUserProfileImage($usr_code,$user_role);      
+$userProfileImage = @App::getUserProfileImage($usr_code,$user_role);
+
+// Load module permissions for this role
+if ($user_role == 5) {
+    $user_perms = ['*']; // super admin: unrestricted
+} else {
+    $pstmt = $db->prepare("SELECT module_key FROM tbl_module_permissions WHERE role_id = ? AND is_enabled = 1");
+    $pstmt->bind_param("i", $user_role);
+    $pstmt->execute();
+    $user_perms = array_column($pstmt->get_result()->fetch_all(MYSQLI_ASSOC), 'module_key');
+}      
 if(!isset($_SESSION['usr_code'])){
     header('Location: ../');
     exit;
 }
+
+// ── AJAX fragment mode (lazy navigation) ──────────────────────
+if (!empty($_GET['_dcm_ajax'])) {
+    include('pages/controller.php');
+    exit;
+}
+
 if ($signup_success !== 'Completed' && ($user_role=='1')): ?>
 <script>
     const params = new URLSearchParams(window.location.search);
@@ -56,8 +74,10 @@ if ($signup_success !== 'Completed' && ($user_role=='1')): ?>
     <script defer="defer" src="../assets/js/appd9fa.js?6b22e6ee1626676f5950"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css">
     <link href="../assets/css/appd9fa.css?6b22e6ee1626676f5950" rel="stylesheet">
     <link href="../assets/css/custom.css" rel="stylesheet">
+    <link href="../assets/css/dcm-system.css" rel="stylesheet">
 </head>
 
 <body
@@ -136,6 +156,7 @@ if ($signup_success !== 'Completed' && ($user_role=='1')): ?>
     <script src="../assets/js/learning/learning-student-add.js"></script>
     <script src="../assets/js/learning/learning-student-progress.js"></script>
     <script src="../assets/js/learning/learning-teacher-profile.js"></script>
+    <script src="../assets/js/learning/dcm-nav.js"></script>
 </body>
 
 </html>

@@ -76,6 +76,7 @@ if ($action === 'list') {
 
     // Paginated rows
     $listSql = "SELECT q.question_id, q.q_uid, q.question_type, q.status, q.marks,
+                       q.question_stem,
                        s.subject_name, l.level_name, c.chapter_name,
                        d.difficulty_name
                 FROM   qb_questions q
@@ -108,12 +109,12 @@ if ($action === 'get') {
                 s.subject_name, l.level_name, c.chapter_name, st.subtopic_name,
                 d.difficulty_name, b.bloom_name
          FROM   qb_questions q
-         JOIN   qb_subjects           s  ON s.subject_id    = q.subject_id
-         JOIN   qb_levels             l  ON l.level_id      = q.level_id
-         JOIN   qb_chapters           c  ON c.chapter_id    = q.chapter_id
-         JOIN   qb_subtopics          st ON st.subtopic_id  = q.subtopic_id
-         LEFT JOIN qb_difficulty_levels d ON d.difficulty_id = q.difficulty_id
-         LEFT JOIN qb_bloom_levels      b ON b.bloom_id      = q.bloom_id
+         JOIN   qb_subjects              s  ON s.subject_id    = q.subject_id
+         JOIN   qb_levels                l  ON l.level_id      = q.level_id
+         JOIN   qb_chapters              c  ON c.chapter_id    = q.chapter_id
+         LEFT JOIN qb_subtopics          st ON st.subtopic_id  = q.subtopic_id
+         LEFT JOIN qb_difficulty_levels  d  ON d.difficulty_id = q.difficulty_id
+         LEFT JOIN qb_bloom_levels       b  ON b.bloom_id      = q.bloom_id
          WHERE  q.question_id = ?"
     );
     $stmt->bind_param('i', $id);

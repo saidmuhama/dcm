@@ -1,0 +1,400 @@
+/* ================================================================
+   DCM DESIGN SYSTEM  —  Global Modal + Navigation
+   DigitalClass Platform · v2.0
+================================================================ */
+
+:root {
+  --dcm-brand-from:     #1a4fc4;
+  --dcm-brand-to:       #6d28d9;
+  --dcm-amber-from:     #f59e0b;
+  --dcm-amber-to:       #d97706;
+  --dcm-success-from:   #059669;
+  --dcm-success-to:     #0d9488;
+  --dcm-danger-from:    #dc2626;
+  --dcm-danger-to:      #9f1239;
+  --dcm-modal-radius:   20px;
+  --dcm-modal-shadow:   0 40px 100px rgba(0,0,0,.42), 0 8px 30px rgba(0,0,0,.18);
+  --dcm-backdrop-bg:    rgba(10, 18, 42, 0.65);
+  --dcm-surface:        #ffffff;
+  --dcm-surface-2:      #f8fafc;
+  --dcm-border:         #e8edf4;
+  --dcm-text:           #0f172a;
+  --dcm-muted:          #64748b;
+  --dcm-spring:         cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ════════════════════════════════════════════════════════
+   BACKDROP
+════════════════════════════════════════════════════════ */
+.modal-backdrop {
+  backdrop-filter: blur(10px) saturate(1.6);
+  -webkit-backdrop-filter: blur(10px) saturate(1.6);
+  background-color: var(--dcm-backdrop-bg) !important;
+  opacity: 1 !important;
+}
+
+/* ════════════════════════════════════════════════════════
+   DIALOG  —  spring entrance
+════════════════════════════════════════════════════════ */
+.modal.fade .modal-dialog {
+  transform: translateY(28px) scale(0.96);
+  opacity: 0;
+  transition:
+    transform 0.42s var(--dcm-spring),
+    opacity   0.28s ease;
+}
+.modal.show .modal-dialog {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+/* ════════════════════════════════════════════════════════
+   MODAL CONTENT SHELL
+════════════════════════════════════════════════════════ */
+.modal-content {
+  border: none !important;
+  border-radius: var(--dcm-modal-radius) !important;
+  box-shadow: var(--dcm-modal-shadow) !important;
+  overflow: hidden;
+  background: var(--dcm-surface);
+  position: relative;
+}
+
+/* Accent stripe at top — auto-colors from data-dcm-accent */
+.modal-content::before {
+  content: '';
+  display: block;
+  height: 3.5px;
+  background: linear-gradient(90deg, var(--dcm-brand-from), var(--dcm-brand-to), #a855f7);
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 3;
+  border-radius: var(--dcm-modal-radius) var(--dcm-modal-radius) 0 0;
+}
+.modal-content[data-dcm-accent="amber"]::before {
+  background: linear-gradient(90deg, var(--dcm-amber-from), var(--dcm-amber-to));
+}
+.modal-content[data-dcm-accent="success"]::before {
+  background: linear-gradient(90deg, var(--dcm-success-from), var(--dcm-success-to));
+}
+.modal-content[data-dcm-accent="danger"]::before {
+  background: linear-gradient(90deg, var(--dcm-danger-from), var(--dcm-danger-to));
+}
+.modal-content[data-dcm-accent="dark"]::before {
+  background: linear-gradient(90deg, #0f172a, #334155);
+}
+.modal-content[data-dcm-accent="none"]::before {
+  display: none;
+}
+
+/* ════════════════════════════════════════════════════════
+   MODAL HEADER VARIANTS
+════════════════════════════════════════════════════════ */
+.modal-header {
+  padding: 1.35rem 1.6rem 1rem !important;
+  border-bottom: none !important;
+  align-items: flex-start;
+}
+
+/* Gradient header backgrounds */
+.dcm-hdr-brand {
+  background: linear-gradient(135deg, var(--dcm-brand-from) 0%, var(--dcm-brand-to) 100%);
+  color: #fff !important;
+  padding: 1.4rem 1.6rem !important;
+}
+.dcm-hdr-amber {
+  background: linear-gradient(135deg, var(--dcm-amber-from) 0%, var(--dcm-amber-to) 100%);
+  color: #fff !important;
+  padding: 1.4rem 1.6rem !important;
+}
+.dcm-hdr-success {
+  background: linear-gradient(135deg, var(--dcm-success-from) 0%, var(--dcm-success-to) 100%);
+  color: #fff !important;
+  padding: 1.4rem 1.6rem !important;
+}
+.dcm-hdr-danger {
+  background: linear-gradient(135deg, var(--dcm-danger-from) 0%, var(--dcm-danger-to) 100%);
+  color: #fff !important;
+  padding: 1.4rem 1.6rem !important;
+}
+.dcm-hdr-dark {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #fff !important;
+  padding: 1.4rem 1.6rem !important;
+}
+
+/* Header icon pill */
+.dcm-modal-icon {
+  width: 42px; height: 42px;
+  border-radius: 13px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+  background: rgba(255,255,255,.18);
+  color: #fff;
+  margin-right: .85rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.dcm-modal-icon.icon-light {
+  background: rgba(26,79,196,.1);
+  color: var(--dcm-brand-from);
+}
+.dcm-modal-icon.icon-amber {
+  background: rgba(245,158,11,.12);
+  color: var(--dcm-amber-to);
+}
+
+/* Title + subtitle inside header */
+.dcm-modal-title {
+  font-size: .95rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -.012em;
+  line-height: 1.3;
+  margin: 0;
+  color: inherit;
+}
+.dcm-modal-sub {
+  font-size: .74rem;
+  opacity: .72;
+  margin-top: .18rem;
+  font-weight: 400;
+}
+
+/* Close button override */
+.modal-header .btn-close {
+  transition: transform .22s ease, opacity .18s;
+  opacity: .65;
+  margin: 0;
+  flex-shrink: 0;
+}
+.modal-header .btn-close:hover {
+  transform: rotate(90deg);
+  opacity: 1;
+}
+.modal-header .btn-close-white { filter: invert(1) grayscale(1); }
+
+/* ════════════════════════════════════════════════════════
+   MODAL BODY
+════════════════════════════════════════════════════════ */
+.modal-body { padding: 1.5rem 1.6rem; }
+
+/* Form controls inside modals */
+.modal-body .form-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: .38rem;
+  letter-spacing: .01em;
+}
+.modal-body .form-control,
+.modal-body .form-select {
+  border-radius: 11px;
+  border: 1.5px solid #dde3ed;
+  font-size: .855rem;
+  color: var(--dcm-text);
+  background: #f9fafc;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+  padding: .52rem .9rem;
+  min-height: 42px;
+}
+.modal-body .form-control:focus,
+.modal-body .form-select:focus {
+  border-color: var(--dcm-brand-from);
+  background: #fff;
+  box-shadow: 0 0 0 3.5px rgba(26,79,196,.11);
+  outline: none;
+}
+.modal-body textarea.form-control {
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 88px;
+}
+.modal-body .form-check-input:checked {
+  background-color: var(--dcm-brand-from);
+  border-color: var(--dcm-brand-from);
+}
+.modal-body .bg-light.form-control {
+  background: #f0f4f8 !important;
+  border-color: #e8edf4 !important;
+  color: #64748b;
+}
+
+/* Field group dividers */
+.dcm-field-section {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+/* Skeleton loader for lazy-loaded modal content */
+@keyframes dcm-shimmer {
+  0%   { background-position: -700px 0; }
+  100% { background-position: 700px 0; }
+}
+.dcm-skeleton {
+  border-radius: 9px;
+  background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 50%, #eef2f7 75%);
+  background-size: 700px 100%;
+  animation: dcm-shimmer 1.5s infinite linear;
+  display: block;
+}
+.dcm-skeleton-line  { height: 14px; margin-bottom: 10px; }
+.dcm-skeleton-line.lg  { height: 20px; width: 55%; margin-bottom: 14px; }
+.dcm-skeleton-line.sm  { height: 10px; width: 40%; margin-bottom: 8px; }
+.dcm-skeleton-block { height: 90px; margin-bottom: 14px; }
+.dcm-skeleton-input { height: 42px; margin-bottom: 14px; }
+
+/* Modal lazy load state */
+.dcm-modal-loading-body {
+  padding: 1.8rem 1.6rem;
+}
+
+/* ════════════════════════════════════════════════════════
+   MODAL FOOTER
+════════════════════════════════════════════════════════ */
+.modal-footer {
+  padding: .9rem 1.6rem 1.3rem !important;
+  border-top: 1px solid #f0f4f8 !important;
+  background: #f8fafc;
+  gap: .45rem;
+  justify-content: flex-end;
+}
+
+/* ════════════════════════════════════════════════════════
+   MODAL SIZE HELPERS
+════════════════════════════════════════════════════════ */
+.modal-dialog.modal-lg  { max-width: 680px; }
+.modal-dialog.modal-xl  { max-width: 900px; }
+
+/* Scrollable body */
+.modal-dialog-scrollable .modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar { width: 5px; }
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1; border-radius: 10px;
+}
+
+/* ════════════════════════════════════════════════════════
+   LAZY NAVIGATION — Progress Bar
+════════════════════════════════════════════════════════ */
+#dcm-progress {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  z-index: 99999;
+  pointer-events: none;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(90deg,
+    var(--dcm-brand-from) 0%,
+    var(--dcm-brand-to) 50%,
+    #a855f7 100%);
+  background-size: 200% 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform .25s ease, opacity .35s ease;
+  opacity: 0;
+}
+#dcm-progress.dcm-bar-active {
+  opacity: 1;
+  animation: dcm-bar-move 1.4s ease infinite;
+}
+#dcm-progress.dcm-bar-done {
+  transform: scaleX(1) !important;
+  animation: none;
+  opacity: 0;
+  transition: opacity .35s .1s ease, transform .2s ease;
+}
+@keyframes dcm-bar-move {
+  0%   { transform: scaleX(.08); background-position: 0% 0;   }
+  40%  { transform: scaleX(.45); background-position: 50% 0;  }
+  70%  { transform: scaleX(.72); }
+  100% { transform: scaleX(.88); background-position: 100% 0; }
+}
+
+/* ════════════════════════════════════════════════════════
+   LAZY NAVIGATION — Content transitions
+════════════════════════════════════════════════════════ */
+@keyframes dcm-page-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+.dcm-page-enter {
+  animation: dcm-page-in 0.38s var(--dcm-spring) both;
+}
+
+/* Skeleton page loader (shown while content fetches) */
+@keyframes dcm-page-skeleton-pulse {
+  0%, 100% { opacity: .6; }
+  50%       { opacity: 1;  }
+}
+#dcm-page-skeleton {
+  padding: 1.8rem 1.5rem;
+  animation: dcm-page-skeleton-pulse 1.6s ease infinite;
+}
+#dcm-page-skeleton .sk-card {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e8edf4;
+  padding: 1.4rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+#dcm-page-skeleton .sk-title {
+  height: 22px; width: 38%;
+  background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 50%, #eef2f7 75%);
+  background-size: 700px 100%;
+  animation: dcm-shimmer 1.5s infinite linear;
+  border-radius: 8px; margin-bottom: 14px;
+}
+#dcm-page-skeleton .sk-line {
+  height: 13px;
+  background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 50%, #eef2f7 75%);
+  background-size: 700px 100%;
+  animation: dcm-shimmer 1.5s infinite linear;
+  border-radius: 6px; margin-bottom: 9px;
+}
+#dcm-page-skeleton .sk-line.w60 { width: 60%; }
+#dcm-page-skeleton .sk-line.w80 { width: 80%; }
+#dcm-page-skeleton .sk-line.w45 { width: 45%; }
+#dcm-page-skeleton .sk-row {
+  display: flex; gap: 1rem; margin-bottom: 1rem;
+}
+#dcm-page-skeleton .sk-stat {
+  flex: 1; height: 90px;
+  background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 50%, #eef2f7 75%);
+  background-size: 700px 100%;
+  animation: dcm-shimmer 1.5s infinite linear;
+  border-radius: 14px;
+}
+
+/* Nav link active feedback during load */
+.adminuiux-sidebar a.dcm-nav-pending {
+  opacity: .5;
+  pointer-events: none;
+}
+
+/* ════════════════════════════════════════════════════════
+   MODAL — Close on outside click enhancement
+════════════════════════════════════════════════════════ */
+.modal[data-dcm-closable="true"] .modal-dialog {
+  cursor: default;
+}
+
+/* ════════════════════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════════════════════ */
+@media (max-width: 576px) {
+  .modal-dialog:not(.modal-fullscreen) {
+    margin: .75rem;
+    max-width: calc(100vw - 1.5rem);
+  }
+  .modal-content {
+    border-radius: 16px !important;
+  }
+  .modal-header, .modal-body, .modal-footer {
+    padding-left: 1.2rem !important;
+    padding-right: 1.2rem !important;
+  }
+  .modal-dialog.modal-xl { max-width: calc(100vw - 1.5rem); }
+}

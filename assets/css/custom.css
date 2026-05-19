@@ -1,107 +1,238 @@
 
 
-        /* ================= SIDEBAR – PROFESSIONAL ================= */
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR — DARK PREMIUM  DigitalClass 2025
+═══════════════════════════════════════════════════════════ */
 
-        /* ── Parent nav-link: [icon] [title·····] [chevron] ── */
-        .adminuiux-sidebar .nav > .nav-item > .nav-link {
-            display: flex !important;
-            align-items: center;
-            flex-wrap: nowrap;
-            padding: 0.6rem 1rem;
-            border-radius: 8px;
-            margin: 1px 8px;
-            transition: background 0.15s ease, color 0.15s ease;
-        }
+/* ── Shell & background ─────────────────────────────────── */
+.adminuiux-sidebar {
+    background: linear-gradient(175deg, #0c1528 0%, #0f1e3d 55%, #0a1220 100%) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.055) !important;
+    box-shadow: 4px 0 28px rgba(0, 0, 0, 0.45) !important;
+}
 
-        /* Fixed-width icon — locked, never shrinks */
-        .adminuiux-sidebar .nav > .nav-item > .nav-link .menu-icon {
-            width: 1.75rem;
-            flex-shrink: 0;
-            flex-grow: 0;
-            font-size: 1rem;
-            text-align: center;
-            line-height: 1;
-        }
+/* Top accent shimmer line */
+.adminuiux-sidebar::before {
+    content: '';
+    display: block;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #1a4fc4 30%, #6d28d9 70%, transparent);
+    opacity: 0.7;
+}
 
-        /* Title — grows to fill space, shrinks before touching chevron */
-        .adminuiux-sidebar .nav > .nav-item > .nav-link .menu-name {
-            flex: 1 1 0%;
-            min-width: 0;
-            font-size: 0.875rem;
-            font-weight: 500;
-            padding-left: 0.65rem;
-            padding-right: 0.5rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+/* ── Scrollbar ──────────────────────────────────────────── */
+.adminuiux-sidebar-inner {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
+}
+.adminuiux-sidebar-inner::-webkit-scrollbar { width: 3px; }
+.adminuiux-sidebar-inner::-webkit-scrollbar-track { background: transparent; }
+.adminuiux-sidebar-inner::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+}
 
-        /* Chevron — fixed size, right edge, vertically centered */
-        .qb-chevron {
-            flex-shrink: 0;
-            flex-grow: 0;
-            width: 0.875rem;
-            font-size: 0.65rem;
-            text-align: center;
-            align-self: center;
-            opacity: 0.5;
-            transition: transform 0.2s ease, opacity 0.2s ease;
-        }
+/* ── Section group label ────────────────────────────────── */
+.dcm-nav-group {
+    padding: 1.1rem 1rem 0.3rem 1rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(148, 163, 220, 0.45);
+    pointer-events: none;
+    user-select: none;
+}
 
-        .qb-parent:not(.collapsed) .qb-chevron {
-            transform: rotate(180deg);
-            opacity: 0.85;
-        }
+/* ── Parent nav-link ────────────────────────────────────── */
+.adminuiux-sidebar .nav > .nav-item > .nav-link {
+    display: flex !important;
+    align-items: center;
+    flex-wrap: nowrap;
+    padding: 0.55rem 0.85rem;
+    border-radius: 10px;
+    margin: 1px 10px;
+    color: rgba(200, 220, 255, 0.58);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    position: relative;
+}
 
-        /* ── Submenu container ── */
-        .qb-submenu {
-            margin: 2px 8px 4px 8px;
-            padding: 4px 0 4px 2.75rem;
-            border-left: 2px solid rgba(var(--bs-primary-rgb), 0.15);
-        }
+.adminuiux-sidebar .nav > .nav-item > .nav-link:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.92);
+}
 
-        /* ── Submenu row: [icon] [label] ── */
-        .qb-submenu .nav-link {
-            display: flex !important;
-            align-items: center;
-            padding: 0.32rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.82rem;
-            font-weight: 400;
-            color: var(--bs-secondary);
-            transition: background 0.15s ease, color 0.15s ease;
-            gap: 0;
-        }
+/* Expanded/open parent */
+.adminuiux-sidebar .nav > .nav-item > .nav-link.qb-parent:not(.collapsed) {
+    background: rgba(99, 130, 255, 0.13);
+    color: #c7d4ff;
+}
 
-        /* Fixed-width icon column inside submenu */
-        .qb-submenu .nav-link i {
-            width: 1.4rem;
-            font-size: 0.8rem;
-            flex-shrink: 0;
-            text-align: left;
-            opacity: 0.7;
-            line-height: 1;
-        }
+/* Top-level active (e.g. Dashboard) */
+.adminuiux-sidebar .nav > .nav-item > .nav-link.active {
+    background: linear-gradient(135deg, rgba(26, 79, 196, 0.90), rgba(109, 40, 217, 0.75));
+    color: #fff !important;
+    box-shadow: 0 4px 16px rgba(26, 79, 196, 0.38);
+    font-weight: 600;
+}
 
-        /* Label — spaced from the icon */
-        .qb-submenu .nav-link span {
-            margin-left: 0.5rem;
-        }
+/* ── Icon box ───────────────────────────────────────────── */
+.adminuiux-sidebar .nav > .nav-item > .nav-link .menu-icon {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    flex-grow: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.07);
+    font-size: 0.95rem;
+    line-height: 1;
+    transition: background 0.18s ease, color 0.18s ease;
+}
 
-        .qb-submenu .nav-link:hover {
-            background: rgba(var(--bs-primary-rgb), 0.06);
-            color: var(--bs-primary);
-        }
+.adminuiux-sidebar .nav > .nav-item > .nav-link:hover .menu-icon {
+    background: rgba(99, 130, 255, 0.20);
+    color: #a5b4fc;
+}
 
-        .qb-submenu .nav-link:hover i {
-            opacity: 1;
-        }
+.adminuiux-sidebar .nav > .nav-item > .nav-link.qb-parent:not(.collapsed) .menu-icon {
+    background: rgba(99, 130, 255, 0.22);
+    color: #a5b4fc;
+}
 
-        .qb-submenu .nav-link.active {
-            background: rgba(var(--bs-primary-rgb), 0.1);
-            color: var(--bs-primary);
-            font-weight: 500;
-        }
+.adminuiux-sidebar .nav > .nav-item > .nav-link.active .menu-icon {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+/* ── Label ──────────────────────────────────────────────── */
+.adminuiux-sidebar .nav > .nav-item > .nav-link .menu-name {
+    flex: 1 1 0%;
+    min-width: 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding-left: 0.65rem;
+    padding-right: 0.4rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Chevron ────────────────────────────────────────────── */
+.qb-chevron {
+    flex-shrink: 0;
+    flex-grow: 0;
+    width: 0.9rem;
+    font-size: 0.6rem;
+    text-align: center;
+    align-self: center;
+    opacity: 0.35;
+    color: rgba(255, 255, 255, 0.7);
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.18s ease;
+}
+
+.qb-parent:not(.collapsed) .qb-chevron {
+    transform: rotate(180deg);
+    opacity: 0.75;
+}
+
+/* ── Submenu container ──────────────────────────────────── */
+.qb-submenu {
+    margin: 2px 10px 6px 10px;
+    padding: 4px 0;
+    background: rgba(0, 0, 0, 0.18);
+    border-radius: 8px;
+    overflow: hidden;
+    border-left: none;
+}
+
+/* ── Submenu item ───────────────────────────────────────── */
+.qb-submenu .nav-link {
+    display: flex !important;
+    align-items: center;
+    padding: 0.38rem 0.85rem;
+    border-radius: 0;
+    font-size: 0.80rem;
+    font-weight: 400;
+    color: rgba(185, 210, 255, 0.52);
+    transition: background 0.15s ease, color 0.15s ease, padding-left 0.15s ease, border-color 0.15s ease;
+    gap: 0;
+    border-left: 2px solid transparent;
+}
+
+.qb-submenu .nav-link i {
+    width: 1.35rem;
+    font-size: 0.77rem;
+    flex-shrink: 0;
+    text-align: left;
+    opacity: 0.55;
+    line-height: 1;
+    transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.qb-submenu .nav-link span {
+    margin-left: 0.5rem;
+}
+
+.qb-submenu .nav-link:hover {
+    background: rgba(255, 255, 255, 0.065);
+    color: rgba(255, 255, 255, 0.88);
+    border-left-color: rgba(99, 130, 255, 0.50);
+    padding-left: 1.05rem;
+}
+
+.qb-submenu .nav-link:hover i {
+    opacity: 1;
+    color: #a5b4fc;
+}
+
+.qb-submenu .nav-link.active {
+    background: linear-gradient(90deg, rgba(26, 79, 196, 0.82) 0%, rgba(26, 79, 196, 0.55) 100%);
+    color: #fff !important;
+    font-weight: 600;
+    border-left-color: #60a5fa;
+    padding-left: 1.05rem;
+    box-shadow: inset 0 0 16px rgba(99, 130, 255, 0.12);
+}
+
+.qb-submenu .nav-link.active i {
+    opacity: 1;
+    color: #93c5fd;
+}
+
+/* ── Bottom user card ───────────────────────────────────── */
+.adminuiux-sidebar .menu-active-line .nav-link {
+    color: rgba(200, 220, 255, 0.65) !important;
+    border-radius: 10px;
+    margin: 1px 10px;
+    padding: 0.5rem 0.85rem;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.adminuiux-sidebar .menu-active-line .nav-link:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+    color: #fff !important;
+}
+
+.adminuiux-sidebar .px-3 .card {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 10px !important;
+}
+
+.adminuiux-sidebar .px-3 .btn-link {
+    color: rgba(200, 220, 255, 0.45) !important;
+    transition: color 0.18s ease;
+}
+
+.adminuiux-sidebar .px-3 .btn-link:hover {
+    color: #f87171 !important;
+}
 
         /* ================= BRAND HEADER COLOR ================= */
         .adminuiux-header-fill-theme .adminuiux-header .navbar,
@@ -109,67 +240,33 @@
             background-color: #0037ad !important;
         }
 
-        /* ================= MODAL BEAUTIFY ================= */
+        /* ================= MODAL BEAUTIFY =================
+           Base overrides — full system lives in dcm-system.css
+        ================================================== */
 
-        .custom-modal {
-            border-radius: 16px;
-            border: none;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-            overflow: hidden;
-        }
+        /* Legacy class alias — kept for backward compatibility */
+        .custom-modal { }
 
-        /* Header */
-        .modal-header {
-            padding: 20px 24px;
-        }
-
-        /* Body */
-        .modal-body {
-            padding: 20px 24px;
-        }
-
-        /* Footer */
-        .modal-footer {
-            padding: 15px 24px 20px;
-        }
-
-        /* Close button */
         .custom-close {
-            opacity: 0.6;
-            transition: 0.3s;
+            opacity: 0.65;
+            transition: transform .22s, opacity .18s;
         }
-
         .custom-close:hover {
             opacity: 1;
             transform: rotate(90deg);
         }
 
-        /* Buttons */
+        /* dcm-btn inside modal footers */
+        .modal-footer .dcm-btn {
+            border-radius: 10px;
+        }
         .modal-footer .btn {
             border-radius: 10px;
             font-weight: 500;
-            transition: all 0.25s ease;
         }
-
         .modal-footer .btn-theme:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(1,94,194,0.3);
-        }
-
-        /* Smooth animation */
-        .modal.fade .modal-dialog {
-            transform: scale(0.95);
-            transition: all 0.3s ease;
-        }
-
-        .modal.show .modal-dialog {
-            transform: scale(1);
-        }
-
-        /* Optional subtle background blur */
-        .modal-backdrop.show {
-            backdrop-filter: blur(4px);
-            background-color: rgba(0,0,0,0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(1,94,194,.28);
         }
 
         /* ================= PLYR AUDIO PLAYER ================= */

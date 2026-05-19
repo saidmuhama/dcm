@@ -1,6 +1,6 @@
 <div class="container-fluid"><button class="btn btn-link btn-square sidebar-toggler" type="button"
                     onclick="initSidebar()"><i class="sidebar-svg" data-feather="menu"></i></button> <a
-                    class="navbar-brand" href="learning-dashboard.html"><img data-bs-img="light"
+                    class="navbar-brand" href="?view=3002"><img data-bs-img="light"
                         src="../assets/img/logo-light.svg" alt=""> <img data-bs-img="dark" src="../assets/img/logo.svg"
                         alt="">
                     <div class=""><span class="h4">Digital<span class="fw-bold">CLass</span></span>

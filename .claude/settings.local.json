@@ -18,7 +18,23 @@
       "Bash(/Applications/XAMPP/xamppfiles/bin/mysqldump --version)",
       "Bash(/Applications/XAMPP/xamppfiles/bin/mysqldump -u root --no-tablespaces e_learning)",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(xargs -I{} sh -c 'du -sk \"/Applications/XAMPP/xamppfiles/htdocs/dcm/{}\" 2>/dev/null')",
+      "Bash(git commit -m ' *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(ls ~/.ssh/*.pub 2>/dev/null && echo \"SSH keys found\" || echo \"No SSH keys\")",
+      "Read(//Users/said.said/.ssh/**)",
+      "Bash(ssh-keygen -t ed25519 -C \"saidmuhama@gmail.com\" -f ~/.ssh/id_ed25519 -N \"\")",
+      "Bash(ssh -T git@github.com)",
+      "Bash(ssh-keyscan github.com >> ~/.ssh/known_hosts 2>&1 && ssh -T git@github.com 2>&1)",
+      "Bash(chmod 600 ~/.ssh/config)",
+      "Bash(ssh -vT git@github.com)"
+    ],
+    "additionalDirectories": [
+      "/Users/said.said/.ssh"
     ]
   }
 }
