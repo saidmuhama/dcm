@@ -82,6 +82,7 @@ $recent = $db->query("
             ['?view=admin_permissions',  'bi-toggle-on',        'Module Permissions', 'Control which roles see what'],
             ['?view=qb_all_questions',   'bi-patch-question',   'Question Bank',      'View all QB questions'],
             ['?view=my_courses_online_contents_list_view','bi-collection-play','Courses','All instructor courses'],
+            ['?view=admin_payment_settings','bi-credit-card-fill','Payment Settings','Selcom API keys & gateway config'],
           ];
           foreach ($links as [$href,$icon,$title,$sub]): ?>
           <a href="<?= $href ?>" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2 px-3">

@@ -1,954 +1,994 @@
-<?php 
-$course_id = $_GET['course_id'];
-$sql = mysqli_query($db,"SELECT * FROM tbl_courses WHERE id='$course_id'");
-$course = mysqli_fetch_assoc($sql);
-$instructor_id= $course['instructor_id'];
+<?php
+/* ── Course data ──────────────────────────────────────────────── */
+$_cid = (int)($_GET['course_id'] ?? 0);
+if (!$_cid) { echo '<div class="p-4 text-center text-danger">Invalid course.</div>'; return; }
 
-$qry = mysqli_query($db,"SELECT * FROM tbl_tutors WHERE usr_code='$instructor_id'");
-$instructor = mysqli_fetch_assoc($qry);
+$_cs = $db->prepare("SELECT * FROM tbl_courses WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+$_cs->bind_param('i', $_cid);
+$_cs->execute();
+$_course = $_cs->get_result()->fetch_assoc();
+if (!$_course) { echo '<div class="p-4 text-center text-danger">Course not found.</div>'; return; }
 
-//lessons and statictics
-$lessons_count = mysqli_num_rows(mysqli_query($db,"SELECT * FROM tbl_course_chapter_lessons WHERE course_id='$course_id'"));
-$chapters_count = mysqli_num_rows(mysqli_query($db,"SELECT * FROM tbl_course_chapters WHERE course_id='$course_id'"));
+/* ── Instructor ───────────────────────────────────────────────── */
+$_ti = $db->prepare("SELECT first_name, last_name, image, course FROM tbl_tutors WHERE usr_code = ? LIMIT 1");
+$_ti->bind_param('s', $_course['instructor_id']);
+$_ti->execute();
+$_instructor = $_ti->get_result()->fetch_assoc() ?: [];
+
+/* ── Stats ────────────────────────────────────────────────────── */
+$_stats = $db->query("
+    SELECT COUNT(DISTINCT ch.id) chapters, COUNT(DISTINCT l.id) lessons,
+           ROUND(AVG(r.rating),1) avg_rating, COUNT(DISTINCT r.id) reviews,
+           COUNT(DISTINCT CASE WHEN e.has_access=1 THEN e.id END) enrolled
+    FROM tbl_courses c
+    LEFT JOIN tbl_course_chapters ch ON ch.course_id=c.id
+    LEFT JOIN tbl_course_chapter_lessons l ON l.chapter_id=ch.id
+    LEFT JOIN tbl_course_ratings r ON r.course_id=c.id
+    LEFT JOIN tbl_course_enrollments e ON e.course_id=c.id
+    WHERE c.id={$_cid}")->fetch_assoc();
+
+$_chapters  = (int)($_stats['chapters'] ?? 0);
+$_lessons   = (int)($_stats['lessons']  ?? 0);
+$_rating    = $_stats['avg_rating'] ? number_format((float)$_stats['avg_rating'], 1) : '—';
+$_reviews   = (int)($_stats['reviews']  ?? 0);
+$_enrolled  = (int)($_stats['enrolled'] ?? 0);
+$_iname     = htmlspecialchars(trim(($_instructor['first_name'] ?? '') . ' ' . ($_instructor['last_name'] ?? '')));
+$_iimg      = !empty($_instructor['image']) ? $_instructor['image'] : '';
+$_thumb     = !empty($_course['thumbnail']) && $_course['thumbnail'] !== 'uploads/course_default.png'
+              ? htmlspecialchars($_course['thumbnail']) : '';
+$_price     = (float)($_course['price'] ?? 0);
+$_disc      = (float)($_course['discount'] ?? 0);
+$_final     = $_price > 0 ? $_price - ($_price * $_disc / 100) : 0;
 ?>
-
 <style>
-button[aria-expanded="true"] i { transform: rotate(180deg); transition: 0.3s; }
+/* ═══════════════════════════════════════════════════════════
+   COURSE READER  (cr-*)
+═══════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+.cr-wrap   { font-family:'Open Sans',sans-serif; background:#f8fafc; min-height:100vh; padding:0 0 2rem; }
 
-/* ── Study Notes ──────────────────────────────────────────────────────── */
-.sn-card { border-radius: 12px; overflow: hidden; transition: box-shadow .15s ease; }
-.sn-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.09) !important; }
-.sn-card.important { border-left: 4px solid #f59e0b !important; }
-.sn-header { cursor: pointer; user-select: none; }
-.sn-chevron { transition: transform .25s ease; font-size: .75rem; flex-shrink: 0; }
-.sn-card.open .sn-chevron { transform: rotate(180deg); }
-.sn-answer {
-    display: none;
-    border-top: 1px solid rgba(0,0,0,.06);
-    background: rgba(var(--bs-primary-rgb), .02);
-    white-space: pre-wrap;
-    line-height: 1.75;
-}
-.sn-answer.open { display: block; }
-.sn-bm-btn { color: #cbd5e1; transition: color .15s ease; padding: 0; border: none; background: none; }
-.sn-bm-btn.saved { color: #f59e0b; }
-.sn-search .input-group-text { border-right: none; background: transparent; }
-.sn-search .form-control { border-left: none; }
-.sn-search .form-control:focus { box-shadow: none; border-color: #dee2e6; }
-.sn-highlight { background: #fef08a; border-radius: 2px; padding: 0 2px; }
-#studyNotesSection { animation: snFadeIn .25s ease; }
-@keyframes snFadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+/* ── Top bar ── */
+.cr-topbar { background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 60%,#312e81 100%);
+             padding:1rem 1.5rem; display:flex; align-items:center; gap:1rem;
+             flex-wrap:wrap; border-bottom:1px solid rgba(255,255,255,.07); }
+.cr-back   { display:inline-flex;align-items:center;gap:.4rem;color:rgba(255,255,255,.7);
+             font-size:.78rem;font-weight:700;text-decoration:none;padding:.35rem .75rem;
+             border-radius:8px;border:1px solid rgba(255,255,255,.15);transition:all .15s; }
+.cr-back:hover { background:rgba(255,255,255,.12);color:#fff; }
+.cr-topbar-title { flex:1;min-width:0; }
+.cr-topbar-title h1 { font-size:1rem;font-weight:800;color:#fff;font-family:'SUSE',sans-serif;
+                      margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.cr-topbar-meta  { display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-top:.25rem; }
+.cr-chip { display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:700;
+           color:rgba(255,255,255,.6);padding:.2rem .6rem;border-radius:100px;
+           background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1); }
+.cr-chip .stars { color:#f59e0b; }
+
+/* ── Layout ── */
+.cr-layout { display:grid;grid-template-columns:1fr 360px;gap:0;
+             min-height:calc(100vh - 60px);margin:1.25rem;border-radius:18px;
+             overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,.08);border:1.5px solid #f0f4f8; }
+@media(max-width:900px){ .cr-layout { grid-template-columns:1fr;margin:.75rem; } }
+
+/* ── Main column ── */
+.cr-main   { min-width:0; }
+
+/* ── Viewer ── */
+.cr-viewer { background:#000;position:relative;width:100%; }
+.cr-viewer-inner { width:100%;aspect-ratio:16/9;max-height:500px;background:#0a0a0a;
+                   display:flex;align-items:center;justify-content:center;overflow:hidden; }
+.cr-viewer-inner iframe,
+.cr-viewer-inner embed  { width:100%;height:100%;border:0; }
+.cr-viewer-inner audio  { width:90%;border-radius:12px; }
+.cr-no-content { display:flex;flex-direction:column;align-items:center;justify-content:center;
+                 color:rgba(255,255,255,.35);gap:.75rem;height:100%; }
+.cr-no-content i { font-size:3rem; }
+.cr-no-content p { font-size:.85rem;font-weight:600;margin:0; }
+
+/* ── Content tabs ── */
+.cr-tabs-wrap { position:sticky;top:0;z-index:20;background:#fff;
+                border-bottom:2px solid #f0f4f8;overflow-x:auto; }
+.cr-tabs { display:flex;gap:0;padding:0 1.5rem; }
+.cr-tab  { display:inline-flex;align-items:center;gap:.4rem;padding:.85rem 1.1rem;
+           font-size:.8rem;font-weight:700;color:#64748b;cursor:pointer;border:none;
+           background:none;border-bottom:2.5px solid transparent;margin-bottom:-2px;
+           white-space:nowrap;transition:all .18s;font-family:inherit; }
+.cr-tab.active  { color:#4f46e5;border-bottom-color:#4f46e5; }
+.cr-tab:hover:not(.active) { color:#0f172a;background:#f8fafc; }
+.cr-tab-badge { background:#ede9fe;color:#4f46e5;border-radius:100px;
+                padding:.05rem .45rem;font-size:.65rem;font-weight:800; }
+
+/* ── Tab panels ── */
+.cr-panels { padding:1.5rem; }
+.cr-panel  { display:none; }
+.cr-panel.active { display:block; animation:crFade .25s ease; }
+@keyframes crFade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+/* ── About section ── */
+.cr-about-header { display:flex;align-items:center;gap:1rem;padding:1rem;
+                   background:linear-gradient(135deg,#f8faff,#f0f4ff);
+                   border-radius:14px;border:1px solid #e0e7ff;margin-bottom:1.25rem; }
+.cr-instr-avatar { width:52px;height:52px;border-radius:50%;object-fit:cover;
+                   border:2px solid #c7d2fe;flex-shrink:0;background:#ede9fe;
+                   display:flex;align-items:center;justify-content:center;
+                   font-size:1.3rem;color:#818cf8; }
+.cr-instr-name  { font-size:.85rem;font-weight:800;color:#0f172a; }
+.cr-instr-sub   { font-size:.72rem;color:#64748b;margin-top:.1rem; }
+.cr-desc-box    { background:#f8fafc;border-radius:12px;padding:1.1rem 1.25rem;
+                  font-size:.83rem;color:#475569;line-height:1.8;
+                  border:1px solid #f0f4f8; }
+.cr-stat-pills  { display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem; }
+.cr-stat-pill   { display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem;
+                  font-weight:700;padding:.35rem .85rem;border-radius:100px;
+                  background:#fff;border:1.5px solid #e2e8f0;color:#334155; }
+
+/* ── Discussion ── */
+.cr-discuss-form { background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;
+                   padding:1.1rem 1.25rem;margin-bottom:1.25rem; }
+.cr-discuss-form h6 { font-size:.82rem;font-weight:800;color:#0f172a;margin-bottom:.75rem; }
+.cr-inp { width:100%;border:1.5px solid #e2e8f0;border-radius:10px;
+          padding:.55rem .85rem;font-size:.82rem;font-family:inherit;
+          color:#0f172a;background:#f8fafc;outline:none;transition:border-color .15s;
+          margin-bottom:.6rem;resize:vertical; }
+.cr-inp:focus { border-color:#4f46e5;background:#fff; }
+.cr-btn { display:inline-flex;align-items:center;gap:.35rem;border-radius:10px;
+          padding:.5rem 1.1rem;font-size:.78rem;font-weight:700;cursor:pointer;
+          font-family:inherit;border:none;transition:all .15s; }
+.cr-btn-primary { background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 3px 10px rgba(79,70,229,.25); }
+.cr-btn-primary:hover { filter:brightness(1.08); }
+.cr-btn-sm { padding:.38rem .8rem;font-size:.73rem; }
+.cr-btn-ghost { background:#f1f5f9;color:#475569;border:1.5px solid #e2e8f0; }
+.cr-btn-ghost:hover { background:#e2e8f0;color:#0f172a; }
+.cr-d-card { background:#fff;border:1.5px solid #f0f4f8;border-radius:14px;
+             margin-bottom:.75rem;overflow:hidden; }
+.cr-d-head { display:flex;align-items:flex-start;justify-content:space-between;
+             gap:.75rem;padding:.9rem 1.1rem;cursor:pointer; }
+.cr-d-num  { width:28px;height:28px;border-radius:8px;background:#ede9fe;color:#4f46e5;
+             font-size:.72rem;font-weight:800;display:flex;align-items:center;
+             justify-content:center;flex-shrink:0;margin-top:.1rem; }
+.cr-d-title { font-size:.83rem;font-weight:700;color:#0f172a;flex:1; }
+.cr-d-meta  { font-size:.68rem;color:#94a3b8;margin-top:.2rem; }
+.cr-d-body  { border-top:1.5px solid #f0f4f8;padding:1rem 1.1rem;display:none; }
+.cr-d-body.open { display:block; }
+.cr-d-answer-item { background:#f8fafc;border-radius:10px;padding:.7rem .9rem;
+                    margin-bottom:.5rem;font-size:.8rem;color:#334155; }
+.cr-d-answer-item.best { background:#f0fdf4;border:1.5px solid #86efac; }
+.cr-d-answer-name { font-weight:700;font-size:.72rem;color:#4f46e5;margin-bottom:.2rem; }
+.cr-d-ans-form { margin-top:.8rem;border-top:1.5px solid #f0f4f8;padding-top:.8rem; }
+.cr-d-like { display:inline-flex;align-items:center;gap:.3rem;font-size:.73rem;
+             font-weight:700;color:#dc2626;background:#fee2e2;border:none;
+             border-radius:8px;padding:.3rem .75rem;cursor:pointer;transition:all .15s; }
+.cr-d-like:hover { background:#fecaca; }
+
+/* ── Study Notes ── */
+.sn-card2  { background:#fff;border:1.5px solid #f0f4f8;border-radius:14px;
+             margin-bottom:.65rem;overflow:hidden;transition:box-shadow .15s; }
+.sn-card2:hover { box-shadow:0 4px 16px rgba(0,0,0,.07); }
+.sn-card2.important { border-left:3px solid #f59e0b; }
+.sn-head2  { display:flex;align-items:flex-start;gap:.75rem;padding:.85rem 1rem;cursor:pointer; }
+.sn-num2   { width:26px;height:26px;border-radius:7px;background:#ede9fe;color:#4f46e5;
+             font-size:.7rem;font-weight:800;display:flex;align-items:center;
+             justify-content:center;flex-shrink:0;margin-top:.1rem; }
+.sn-q2     { font-size:.82rem;font-weight:700;color:#0f172a;flex:1;line-height:1.4; }
+.sn-body2  { border-top:1.5px solid #f0f4f8;padding:.85rem 1rem;display:none;
+             background:#fafbff;font-size:.8rem;color:#475569;line-height:1.8; }
+.sn-body2.open { display:block; }
+.sn-bm2   { padding:0;border:none;background:none;font-size:1rem;
+            cursor:pointer;color:#cbd5e1;transition:color .15s;flex-shrink:0; }
+.sn-bm2.saved { color:#f59e0b; }
+
+/* ── Sidebar ── */
+.cr-sidebar { background:#fff;border-left:1.5px solid #f0f4f8;
+              height:calc(100vh - 60px);overflow-y:auto;position:sticky;top:0;
+              display:flex;flex-direction:column; }
+@media(max-width:900px){ .cr-sidebar { height:auto;position:static;border-left:none;border-top:2px solid #f0f4f8; } }
+
+.cr-sb-head { padding:1.1rem 1.25rem;border-bottom:1.5px solid #f0f4f8;flex-shrink:0; }
+.cr-sb-title{ font-size:.82rem;font-weight:800;color:#0f172a;margin-bottom:.7rem;font-family:'SUSE',sans-serif; }
+.cr-prog-bar{ height:6px;background:#f0f4f8;border-radius:100px;overflow:hidden;margin-bottom:.35rem; }
+.cr-prog-fill{ height:100%;background:linear-gradient(90deg,#4f46e5,#7c3aed);
+               border-radius:100px;transition:width 1s cubic-bezier(.16,1,.3,1); }
+.cr-prog-lbl{ display:flex;justify-content:space-between;font-size:.67rem;
+              font-weight:700;color:#94a3b8; }
+
+.cr-sb-list { flex:1;overflow-y:auto;padding:.75rem; }
+
+/* Chapter accordion */
+.cr-ch     { border:1.5px solid #f0f4f8;border-radius:12px;margin-bottom:.6rem;overflow:hidden; }
+.cr-ch-head{ display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+             padding:.7rem .9rem;cursor:pointer;background:#f8fafc;
+             transition:background .15s; }
+.cr-ch-head:hover { background:#f1f5f9; }
+.cr-ch-name{ font-size:.78rem;font-weight:800;color:#0f172a;flex:1; }
+.cr-ch-meta{ font-size:.65rem;color:#94a3b8;font-weight:600;white-space:nowrap; }
+.cr-ch-ico { font-size:.7rem;color:#94a3b8;transition:transform .2s; }
+.cr-ch.open .cr-ch-ico { transform:rotate(180deg); }
+.cr-ch-body{ display:none;background:#fff; }
+.cr-ch.open .cr-ch-body { display:block; }
+
+/* Lesson row */
+.cr-lesson { display:flex;align-items:center;gap:.7rem;padding:.6rem .9rem;
+             cursor:pointer;transition:background .15s;border-bottom:1px solid #f8fafc; }
+.cr-lesson:last-child { border-bottom:none; }
+.cr-lesson:hover { background:#f8fafc; }
+.cr-lesson.active { background:#ede9fe; }
+.cr-lesson.locked { cursor:default;opacity:.5; }
+.cr-l-icon { width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
+             justify-content:center;font-size:.75rem;flex-shrink:0; }
+.cr-l-icon.done   { background:#dcfce7;color:#059669; }
+.cr-l-icon.active { background:#4f46e5;color:#fff; }
+.cr-l-icon.locked { background:#f1f5f9;color:#94a3b8; }
+.cr-l-icon.free   { background:#f0fdf4;color:#059669; }
+.cr-l-icon.idle   { background:#f1f5f9;color:#475569; }
+.cr-l-info { flex:1;min-width:0; }
+.cr-l-title{ font-size:.75rem;font-weight:700;color:#0f172a;
+             white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.cr-l-meta { font-size:.63rem;color:#94a3b8;margin-top:.1rem; }
+.cr-l-badge{ font-size:.6rem;font-weight:800;padding:.1rem .4rem;border-radius:100px;
+             background:#dcfce7;color:#166534;white-space:nowrap;flex-shrink:0; }
+
+/* Mark complete btn — inline in sidebar lesson */
+.cr-mark-btn { display:inline-flex;align-items:center;gap:.3rem;padding:.32rem .7rem;
+               border-radius:8px;border:none;cursor:pointer;font-size:.68rem;font-weight:700;
+               font-family:inherit;background:linear-gradient(135deg,#059669,#10b981);
+               color:#fff;box-shadow:0 2px 6px rgba(5,150,105,.25);transition:all .15s; }
+.cr-mark-btn:hover { filter:brightness(1.07); }
+.cr-mark-btn:disabled { opacity:.5;cursor:not-allowed; }
+.cr-l-actions { padding:.3rem .9rem .65rem 3.15rem;display:flex;gap:.4rem;flex-wrap:wrap; }
+
+/* Viewer label */
+.cr-viewer-label { background:#1e1b4b;padding:.5rem 1.25rem;
+                   display:flex;align-items:center;gap:.75rem;flex-wrap:wrap; }
+.cr-vl-title { font-size:.8rem;font-weight:700;color:#fff;flex:1;
+               white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.cr-vl-type  { font-size:.65rem;font-weight:800;padding:.2rem .6rem;border-radius:100px;
+               background:rgba(255,255,255,.12);color:rgba(255,255,255,.7); }
+
+/* Skeleton */
+.cr-skel { background:linear-gradient(90deg,#f0f4f8 25%,#e2e8f0 50%,#f0f4f8 75%);
+           background-size:200% 100%;animation:crShim 1.4s infinite;border-radius:8px; }
+@keyframes crShim { 0%{background-position:200%}100%{background-position:-200%} }
+
+/* Empty state */
+.cr-empty { text-align:center;padding:2.5rem 1rem;color:#94a3b8; }
+.cr-empty i { font-size:2.5rem;display:block;margin-bottom:.65rem; }
+.cr-empty-title { font-weight:700;color:#475569;font-size:.85rem;margin-bottom:.25rem; }
+
+/* Locked overlay */
+.cr-locked-overlay { position:absolute;inset:0;display:flex;flex-direction:column;
+                     align-items:center;justify-content:center;gap:.85rem;
+                     background:rgba(10,10,20,.85);backdrop-filter:blur(4px);color:#fff; }
+.cr-locked-overlay i { font-size:3rem;color:rgba(255,255,255,.5); }
+.cr-locked-overlay p { font-size:.85rem;font-weight:700;color:rgba(255,255,255,.8);margin:0; }
 </style>
-<div class="container mt-4">
-    <div class="row align-items-center">
-        <div class="col-12 col-md">
-            <h5>Courses Details</h5>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-3 mb-md-0">
-                    <li class="breadcrumb-item bi"><a href="../data_files/?view=3002">Dashboard</a></li>
-                    <li class="breadcrumb-item bi"><a href="../data_files/?view=3002">Courses</a></li>
-                    <li class="breadcrumb-item active bi" aria-current="page">Courses Details</li>
-                </ol>
-            </nav>
-        </div>
-        <div class="col-12 col-md-auto"></div>
+
+<div class="cr-wrap">
+
+<!-- ── Top bar ── -->
+<div class="cr-topbar">
+  <a href="?view=3002" class="cr-back"><i class="bi bi-arrow-left"></i>Dashboard</a>
+  <div class="cr-topbar-title">
+    <h1><?= htmlspecialchars($_course['title']) ?></h1>
+    <div class="cr-topbar-meta">
+      <?php if ($_iname): ?>
+      <span class="cr-chip"><i class="bi bi-person-fill"></i><?= $_iname ?></span>
+      <?php endif; ?>
+      <span class="cr-chip"><i class="bi bi-collection"></i><?= $_chapters ?> chapters</span>
+      <span class="cr-chip"><i class="bi bi-play-circle"></i><?= $_lessons ?> lessons</span>
+      <?php if ($_rating !== '—'): ?>
+      <span class="cr-chip"><span class="stars" style="color:#f59e0b">★</span><?= $_rating ?> (<?= $_reviews ?>)</span>
+      <?php endif; ?>
+      <?php if ($_price > 0): ?>
+      <span class="cr-chip" style="color:#86efac;border-color:rgba(134,239,172,.3)">
+        TZS <?= number_format($_final) ?>
+        <?php if ($_disc > 0): ?><s style="opacity:.5;font-size:.6rem">TZS <?= number_format($_price) ?></s><?php endif; ?>
+      </span>
+      <?php else: ?>
+      <span class="cr-chip" style="color:#86efac;border-color:rgba(134,239,172,.3)"><i class="bi bi-gift"></i>Free</span>
+      <?php endif; ?>
     </div>
-</div>
-<div class="container mt-4" id="main-content">
-    <div class="row">
-        <div class="col-12 col-md-8">
-            <div class="card adminuiux-card bg-theme-1-subtle mb-4">
-                <div class="card-body">
-                    <h4 class="mb-3 text-truncated"><?php echo $course['title']; ?></h4>
-                    <div class="row align-items-center">
-                        <div class="col-auto mb-3 mb-sm-0">
-                            <div class="avatar avatar-50 coverimg rounded"><img
-                                    src="<?php echo $instructor['image']; ?>" alt=""></div>
-                        </div>
-                        <div class="col-auto mb-3 mb-sm-0">
-                            <h6 class="mb-0">Instructor/Teacher: <?php echo $instructor['first_name'].' '.$instructor['last_name']; ?></h6>
-                            <p class="small text-secondary"><?php echo $instructor['course']; ?></p>
-                        </div>
-                        <!-- <div class="col-auto mb-3 mb-sm-0">
-                            <button class="btn btn-sm btn-outline-theme">View More</button>
-                        </div> -->
-                        <div class="col-12 col-sm-auto ms-auto mb-sm-0">
-                            <span class="badge badge-light text-bg-theme-1 theme-red ms-1 my-1"><i
-                                    class="bi bi-person me-1"></i> <?php echo $chapters_count; ?> Chapters </span><span
-                                class="badge badge-light text-bg-theme-1 theme-orange ms-1 my-1"><i
-                                    class="bi bi-eye me-1"></i> <?php echo $lessons_count; ?> Lessons </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <iframe id="videoPlayer" class="height-400 w-100 rounded mb-2 border-0" title="Digital Class video player"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
-            <div class="position-sticky z-index-1" style="top:5.0rem">
-                <div class="card adminuiux-card shadow-sm mb-4">
-                    <div class="card-body p-2 overflow-x-auto">
-                        <ul class="nav nav-pills adminuiux-nav-pills flex-nowrap" id="list-example">
-                            <li class="nav-item"><a class="nav-link active" aria-current="page" href="#description">
-                                    <div class="avatar avatar-28 icon"><i class="bi bi-journal-text fs-4"></i></div>
-                                    <div class="col text-truncated">
-                                        <p class="h6 mb-0">About Course</p>
-                                    </div>
-                                </a></li>
-                            <li class="nav-item d-none" id="snNavTab">
-                                <a class="nav-link" href="#studyNotesSection">
-                                    <div class="avatar avatar-28 icon"><i class="bi bi-journal-bookmark-fill fs-4"></i></div>
-                                    <div class="col text-truncated">
-                                        <p class="h6 mb-0">Study Notes <span class="badge text-bg-theme-1 ms-1" id="snBadgeCount">0</span></p>
-                                    </div>
-                                </a>
-                            </li>
-                            <li class="nav-item"><a class="nav-link" href="#discussion">
-                                    <div class="avatar avatar-28 icon"><i class="bi bi-chat-right-text fs-4"></i></div>
-                                    <div class="col text-truncated">
-                                        <p class="h6 mb-0">Discussion <span
-                                                class="badge text-bg-theme-1 ms-1">115</span></p>
-                                    </div>
-                                </a></li>
-                            <li class="nav-item"><a class="nav-link" href="#projectsnresources">
-                                    <div class="avatar avatar-28 icon"><i class="bi bi-folder2 fs-4"></i>
-                                    </div>
-                                    <div class="col text-truncated">
-                                        <p class="h6 mb-0">Resources</p>
-                                    </div>
-                                </a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            <div class="card adminuiux-card shadow-sm mb-4" id="description">
-                <div class="card-header">
-                    <h6>About Course</h6>
-                </div>
-                <div class="card-body">
-                    <p><?php echo $course['description']; ?></p>
-                </div>
-            </div>
-
-            <!-- ── Study Notes Section ─────────────────────────────────────── -->
-            <div id="studyNotesSection" class="d-none mb-4"></div>
-
-            <div class="card adminuiux-card shadow-sm mb-4" id="discussion">
-
-            </div>
-
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="card adminuiux-card shadow-sm mb-4" id="lesson_list_view">
-    
-            </div>
-            <div class="card adminuiux-card shadow-sm bg-theme-1 overflow-hidden position-relative mb-4">
-                <div class="position-absolute start-0 top-0 h-100 w-100 rounded overflow-hidden coverimg z-index-0">
-                    <img src="../assets/img/learning/bg-overlay-1.png" alt="">
-                </div>
-                <div class="card-header">
-                    <h4 class="fw-normal">Total <?php echo $lessons_count; ?> Lessons</h4>
-                </div>
-                <div class="card-body">
-                    <div class="row gx-2 align-items-center mb-2">
-                        <div class="col-auto">
-                            <p class="opacity-75"><i class="bi bi-clock me-1"></i></p>
-                        </div>
-                        <div class="col">
-                            <p>Total <?php echo $chapters_count; ?> Chapters</p>
-                        </div>
-                    </div>
-                    <div class="row gx-2 align-items-center mb-2">
-                        <div class="col-auto">
-                            <p class="opacity-75"><i class="bi bi-clipboard-check me-1"></i></p>
-                        </div>
-                        <div class="col">
-                            <p>4 Assignments</p>
-                        </div>
-                    </div>
-                    <div class="row gx-2 align-items-center mb-2">
-                        <div class="col-auto">
-                            <p class="opacity-75"><i class="bi bi-bar-chart me-1"></i></p>
-                        </div>
-                    </div><br>
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h4><?php echo number_format($course['price']); ?><small class="opacity-50 fw-normal">/Course</small></h4>
-                        </div>
-                        <div class="col-auto">
-                            <button disabled class="btn btn-light">You Enrolled.</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-          
-        </div>
-    </div>
-
+  </div>
 </div>
 
-<style>
-/* Gradient theme */
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #4e73df, #1cc88a);
-}
+<!-- ── Layout ── -->
+<div class="cr-layout">
 
-/* Hover effect */
-.card-header button:hover {
-    opacity: 0.9;
-}
+  <!-- ══ MAIN ══ -->
+  <div class="cr-main">
 
-/* Smooth icon rotation */
-.transition-icon {
-    transition: transform 0.3s ease;
-}
+    <!-- Content viewer -->
+    <div class="cr-viewer">
+      <div class="cr-viewer-inner" id="crViewerInner">
+        <div class="cr-no-content">
+          <i class="bi bi-collection-play"></i>
+          <p>Select a lesson to begin</p>
+        </div>
+      </div>
+      <div class="cr-viewer-label" id="crViewerLabel" style="display:none">
+        <span class="cr-vl-title" id="crViewerTitle"></span>
+        <span class="cr-vl-type"  id="crViewerType"></span>
+      </div>
+    </div>
 
-/* Rotate icon when open */
-button[aria-expanded="true"] .transition-icon {
-    transform: rotate(180deg);
-}
-</style>
+    <!-- Tabs -->
+    <div class="cr-tabs-wrap">
+      <div class="cr-tabs" role="tablist">
+        <button class="cr-tab active" id="crTabAbout"   onclick="crTab('about')"><i class="bi bi-journal-text"></i>About</button>
+        <button class="cr-tab" id="crTabNotes"   onclick="crTab('notes')">
+          <i class="bi bi-journal-bookmark-fill"></i>Study Notes
+          <span class="cr-tab-badge" id="crNotesBadge" style="display:none">0</span>
+        </button>
+        <button class="cr-tab" id="crTabDiscuss" onclick="crTab('discuss')">
+          <i class="bi bi-chat-right-text"></i>Discussion
+          <span class="cr-tab-badge" id="crDiscussBadge">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Panels -->
+    <div class="cr-panels">
+
+      <!-- About -->
+      <div class="cr-panel active" id="crPanelAbout">
+        <?php if ($_iname || $_iimg): ?>
+        <div class="cr-about-header">
+          <?php if ($_iimg): ?>
+          <img src="<?= htmlspecialchars($_iimg) ?>" class="cr-instr-avatar" alt="" onerror="this.outerHTML='<div class=\'cr-instr-avatar\'><i class=\'bi bi-person-fill\'></i></div>'">
+          <?php else: ?>
+          <div class="cr-instr-avatar"><i class="bi bi-person-fill"></i></div>
+          <?php endif; ?>
+          <div>
+            <div class="cr-instr-name"><?= $_iname ?></div>
+            <div class="cr-instr-sub"><?= htmlspecialchars($_instructor['course'] ?? 'Instructor') ?></div>
+          </div>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!empty($_course['description'])): ?>
+        <div class="cr-desc-box"><?= nl2br(htmlspecialchars($_course['description'])) ?></div>
+        <?php else: ?>
+        <div class="cr-desc-box" style="color:#94a3b8;font-style:italic">No description provided for this course.</div>
+        <?php endif; ?>
+
+        <div class="cr-stat-pills">
+          <span class="cr-stat-pill"><i class="bi bi-collection" style="color:#4f46e5"></i><?= $_chapters ?> Chapters</span>
+          <span class="cr-stat-pill"><i class="bi bi-play-circle" style="color:#059669"></i><?= $_lessons ?> Lessons</span>
+          <span class="cr-stat-pill"><i class="bi bi-people" style="color:#0ea5e9"></i><?= $_enrolled ?> Enrolled</span>
+          <?php if ($_rating !== '—'): ?>
+          <span class="cr-stat-pill"><span style="color:#f59e0b">★</span><?= $_rating ?> Rating</span>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <!-- Study Notes -->
+      <div class="cr-panel" id="crPanelNotes">
+        <div id="crNotesContent">
+          <div class="cr-empty">
+            <i class="bi bi-journal-x"></i>
+            <div class="cr-empty-title">No notes yet</div>
+            <div style="font-size:.78rem">Select a lesson to view its study notes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Discussion -->
+      <div class="cr-panel" id="crPanelDiscuss">
+        <div class="cr-discuss-form">
+          <h6><i class="bi bi-chat-right-text me-2" style="color:#4f46e5"></i>Ask a Question</h6>
+          <input  type="text" id="crQTitle" class="cr-inp" placeholder="Question title…" autocomplete="off">
+          <textarea id="crQDesc" class="cr-inp" rows="3" placeholder="Describe your question (optional)…"></textarea>
+          <button class="cr-btn cr-btn-primary cr-btn-sm" onclick="crPostQuestion()">
+            <i class="bi bi-send-fill"></i>Post Question
+          </button>
+        </div>
+        <div id="crDiscussList">
+          <div class="cr-skel" style="height:60px;margin-bottom:.5rem"></div>
+          <div class="cr-skel" style="height:60px;margin-bottom:.5rem"></div>
+        </div>
+      </div>
+
+    </div><!-- /.cr-panels -->
+  </div><!-- /.cr-main -->
+
+  <!-- ══ SIDEBAR ══ -->
+  <div class="cr-sidebar">
+    <div class="cr-sb-head">
+      <div class="cr-sb-title">Course Content</div>
+      <div class="cr-prog-bar"><div class="cr-prog-fill" id="crProgFill" style="width:0%"></div></div>
+      <div class="cr-prog-lbl">
+        <span id="crProgTxt">0% complete</span>
+        <span id="crProgFrac">0 / <?= $_lessons ?></span>
+      </div>
+    </div>
+    <div class="cr-sb-list" id="crSbList">
+      <?php for ($i=0;$i<3;$i++): ?>
+      <div class="cr-skel" style="height:44px;margin-bottom:.5rem;border-radius:12px"></div>
+      <?php endfor; ?>
+    </div>
+  </div>
+
+</div><!-- /.cr-layout -->
+</div><!-- /.cr-wrap -->
 
 <script>
+/* ════════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════════ */
+const CR_COURSE_ID = <?= $_cid ?>;
+let crCurrentLesson = null;   // {id, title, file_path, content_type, storage, video_id}
+let crCompleted     = new Set();
+let crIsPaid        = false;
+let crAllLessons    = [];
+let crSnNotes       = [];
+let crSnTab         = 'all';
+let crSnSearch      = '';
+let crDiscussions   = [];
 
-    document.addEventListener("DOMContentLoaded", function(){
-    loadLessons();
-    loadDiscussions();
-});
-
- let currentLessonId = null;
-
-function playLesson(path, lessonId){
-    if(currentLessonId === lessonId){
-        currentLessonId = null;
-        loadStudyNotes(null);
-    } else {
-        currentLessonId = lessonId;
-        loadStudyNotes(lessonId);
-    }
-
-    const player = document.getElementById("videoPlayer");
-    if(player && path){
-        player.src = path;
-    }
-
-    loadLessons();
+/* ════════════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════════ */
+function _crInit() {
+  crLoadSidebar();
+  crLoadDiscussions();
 }
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _crInit);
+} else { _crInit(); }
 
+/* ════════════════════════════════════════════════════════════
+   TABS
+════════════════════════════════════════════════════════════ */
+function crTab(name) {
+  ['about','notes','discuss'].forEach(t => {
+    document.getElementById('crTab'    + cap(t) + (t==='discuss'?'uss':''))?.classList.toggle('active', t === name);
+    document.getElementById('crPanel' + cap(t) + (t==='discuss'?'uss':''))?.classList.toggle('active', t === name);
+  });
+  // simpler approach:
+  document.querySelectorAll('.cr-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.cr-panel').forEach(p => p.classList.remove('active'));
+  const tabMap = {about:'crTabAbout',notes:'crTabNotes',discuss:'crTabDiscuss'};
+  const panMap = {about:'crPanelAbout',notes:'crPanelNotes',discuss:'crPanelDiscuss'};
+  document.getElementById(tabMap[name])?.classList.add('active');
+  document.getElementById(panMap[name])?.classList.add('active');
+}
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-// ✅ GLOBAL STATE
-let completedLessons = []; // from backend
-
-function loadLessons(){
-
-    const params = new URLSearchParams(window.location.search);
-    const course_id = params.get("course_id");
-
-    if(!course_id){
-        document.getElementById("lesson_list_view").innerHTML = "No course selected";
-        return;
-    }
-
-    fetch("ajax/ajax_fetch_lessons_paid.php?course_id=" + course_id)
-    .then(res => res.json())
+/* ════════════════════════════════════════════════════════════
+   SIDEBAR LESSON LIST
+════════════════════════════════════════════════════════════ */
+function crLoadSidebar() {
+  fetch(`ajax/ajax_fetch_lessons_paid.php?course_id=${CR_COURSE_ID}`)
+    .then(r => r.json())
     .then(res => {
+      crIsPaid = !!res.is_paid;
+      crCompleted = new Set((res.completed_lessons || []).map(Number));
+      const chapters = res.data || [];
 
-        if(res.status !== "success"){
-            document.getElementById("lesson_list_view").innerHTML = "No lessons found";
-            return;
+      crAllLessons = [];
+      chapters.forEach(ch => ch.lessons.forEach(l => crAllLessons.push(l)));
+
+      crUpdateProgress();
+      crRenderSidebar(chapters);
+
+      // Auto-play first available lesson
+      let first = null;
+      for (const ch of chapters) {
+        for (const l of ch.lessons) {
+          if (crIsPaid || parseInt(l.isFreePreviewLesson) === 1) {
+            first = l; break;
+          }
         }
-
-        const isPaid = res.is_paid;
-        completedLessons = res.completed_lessons || [];
-
-        let html = "";
-        let lessonCounter = 1;
-        let totalLessons = 0;
-        let completedCount = 0;
-
-        let firstPlayableLesson = null;
-
-        html += `<div class="accordion" id="lessonAccordion">`;
-
-        res.data.forEach((chapter, index) => {
-
-            let chapterId = "chapter_" + index;
-
-            // ✅ FIND FIRST PLAYABLE LESSON
-            chapter.lessons.forEach(lesson => {
-
-                let isFree = lesson.isFreePreviewLesson == 1;
-                let canPlay = isPaid || isFree;
-
-                if(!currentLessonId && canPlay){
-                    currentLessonId = lesson.id;
-                    firstPlayableLesson = lesson;
-                }
-            });
-
-            let isChapterActive = chapter.lessons.some(l => l.id == currentLessonId);
-
-            html += `
-            <div class="card mb-2">
-
-                <!-- HEADER -->
-                <div class="card-header p-2">
-                    <button class="btn w-100 text-start d-flex justify-content-between"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#collapse_${chapterId}">
-                        <span>Chapter ${index+1}: ${chapter.chapter_title}</span>
-                        <i class="bi ${isChapterActive ? 'bi-chevron-up' : 'bi-chevron-down'}"></i>
-                    </button>
-                </div>
-
-                <!-- BODY -->
-                <div id="collapse_${chapterId}" 
-                     class="collapse ${isChapterActive ? 'show' : ''}"
-                     data-bs-parent="#lessonAccordion">
-
-                    <div class="card-body pb-0">
-            `;
-
-            chapter.lessons.forEach(lesson => {
-
-                totalLessons++;
-
-                let isFree = lesson.isFreePreviewLesson == 1;
-                let canPlay = isPaid || isFree;
-                let isActive = currentLessonId == lesson.id;
-                let isCompleted = completedLessons.includes(parseInt(lesson.id));
-
-                if(isCompleted) completedCount++;
-
-                html += `
-                <div class="row">
-                    <div class="col-auto mb-3">
-                        <div class="avatar avatar-40 rounded 
-                            ${isCompleted 
-                                ? 'bg-success text-white' 
-                                : (isActive ? 'bg-theme-1 text-white' : 'border')}">
-                            <h6>${String(lessonCounter).padStart(2,'0')}</h6>
-                        </div>
-                    </div>
-
-                    <div class="col mb-3">
-                        <div class="card 
-                            ${isActive ? 'bg-theme-1 text-white shadow-lg' : ''}">
-
-                            <div class="card-body">
-
-                                <!-- TITLE -->
-                                <div class="row mb-2">
-                                    <div class="col">
-                                        <h6>${lesson.lesson_title}</h6>
-                                        <p class="small ${isActive ? 'opacity-75' : 'text-muted'}">
-                                            ${lesson.description || ''}
-                                        </p>
-                                    </div>
-
-                                    <!-- PLAY BUTTON -->
-                                    <div class="col-auto">
-                                        ${
-                                            canPlay
-                                            ? `
-                                            <div onclick="playLesson('${lesson.file_path}', ${lesson.id})"
-                                                class="btn btn-square rounded-circle 
-                                                ${isActive ? 'btn-outline-light' : 'btn-outline-theme'}">
-                                                <i class="bi ${isActive ? 'bi-pause' : 'bi-play'}"></i>
-                                            </div>`
-                                            : `
-                                            <div class="btn btn-square rounded-circle btn-link theme-red">
-                                                <i class="bi bi-lock"></i>
-                                            </div>`
-                                        }
-                                    </div>
-                                </div>
-
-                                <!-- ACTION -->
-                                <div class="row mt-2">
-                                    <div class="col">
-                                        ${
-                                            isCompleted
-                                            ? `<span class="badge bg-success">Completed</span>`
-                                            : (canPlay
-                                                ? `<button onclick="markCompleted(${lesson.id})"
-                                                    class="btn btn-sm btn-outline-success">
-                                                    Mark Complete
-                                                   </button>`
-                                                : ''
-                                              )
-                                        }
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                `;
-
-                lessonCounter++;
-            });
-
-            html += `</div></div></div>`;
-        });
-
-        html += `</div>`;
-
-        // ✅ AUTO LOAD FIRST VIDEO + STUDY NOTES
-        if(firstPlayableLesson){
-            const player = document.getElementById("videoPlayer");
-            if(player && firstPlayableLesson.file_path){
-                player.src = firstPlayableLesson.file_path;
-            }
-            loadStudyNotes(firstPlayableLesson.id);
-        }
-
-        // ✅ PROGRESS CALCULATION
-        let percent = totalLessons > 0 
-            ? Math.round((completedCount / totalLessons) * 100)
-            : 0;
-
-        html = `
-        <div class="mb-3 px-3">
-            <div class="d-flex justify-content-between mb-1">
-                <small>Course Progress</small>
-                <small class="fw-bold text-success">${percent}%</small>
-            </div>
-
-            <div class="progress" style="height:10px;">
-                <div class="progress-bar bg-success"
-                     style="width:${percent}%"></div>
-            </div>
-        </div>
-        ` + html;
-
-        document.getElementById("lesson_list_view").innerHTML = html;
-
+        if (first) break;
+      }
+      if (first) crPlayLesson(first);
     })
-    .catch(err => {
-        console.error(err);
-        document.getElementById("lesson_list_view").innerHTML = "Error loading lessons";
+    .catch(() => {
+      document.getElementById('crSbList').innerHTML =
+        '<div class="cr-empty"><i class="bi bi-exclamation-circle"></i><div class="cr-empty-title">Could not load lessons</div></div>';
     });
 }
 
-function markCompleted(lesson_id){
-
-    fetch("ajax/ajax_mark_complete.php", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ lesson_id: lesson_id })
-    })
-    .then(res => res.json())
-    .then(res => {
-
-        if(res.status === "success"){
-            
-            Swal.fire("Success", res.message, "success")
-            .then(()=>{
-                loadLessons(); // refresh UI
-            });
-        }else{
-            alert(res.message);
-        }
-
-    })
-    .catch(err => {
-        console.error(err);
-    });
+function crUpdateProgress() {
+  const total = crAllLessons.length;
+  const done  = crCompleted.size;
+  const pct   = total > 0 ? Math.round(done / total * 100) : 0;
+  document.getElementById('crProgFill').style.width = pct + '%';
+  document.getElementById('crProgTxt').textContent  = pct + '% complete';
+  document.getElementById('crProgFrac').textContent = done + ' / ' + total;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// STUDY NOTES
-// ══════════════════════════════════════════════════════════════════════════════
-let snNotes   = [];
-let snTab     = 'all';
-let snSearch  = '';
+function crRenderSidebar(chapters) {
+  const list = document.getElementById('crSbList');
+  if (!chapters.length) {
+    list.innerHTML = '<div class="cr-empty"><i class="bi bi-collection"></i><div class="cr-empty-title">No lessons yet</div></div>';
+    return;
+  }
 
-async function loadStudyNotes(lessonId) {
-    const section = document.getElementById('studyNotesSection');
-    const navTab  = document.getElementById('snNavTab');
+  let num = 0;
+  list.innerHTML = chapters.map((ch, ci) => {
+    const isOpen = ci === 0 || ch.lessons.some(l => crCurrentLesson && l.id == crCurrentLesson.id);
+    const chDone = ch.lessons.filter(l => crCompleted.has(parseInt(l.id))).length;
+    const lessons = ch.lessons.map(l => {
+      num++;
+      const isFree   = parseInt(l.isFreePreviewLesson) === 1;
+      const canPlay  = crIsPaid || isFree;
+      const isDone   = crCompleted.has(parseInt(l.id));
+      const isActive = crCurrentLesson && l.id == crCurrentLesson.id;
+      const ct       = (l.content_type || 'video').toLowerCase();
+      const ctIcon   = ct === 'pdf' ? 'bi-file-earmark-pdf' : ct === 'audio' ? 'bi-music-note-beamed' : 'bi-play-circle-fill';
+      let iconCls = 'idle', iconI = ctIcon;
+      if (!canPlay)    { iconCls = 'locked'; iconI = 'bi-lock-fill'; }
+      else if (isDone) { iconCls = 'done';   iconI = 'bi-check2'; }
+      else if (isActive){ iconCls = 'active'; }
+      else if (isFree && !crIsPaid) { iconCls = 'free'; }
 
-    if (!lessonId) {
-        section.classList.add('d-none');
-        section.innerHTML = '';
-        navTab.classList.add('d-none');
-        return;
-    }
+      const dur = l.video_duration ? `<span>${l.video_duration}</span>` : '';
+      const freeTag = isFree && !crIsPaid ? '<span class="cr-l-badge">Free</span>' : '';
+      const lJson   = JSON.stringify(l).replace(/"/g, '&quot;');
+      const markBtn = canPlay && !isDone
+        ? `<div class="cr-l-actions" id="crMkWrap_${l.id}">
+             <button class="cr-mark-btn" id="crMkBtn_${l.id}" data-lid="${l.id}" onclick="crMarkComplete(${l.id})">
+               <i class="bi bi-check2-circle"></i> Mark Complete
+             </button>
+           </div>` : '';
 
-    const res = await fetch(`ajax/ajax_study_notes.php?action=list&lesson_id=${lessonId}`).then(r => r.json());
-    snNotes = res.data || [];
-
-    if (!snNotes.length) {
-        section.classList.add('d-none');
-        navTab.classList.add('d-none');
-        return;
-    }
-
-    // Show tab + badge
-    document.getElementById('snBadgeCount').textContent = snNotes.length;
-    navTab.classList.remove('d-none');
-
-    section.classList.remove('d-none');
-    section.innerHTML = snBuildShell();
-    snUpdateCounts();
-    snRender();
-}
-
-function snBuildShell() {
-    return `
-    <div class="card adminuiux-card shadow-sm overflow-hidden">
-        <!-- Header -->
-        <div class="card-header py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div>
-                <h6 class="fw-semibold mb-0">
-                    <i class="bi bi-journal-bookmark-fill text-primary me-2"></i>Study Notes
-                </h6>
-                <p class="small text-muted mb-0 mt-1">Click any question to expand the answer</p>
-            </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-secondary" onclick="snExpandAll()">
-                    <i class="bi bi-arrows-expand me-1"></i>Expand All
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" onclick="snCollapseAll()">
-                    <i class="bi bi-arrows-collapse me-1"></i>Collapse All
-                </button>
-            </div>
+      return `<div class="cr-lesson${isActive?' active':''}${!canPlay?' locked':''}" id="crL_${l.id}"
+                   onclick="${canPlay ? `crPlayLesson('${lJson}')` : ''}">
+        <div class="cr-l-icon ${iconCls}"><i class="bi ${iconI}"></i></div>
+        <div class="cr-l-info">
+          <div class="cr-l-title">${crEsc(l.lesson_title)}</div>
+          <div class="cr-l-meta">${ct.toUpperCase()} ${dur}</div>
         </div>
-
-        <!-- Toolbar -->
-        <div class="card-body py-2 border-bottom bg-light bg-opacity-50">
-            <div class="d-flex flex-wrap gap-2 align-items-center">
-                <div class="input-group sn-search flex-grow-1" style="max-width:300px">
-                    <span class="input-group-text"><i class="bi bi-search text-muted small"></i></span>
-                    <input id="snSearchInput" type="text" class="form-control form-control-sm"
-                           placeholder="Search notes…" oninput="snFilterInput(this.value)">
-                </div>
-                <div class="btn-group btn-group-sm ms-auto" role="group">
-                    <button id="snBtnAll"      class="btn btn-primary"        onclick="snSetTab('all')">
-                        All <span class="badge bg-white text-primary ms-1" id="snCntAll">0</span>
-                    </button>
-                    <button id="snBtnBookmarked" class="btn btn-outline-primary" onclick="snSetTab('bookmarked')">
-                        <i class="bi bi-bookmark-fill me-1"></i>Saved
-                        <span class="badge ms-1" id="snCntBookmarked">0</span>
-                    </button>
-                    <button id="snBtnImportant"  class="btn btn-outline-warning" onclick="snSetTab('important')">
-                        <i class="bi bi-star-fill me-1"></i>Key
-                        <span class="badge ms-1" id="snCntImportant">0</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Notes list -->
-        <div class="card-body pt-3" id="snNotesList"></div>
-
-        <!-- Empty state -->
-        <div id="snEmpty" class="text-center py-5 d-none px-3">
-            <i class="bi bi-journal-x fs-2 text-muted opacity-50 d-block mb-2"></i>
-            <p class="text-muted small mb-0" id="snEmptyMsg">No notes match your search.</p>
-        </div>
-    </div>`;
-}
-
-function snUpdateCounts() {
-    document.getElementById('snCntAll').textContent       = snNotes.length;
-    document.getElementById('snCntBookmarked').textContent = snNotes.filter(n => n.bookmarked == 1).length;
-    document.getElementById('snCntImportant').textContent  = snNotes.filter(n => n.is_important == 1).length;
-}
-
-function snFilterInput(val) {
-    snSearch = val.trim().toLowerCase();
-    snRender();
-}
-
-function snSetTab(tab) {
-    snTab = tab;
-    const map = {
-        all:        ['snBtnAll',       'btn-primary',        'btn-outline-primary'],
-        bookmarked: ['snBtnBookmarked','btn-primary',        'btn-outline-primary'],
-        important:  ['snBtnImportant', 'btn-warning text-dark','btn-outline-warning'],
-    };
-    document.getElementById('snBtnAll').className        = 'btn btn-sm ' + (tab==='all'        ? 'btn-primary'         : 'btn-outline-primary');
-    document.getElementById('snBtnBookmarked').className = 'btn btn-sm ' + (tab==='bookmarked' ? 'btn-primary'         : 'btn-outline-primary');
-    document.getElementById('snBtnImportant').className  = 'btn btn-sm ' + (tab==='important'  ? 'btn-warning text-dark' : 'btn-outline-warning');
-    snRender();
-}
-
-function snRender() {
-    const list  = document.getElementById('snNotesList');
-    const empty = document.getElementById('snEmpty');
-    const msg   = document.getElementById('snEmptyMsg');
-    if (!list) return;
-
-    let filtered = snNotes.filter(n => {
-        if (snTab === 'bookmarked' && !n.bookmarked)   return false;
-        if (snTab === 'important'  && !n.is_important) return false;
-        if (snSearch) return (n.question + ' ' + n.answer).toLowerCase().includes(snSearch);
-        return true;
-    });
-
-    if (!filtered.length) {
-        list.innerHTML = '';
-        empty.classList.remove('d-none');
-        msg.textContent = snSearch ? 'No notes match your search.' :
-                          snTab === 'bookmarked' ? 'No saved notes yet.' : 'No key notes in this lesson.';
-        return;
-    }
-    empty.classList.add('d-none');
-
-    list.innerHTML = filtered.map((n, i) => {
-        const q = snHl(n.question);
-        const a = snHl(n.answer);
-        return `
-        <div class="sn-card mb-3 border shadow-sm ${n.is_important ? 'important' : ''}" data-id="${n.id}">
-            <div class="sn-header d-flex align-items-start gap-3 p-3" onclick="snToggle(this.closest('.sn-card'))">
-                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1 rounded-2 flex-shrink-0 mt-1">${i+1}</span>
-                <div class="flex-grow-1 min-w-0">
-                    ${n.is_important
-                        ? `<span class="badge bg-warning text-dark me-2 mb-1">
-                               <i class="bi bi-star-fill me-1"></i>Key Point
-                           </span>`
-                        : ''}
-                    <span class="badge bg-secondary bg-opacity-10 text-secondary me-1 mb-1 small">${n.language}</span>
-                    <p class="fw-semibold mb-0 lh-sm mt-1">${q}</p>
-                </div>
-                <div class="d-flex align-items-center gap-2 flex-shrink-0 pt-1">
-                    <button class="sn-bm-btn ${n.bookmarked ? 'saved' : ''}"
-                            title="${n.bookmarked ? 'Remove bookmark' : 'Save note'}"
-                            onclick="snBookmark(event, ${n.id}, this)">
-                        <i class="bi ${n.bookmarked ? 'bi-bookmark-fill' : 'bi-bookmark'} fs-5"></i>
-                    </button>
-                    <i class="bi bi-chevron-down sn-chevron text-muted"></i>
-                </div>
-            </div>
-            <div class="sn-answer px-4 pb-4 pt-3">
-                <div class="d-flex gap-2 mb-2">
-                    <i class="bi bi-lightbulb-fill text-primary mt-1 flex-shrink-0"></i>
-                    <div class="text-secondary small">${a}</div>
-                </div>
-            </div>
-        </div>`;
+        ${freeTag}
+      </div>${markBtn}`;
     }).join('');
+
+    return `<div class="cr-ch${isOpen?' open':''}" id="crCh_${ci}">
+      <div class="cr-ch-head" onclick="crToggleCh(${ci})">
+        <span class="cr-ch-name">${crEsc(ch.chapter_title)}</span>
+        <span class="cr-ch-meta">${chDone}/${ch.lessons.length}</span>
+        <i class="bi bi-chevron-down cr-ch-ico"></i>
+      </div>
+      <div class="cr-ch-body">${lessons}</div>
+    </div>`;
+  }).join('');
 }
 
-function snToggle(card) {
-    const answer = card.querySelector('.sn-answer');
-    const isOpen = card.classList.contains('open');
-    card.classList.toggle('open', !isOpen);
-    if (!isOpen) {
-        answer.style.display = 'block';
-        $(answer).hide().slideDown(200);
+function crToggleCh(ci) {
+  const el = document.getElementById('crCh_' + ci);
+  if (el) el.classList.toggle('open');
+}
+
+/* ════════════════════════════════════════════════════════════
+   VIDEO URL RESOLVER
+════════════════════════════════════════════════════════════ */
+function crResolveEmbed(lesson) {
+  const ct      = (lesson.content_type || 'video').toLowerCase();
+  const storage = (lesson.storage || 'upload').toLowerCase();
+  const fp      = (lesson.file_path || '').trim();
+
+  // PDF
+  if (ct === 'pdf') {
+    return { type:'pdf', src: fp };
+  }
+
+  // Audio
+  if (ct === 'audio') {
+    return { type:'audio', src: encodeURI(fp), thumb: lesson.lesson_thumbnail || '' };
+  }
+
+  // BunnyCDN stream: video_id + library_id (from DB)
+  if (lesson.video_id && lesson.library_id) {
+    return { type:'iframe', src:`https://iframe.mediadelivery.net/embed/${lesson.library_id}/${lesson.video_id}?autoplay=true&preload=true` };
+  }
+
+  // file_path contains a BunnyCDN player URL → convert to embed
+  // e.g. https://player.mediadelivery.net/play/637820/8ad51273-...
+  if (fp.includes('player.mediadelivery.net/play/')) {
+    const m = fp.match(/player\.mediadelivery\.net\/play\/(\d+)\/([a-f0-9-]+)/i);
+    if (m) return { type:'iframe', src:`https://iframe.mediadelivery.net/embed/${m[1]}/${m[2]}?autoplay=true&preload=true` };
+  }
+
+  // Already a BunnyCDN iframe embed URL
+  if (fp.includes('iframe.mediadelivery.net/embed/')) {
+    return { type:'iframe', src: fp.includes('autoplay') ? fp : fp + (fp.includes('?') ? '&' : '?') + 'autoplay=true' };
+  }
+
+  // YouTube embed URL (already /embed/)
+  if (fp.includes('youtube.com/embed/') || fp.includes('youtu.be/')) {
+    const src = fp.includes('youtube.com/embed/')
+      ? (fp.includes('autoplay') ? fp : fp + (fp.includes('?') ? '&' : '?') + 'autoplay=1')
+      : `https://www.youtube.com/embed/${fp.split('youtu.be/')[1]}?autoplay=1`;
+    return { type:'iframe', src };
+  }
+
+  // YouTube watch URL → convert to embed
+  if (fp.includes('youtube.com/watch')) {
+    try {
+      const u = new URL(fp);
+      const v = u.searchParams.get('v');
+      if (v) return { type:'iframe', src:`https://www.youtube.com/embed/${v}?autoplay=1` };
+    } catch(e) {}
+  }
+
+  // Vimeo
+  if (fp.includes('vimeo.com/')) {
+    const vid = fp.split('vimeo.com/').pop().split('?')[0].split('/')[0];
+    return { type:'iframe', src:`https://player.vimeo.com/video/${vid}?autoplay=1` };
+  }
+
+  // storage flag overrides
+  if (storage === 'youtube') {
+    const v = lesson.video_id || fp;
+    return { type:'iframe', src:`https://www.youtube.com/embed/${v}?autoplay=1` };
+  }
+  if (storage === 'vimeo') {
+    return { type:'iframe', src:`https://player.vimeo.com/video/${lesson.video_id}?autoplay=1` };
+  }
+
+  // Direct file (mp4, webm, etc.)
+  if (fp) return { type:'video', src: encodeURI(fp) };
+
+  return null;
+}
+
+/* ════════════════════════════════════════════════════════════
+   LESSON PLAYER
+════════════════════════════════════════════════════════════ */
+function crPlayLesson(lesson) {
+  if (typeof lesson === 'string') lesson = JSON.parse(lesson);
+  crCurrentLesson = lesson;
+
+  const inner = document.getElementById('crViewerInner');
+  const label = document.getElementById('crViewerLabel');
+  const ct    = (lesson.content_type || 'video').toLowerCase();
+
+  const embed = crResolveEmbed(lesson);
+  let viewerHtml = '';
+
+  if (!embed) {
+    viewerHtml = `<div class="cr-no-content"><i class="bi bi-exclamation-circle"></i><p>No content available for this lesson</p></div>`;
+  } else if (embed.type === 'pdf') {
+    viewerHtml = `<iframe src="${crEsc(embed.src)}" style="width:100%;height:100%;border:0;background:#fff" title="${crEsc(lesson.lesson_title)}"></iframe>`;
+  } else if (embed.type === 'audio') {
+    const thumb = embed.thumb ? `uploads/lessons/${embed.thumb.split('/').pop()}` : '';
+    if (thumb) {
+      viewerHtml = `
+        <div style="position:relative;width:100%;height:100%;background:#0a0a0a;overflow:hidden">
+          <img src="${crEsc(thumb)}" alt="Audio cover"
+               style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55"
+               onerror="this.style.display='none'">
+          <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.2) 60%,transparent 100%)"></div>
+          <div style="position:absolute;bottom:0;left:0;right:0;padding:1.25rem 1.5rem">
+            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem">
+              <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="bi bi-music-note-beamed" style="color:#fff;font-size:.9rem"></i>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:.78rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${crEsc(lesson.lesson_title||'')}</div>
+                <div style="font-size:.65rem;color:rgba(255,255,255,.55)">Audio Lesson</div>
+              </div>
+            </div>
+            <audio controls autoplay src="${crEsc(embed.src)}"
+                   style="width:100%;border-radius:10px;height:40px;accent-color:#4f46e5"
+                   onerror="this.parentElement.insertAdjacentHTML('beforeend','<p style=color:rgba(255,255,255,.5);font-size:.75rem;margin-top:.4rem>Could not load audio</p>')">
+            </audio>
+          </div>
+        </div>`;
     } else {
-        $(answer).slideUp(180, () => { answer.style.display = 'none'; });
-    }
+      viewerHtml = `
+        <div style="position:relative;width:100%;height:100%;background:linear-gradient(135deg,#1e1b4b,#312e81);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem">
+          <div style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.15)">
+            <i class="bi bi-music-note-beamed" style="font-size:2rem;color:rgba(255,255,255,.7)"></i>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.25rem">${crEsc(lesson.lesson_title||'')}</div>
+            <div style="font-size:.72rem;color:rgba(255,255,255,.5)">Audio Lesson</div>
+          </div>
+          <audio controls autoplay src="${crEsc(embed.src)}"
+                 style="width:min(340px,90%);border-radius:10px;accent-color:#4f46e5">
+          </audio>
+        </div>`;}
+  } else if (embed.type === 'iframe') {
+    viewerHtml = `<iframe src="${crEsc(embed.src)}" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture;fullscreen" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
+  } else if (embed.type === 'video') {
+    viewerHtml = `<video controls autoplay src="${crEsc(embed.src)}" style="width:100%;height:100%;background:#000"></video>`;
+  }
+
+  inner.innerHTML = viewerHtml;
+
+  // Label bar
+  const ctLabel = { pdf:'PDF Document', audio:'Audio', video:'Video' }[ct] || 'Video';
+  document.getElementById('crViewerTitle').textContent = lesson.lesson_title || '';
+  document.getElementById('crViewerType').textContent  = ctLabel;
+  label.style.display = 'flex';
+
+  // Highlight active lesson + refresh mark-complete buttons in sidebar
+  document.querySelectorAll('.cr-lesson').forEach(el => el.classList.remove('active'));
+  const lessonEl = document.getElementById('crL_' + lesson.id);
+  if (lessonEl) {
+    lessonEl.classList.add('active');
+    lessonEl.scrollIntoView({block:'nearest'});
+  }
+  crRefreshMarkBtns();
+
+  // Load study notes
+  crLoadStudyNotes(lesson.id);
 }
 
-function snExpandAll() {
-    document.querySelectorAll('.sn-card:not(.open)').forEach(c => {
-        c.classList.add('open');
-        const a = c.querySelector('.sn-answer');
-        a.style.display = 'block';
-        $(a).hide().slideDown(200);
-    });
-}
+/* ════════════════════════════════════════════════════════════
+   MARK COMPLETE
+════════════════════════════════════════════════════════════ */
+function crMarkComplete(lessonId) {
+  const id  = lessonId || (crCurrentLesson && crCurrentLesson.id);
+  if (!id) return;
+  const btn = document.getElementById('crMkBtn_' + id);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving…'; }
 
-function snCollapseAll() {
-    document.querySelectorAll('.sn-card.open').forEach(c => {
-        c.classList.remove('open');
-        const a = c.querySelector('.sn-answer');
-        $(a).slideUp(180, () => { a.style.display = 'none'; });
-    });
-}
-
-async function snBookmark(e, noteId, btn) {
-    e.stopPropagation();
-    const res = await fetch('ajax/ajax_study_notes.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ action: 'toggle_bookmark', note_id: noteId })
-    }).then(r => r.json());
-
+  fetch('ajax/ajax_mark_complete.php', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({lesson_id: id})
+  }).then(r => r.json()).then(res => {
     if (res.status === 'success') {
-        const note = snNotes.find(n => n.id == noteId);
-        if (note) note.bookmarked = res.bookmarked ? 1 : 0;
-        btn.classList.toggle('saved', res.bookmarked);
-        btn.querySelector('i').className = `bi ${res.bookmarked ? 'bi-bookmark-fill' : 'bi-bookmark'} fs-5`;
-        snUpdateCounts();
-        if (snTab === 'bookmarked') snRender();
-    }
-}
-
-function snHl(text) {
-    const safe = String(text ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    if (!snSearch) return safe;
-    const re = new RegExp(`(${snSearch.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
-    return safe.replace(re, '<mark class="sn-highlight">$1</mark>');
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-
-function toggleAnswer(id){
-    $("#answerBox"+id).collapse('toggle');
-}
-
-function submitAnswer(id){
-
-    let answer = document.getElementById("answerInput"+id).value;
-
-    fetch("ajax/ajax_post_answer.php", {
-        method: "POST",
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `discussion_id=${id}&answer=${encodeURIComponent(answer)}`
-    })
-    .then(res => res.json())
-    .then(() => loadDiscussions());
-}
-
-function likeDiscussion(id){
-
-    fetch("ajax/ajax_like_discussion.php", {
-        method: "POST",
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `discussion_id=${id}`
-    })
-    .then(() => loadDiscussions());
-}
-
-function postQuestion(){
-
-    let title = document.getElementById("questionTitle").value;
-    let desc  = document.getElementById("questionDesc").value;
-
-    // ✅ GET course_id FROM URL
-    const params = new URLSearchParams(window.location.search);
-    const course_id = params.get("course_id");
-
-    if(!course_id){
-        Swal.fire({
-            title: "Course not found",
-            icon: "error"
-        });
-        return;
-    }
-
-    if(!title){
-        Swal.fire({
-            title: "Enter question title",
-            icon: "error"
-        });
-        return;
-    }
-
-    fetch("ajax/ajax_post_question.php", {
-        method: "POST",
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `course_id=${course_id}&title=${encodeURIComponent(title)}&description=${encodeURIComponent(desc)}`
-    })
-    .then(res => res.json())
-    .then(res => {
-
-        if(res.status === "success"){
-
-            Swal.fire({
-                title: "Posted successfully",
-                icon: "success",
-                timer: 1500,
-                showConfirmButton: false
-            });
-
-            // ✅ CLEAR INPUTS
-            document.getElementById("questionTitle").value = "";
-            document.getElementById("questionDesc").value = "";
-
-            // ✅ RELOAD DISCUSSIONS
-            loadDiscussions();
-
-        }else{
-            Swal.fire({
-                title: res.message || "Failed",
-                icon: "error"
-            });
+      crCompleted.add(parseInt(id));
+      crUpdateProgress();
+      // Update sidebar icon
+      const el = document.getElementById('crL_' + id);
+      if (el) {
+        const ico = el.querySelector('.cr-l-icon');
+        if (ico) { ico.className = 'cr-l-icon done'; ico.innerHTML = '<i class="bi bi-check2"></i>'; }
+      }
+      crRefreshMarkBtns();
+      // Auto advance to next lesson if it was the current one
+      if (crCurrentLesson && crCurrentLesson.id == id) {
+        const idx = crAllLessons.findIndex(l => l.id == id);
+        if (idx !== -1 && idx + 1 < crAllLessons.length) {
+          const next = crAllLessons[idx + 1];
+          if (crIsPaid || parseInt(next.isFreePreviewLesson) === 1) {
+            setTimeout(() => crPlayLesson(next), 700);
+          }
         }
-
-    })
-    .catch(err => {
-        console.error(err);
-        Swal.fire({
-            title: "Server error",
-            icon: "error"
-        });
-    });
+      }
+    } else {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2-circle"></i> Mark Complete'; }
+    }
+  }).catch(() => {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2-circle"></i> Mark Complete'; }
+  });
 }
 
-function loadDiscussions(){
-
-    // ✅ SAFE COURSE ID (fix your PHP echo issue)
-    const params = new URLSearchParams(window.location.search);
-    const course_id = params.get("course_id");
-
-    if(!course_id){
-        document.getElementById("discussion").innerHTML = "No course selected";
-        return;
+function crRefreshMarkBtns() {
+  document.querySelectorAll('[id^="crMkBtn_"]').forEach(btn => {
+    const lid = parseInt(btn.dataset.lid);
+    if (crCompleted.has(lid)) {
+      btn.closest('.cr-l-actions')?.remove();
     }
+  });
+}
 
-    fetch("ajax/ajax_fetch_discussions.php?course_id=" + course_id)
-    .then(res => res.json())
+/* ════════════════════════════════════════════════════════════
+   STUDY NOTES
+════════════════════════════════════════════════════════════ */
+function crLoadStudyNotes(lessonId) {
+  fetch(`ajax/ajax_study_notes.php?action=list&lesson_id=${lessonId}`)
+    .then(r => r.json())
     .then(res => {
+      crSnNotes = res.data || [];
+      const badge = document.getElementById('crNotesBadge');
+      if (crSnNotes.length) {
+        badge.textContent = crSnNotes.length;
+        badge.style.display = '';
+      } else {
+        badge.style.display = 'none';
+      }
+      crRenderNotes();
+    })
+    .catch(() => { crSnNotes = []; crRenderNotes(); });
+}
 
-        let html = "";
+function crRenderNotes() {
+  const cont = document.getElementById('crNotesContent');
+  let filtered = crSnNotes.filter(n => {
+    if (crSnTab === 'bookmarked' && !n.bookmarked) return false;
+    if (crSnTab === 'important'  && !n.is_important) return false;
+    if (crSnSearch) return (n.question + ' ' + n.answer).toLowerCase().includes(crSnSearch);
+    return true;
+  });
 
-        // ✅ ASK QUESTION (ALWAYS VISIBLE)
-        html += `
-        <div class="card mb-3">
-            <div class="card-body">
+  if (!crSnNotes.length) {
+    cont.innerHTML = '<div class="cr-empty"><i class="bi bi-journal-x"></i><div class="cr-empty-title">No study notes for this lesson</div></div>';
+    return;
+  }
+  if (!filtered.length) {
+    cont.innerHTML = '<div class="cr-empty"><i class="bi bi-search"></i><div class="cr-empty-title">No notes match your filter</div></div>';
+    return;
+  }
 
-                <h6>Ask a Question</h6>
+  const bkCnt = crSnNotes.filter(n=>n.bookmarked).length;
+  const imCnt = crSnNotes.filter(n=>n.is_important).length;
 
-                <input type="text" id="questionTitle" class="form-control mb-2"
-                    placeholder="Question title">
-
-                <textarea id="questionDesc" class="form-control mb-2"
-                    placeholder="Describe your question"></textarea>
-
-                <button onclick="postQuestion()" class="btn btn-theme btn-sm">
-                    Post Question
-                </button>
-
-            </div>
+  cont.innerHTML = `
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem">
+      <input type="text" class="cr-inp" style="flex:1;min-width:180px;margin:0;padding:.45rem .75rem"
+             placeholder="Search notes…" value="${crEsc(crSnSearch)}" oninput="crSnSearchInput(this.value)">
+      <div style="display:flex;gap:.3rem;flex-shrink:0">
+        <button class="cr-btn cr-btn-sm ${crSnTab==='all'?'cr-btn-primary':'cr-btn-ghost'}" onclick="crSnSetTab('all')">All (${crSnNotes.length})</button>
+        <button class="cr-btn cr-btn-sm ${crSnTab==='bookmarked'?'cr-btn-primary':'cr-btn-ghost'}" onclick="crSnSetTab('bookmarked')">
+          <i class="bi bi-bookmark-fill"></i>${bkCnt}
+        </button>
+        <button class="cr-btn cr-btn-sm ${crSnTab==='important'?'cr-btn-primary':'cr-btn-ghost'}" onclick="crSnSetTab('important')" style="${crSnTab==='important'?'':'background:#fef3c7;color:#92400e;border-color:#fde68a'}">
+          <i class="bi bi-star-fill"></i>${imCnt}
+        </button>
+      </div>
+    </div>
+    ${filtered.map((n,i) => `
+    <div class="sn-card2${n.is_important?' important':''}" id="snc_${n.id}">
+      <div class="sn-head2" onclick="crSnToggle(${n.id})">
+        <span class="sn-num2">${i+1}</span>
+        <div class="sn-q2">
+          ${n.is_important ? '<span style="font-size:.6rem;font-weight:800;background:#fef3c7;color:#92400e;border-radius:100px;padding:.1rem .4rem;margin-right:.4rem">KEY</span>' : ''}
+          ${crHl(n.question)}
         </div>
-        `;
+        <button class="sn-bm2 ${n.bookmarked?'saved':''}" title="Bookmark" onclick="crSnBookmark(event,${n.id},this)">
+          <i class="bi ${n.bookmarked?'bi-bookmark-fill':'bi-bookmark'}"></i>
+        </button>
+        <i class="bi bi-chevron-down" style="font-size:.7rem;color:#94a3b8;margin-left:.3rem;flex-shrink:0;transition:transform .2s" id="snChev_${n.id}"></i>
+      </div>
+      <div class="sn-body2" id="snb_${n.id}">
+        <i class="bi bi-lightbulb-fill" style="color:#4f46e5;margin-right:.5rem;flex-shrink:0"></i>${crHl(n.answer)}
+      </div>
+    </div>`).join('')}
+  `;
+}
 
-        // ✅ EMPTY STATE
-        if(res.data.length === 0){
-            html += `
-            <div class="text-center text-muted py-4">
-                <i class="bi bi-chat-dots fs-2"></i>
-                <p>No discussions yet</p>
-                <small>Be the first to ask a question</small>
-            </div>
-            `;
-        }
+function crSnSearchInput(v) { crSnSearch = v.toLowerCase().trim(); crRenderNotes(); }
+function crSnSetTab(t)      { crSnTab = t; crRenderNotes(); }
 
-        // ✅ ACCORDION START
-        html += `<div class="accordion" id="discussionAccordion">`;
+function crSnToggle(id) {
+  const body = document.getElementById('snb_' + id);
+  const chev = document.getElementById('snChev_' + id);
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  if (chev) chev.style.transform = open ? 'rotate(180deg)' : '';
+}
 
-        // ✅ LOOP DISCUSSIONS
-        res.data.forEach((d, index) => {
+async function crSnBookmark(e, noteId, btn) {
+  e.stopPropagation();
+  const res = await fetch('ajax/ajax_study_notes.php', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'toggle_bookmark', note_id: noteId})
+  }).then(r => r.json());
+  if (res.status === 'success') {
+    const n = crSnNotes.find(x => x.id == noteId);
+    if (n) n.bookmarked = res.bookmarked ? 1 : 0;
+    btn.classList.toggle('saved', !!res.bookmarked);
+    btn.innerHTML = `<i class="bi ${res.bookmarked?'bi-bookmark-fill':'bi-bookmark'}"></i>`;
+  }
+}
 
-            let collapseId = "discussion_" + d.id;
+function crHl(text) {
+  const safe = String(text??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  if (!crSnSearch) return safe;
+  const re = new RegExp(`(${crSnSearch.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+  return safe.replace(re, '<mark style="background:#fef08a;border-radius:2px;padding:0 2px">$1</mark>');
+}
 
-            html += `
-            <div class="card mb-2">
-
-                <!-- HEADER (CLICK TO OPEN) -->
-                <div class="card-header p-2 border-0 rounded-top 
-                    bg-gradient-primary text-white shadow-sm">
-
-                    <button class="btn w-100 text-start d-flex justify-content-between align-items-center 
-                        text-white fw-semibold px-2 py-2"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#${collapseId}"
-                        style="background: transparent; border: none;">
-
-                        <!-- LEFT: TITLE -->
-                        <span>
-                            <i class="bi bi-chat-left-text me-2"></i>
-                            ${index + 1}. ${d.title}
-                        </span>
-
-                        <!-- RIGHT: ICON -->
-                        <i class="bi bi-chevron-down transition-icon"></i>
-                    </button>
-                </div>
-
-                <!-- BODY -->
-                <div id="${collapseId}" class="collapse" data-bs-parent="#discussionAccordion">
-
-                    <div class="card-body">
-
-                        <p class="small text-secondary">
-                            Asked by ${d.first_name} • ${d.created_at}
-                        </p>
-
-                        <p class="text-secondary">${d.description}</p>
-
-                        <!-- ACTIONS -->
-                        <div class="row align-items-center mb-2">
-
-                            <div class="col-auto">
-                                <button onclick="likeDiscussion(${d.id})"
-                                    class="btn btn-outline-danger btn-sm">
-                                    ❤️ ${d.total_likes}
-                                </button>
-                            </div>
-
-                            <div class="col-auto">
-                                <button class="btn btn-outline-theme btn-sm"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#answerBox${d.id}">
-                                    Answer (${d.total_answers})
-                                </button>
-                            </div>
-
-                        </div>
-
-                        <!-- ANSWER BOX -->
-                        <div id="answerBox${d.id}" class="collapse show">
-
-                            <textarea id="answerInput${d.id}" 
-                                class="form-control mb-2"
-                                placeholder="Write answer..."></textarea>
-
-                            <button onclick="submitAnswer(${d.id})"
-                                class="btn btn-theme btn-sm mb-3">
-                                Submit Answer
-                            </button>
-
-                            <hr>
-            `;
-
-            // ✅ NO ANSWERS
-            if(d.answers.length === 0){
-                html += `<p class="text-muted">No answers yet</p>`;
-            }
-
-            // ✅ ANSWERS LOOP
-            d.answers.forEach(a => {
-
-                html += `
-                <div class="mb-2 ${a.is_correct == 1 ? 'bg-success-subtle p-2 rounded' : ''}">
-                    <b>${a.first_name}</b> • ${a.created_at}
-                    ${
-                        a.is_correct == 1 
-                        ? `<span class="badge bg-success ms-2">Best Answer</span>` 
-                        : ''
-                    }
-                    <p class="mb-0">${a.answer}</p>
-                </div>
-                `;
-            });
-
-            html += `
-                        </div> <!-- END ANSWERS -->
-                    </div>
-                </div>
-
-            </div>
-            `;
-        });
-
-        html += `</div>`; // END ACCORDION
-
-        document.getElementById("discussion").innerHTML = html;
-
+/* ════════════════════════════════════════════════════════════
+   DISCUSSION
+════════════════════════════════════════════════════════════ */
+function crLoadDiscussions() {
+  fetch(`ajax/ajax_fetch_discussions.php?course_id=${CR_COURSE_ID}`)
+    .then(r => r.json())
+    .then(res => {
+      crDiscussions = res.data || [];
+      document.getElementById('crDiscussBadge').textContent = crDiscussions.length;
+      crRenderDiscussions();
     })
-    .catch(err => {
-        console.error(err);
-        document.getElementById("discussion").innerHTML = "Error loading discussions";
+    .catch(() => {
+      document.getElementById('crDiscussList').innerHTML =
+        '<div class="cr-empty"><i class="bi bi-exclamation-circle"></i><div class="cr-empty-title">Could not load discussions</div></div>';
     });
 }
+
+function crRenderDiscussions() {
+  const list = document.getElementById('crDiscussList');
+  if (!crDiscussions.length) {
+    list.innerHTML = '<div class="cr-empty"><i class="bi bi-chat-dots"></i><div class="cr-empty-title">No discussions yet</div><div style="font-size:.78rem">Be the first to ask a question</div></div>';
+    return;
+  }
+  list.innerHTML = crDiscussions.map((d, i) => {
+    const answers = (d.answers || []).map(a => `
+      <div class="cr-d-answer-item${a.is_correct==1?' best':''}">
+        <div class="cr-d-answer-name">${crEsc(a.first_name||'User')}
+          ${a.is_correct==1?'<span style="font-size:.62rem;background:#059669;color:#fff;border-radius:100px;padding:.1rem .5rem;margin-left:.4rem">Best Answer</span>':''}
+        </div>
+        ${crEsc(a.answer||'')}
+      </div>`).join('');
+
+    return `<div class="cr-d-card" id="crd_${d.id}">
+      <div class="cr-d-head" onclick="crDToggle(${d.id})">
+        <span class="cr-d-num">${i+1}</span>
+        <div style="flex:1;min-width:0">
+          <div class="cr-d-title">${crEsc(d.title||'Question')}</div>
+          <div class="cr-d-meta"><i class="bi bi-person me-1"></i>${crEsc(d.first_name||'')} · ${crEsc(d.created_at||'')} · ${d.total_answers||0} answers</div>
+        </div>
+        <i class="bi bi-chevron-down" id="crdChev_${d.id}" style="font-size:.75rem;color:#94a3b8;transition:transform .2s;flex-shrink:0"></i>
+      </div>
+      <div class="cr-d-body" id="crdb_${d.id}">
+        ${d.description ? `<p style="font-size:.8rem;color:#475569;margin-bottom:.75rem">${crEsc(d.description)}</p>` : ''}
+        <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.85rem">
+          <button class="cr-d-like" onclick="crLike(${d.id})">❤ ${d.total_likes||0}</button>
+        </div>
+        ${answers || '<div style="font-size:.78rem;color:#94a3b8;margin-bottom:.75rem">No answers yet — be the first!</div>'}
+        <div class="cr-d-ans-form">
+          <textarea id="crAns_${d.id}" class="cr-inp" rows="2" placeholder="Write your answer…"></textarea>
+          <button class="cr-btn cr-btn-primary cr-btn-sm" onclick="crSubmitAnswer(${d.id})">
+            <i class="bi bi-send-fill"></i>Submit
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function crDToggle(id) {
+  const body = document.getElementById('crdb_' + id);
+  const chev = document.getElementById('crdChev_' + id);
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  if (chev) chev.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+function crPostQuestion() {
+  const title = (document.getElementById('crQTitle')?.value || '').trim();
+  const desc  = (document.getElementById('crQDesc')?.value  || '').trim();
+  if (!title) { crToast('Enter a question title', 'error'); return; }
+
+  fetch('ajax/ajax_post_question.php', {
+    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body: `course_id=${CR_COURSE_ID}&title=${encodeURIComponent(title)}&description=${encodeURIComponent(desc)}`
+  }).then(r => r.json()).then(res => {
+    if (res.status === 'success') {
+      document.getElementById('crQTitle').value = '';
+      document.getElementById('crQDesc').value  = '';
+      crToast('Question posted!', 'success');
+      crLoadDiscussions();
+    } else { crToast(res.message || 'Failed', 'error'); }
+  }).catch(() => crToast('Server error', 'error'));
+}
+
+function crSubmitAnswer(id) {
+  const ans = (document.getElementById('crAns_' + id)?.value || '').trim();
+  if (!ans) return;
+  fetch('ajax/ajax_post_answer.php', {
+    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body: `discussion_id=${id}&answer=${encodeURIComponent(ans)}`
+  }).then(r => r.json()).then(() => { crLoadDiscussions(); });
+}
+
+function crLike(id) {
+  fetch('ajax/ajax_like_discussion.php', {
+    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body: `discussion_id=${id}`
+  }).then(() => crLoadDiscussions());
+}
+
+/* ════════════════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════════════════ */
+function crEsc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function crToast(msg, type) {
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({icon: type==='error'?'error':'success', title: msg, timer:2000, showConfirmButton:false});
+  } else { alert(msg); }
+}
+
+Object.assign(window, {
+  crTab, crPlayLesson, crMarkComplete, crRefreshMarkBtns, crToggleCh,
+  crSnToggle, crSnBookmark, crSnSearchInput, crSnSetTab,
+  crDToggle, crPostQuestion, crSubmitAnswer, crLike
+});
 </script>

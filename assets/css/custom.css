@@ -34,8 +34,8 @@
 
 /* ── Section group label ────────────────────────────────── */
 .dcm-nav-group {
-    padding: 1.1rem 1rem 0.3rem 1rem;
-    font-size: 0.65rem;
+    padding: 0.75rem 1rem 0.25rem 1rem;
+    font-size: 0.60rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -49,11 +49,11 @@
     display: flex !important;
     align-items: center;
     flex-wrap: nowrap;
-    padding: 0.55rem 0.85rem;
+    padding: 0.42rem 0.75rem;
     border-radius: 10px;
-    margin: 1px 10px;
+    margin: 1px 8px;
     color: rgba(200, 220, 255, 0.58);
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     font-weight: 500;
     letter-spacing: 0.01em;
     transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
@@ -81,16 +81,16 @@
 
 /* ── Icon box ───────────────────────────────────────────── */
 .adminuiux-sidebar .nav > .nav-item > .nav-link .menu-icon {
-    width: 2rem;
-    height: 2rem;
+    width: 1.7rem;
+    height: 1.7rem;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     flex-grow: 0;
-    border-radius: 8px;
+    border-radius: 7px;
     background: rgba(255, 255, 255, 0.07);
-    font-size: 0.95rem;
+    font-size: 0.82rem;
     line-height: 1;
     transition: background 0.18s ease, color 0.18s ease;
 }
@@ -114,10 +114,10 @@
 .adminuiux-sidebar .nav > .nav-item > .nav-link .menu-name {
     flex: 1 1 0%;
     min-width: 0;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     font-weight: 500;
-    padding-left: 0.65rem;
-    padding-right: 0.4rem;
+    padding-left: 0.5rem;
+    padding-right: 0.3rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -143,8 +143,8 @@
 
 /* ── Submenu container ──────────────────────────────────── */
 .qb-submenu {
-    margin: 2px 10px 6px 10px;
-    padding: 4px 0;
+    margin: 2px 8px 4px 8px;
+    padding: 3px 0;
     background: rgba(0, 0, 0, 0.18);
     border-radius: 8px;
     overflow: hidden;
@@ -155,19 +155,22 @@
 .qb-submenu .nav-link {
     display: flex !important;
     align-items: center;
-    padding: 0.38rem 0.85rem;
+    padding: 0.3rem 0.75rem;
     border-radius: 0;
-    font-size: 0.80rem;
+    font-size: 0.74rem;
     font-weight: 400;
     color: rgba(185, 210, 255, 0.52);
     transition: background 0.15s ease, color 0.15s ease, padding-left 0.15s ease, border-color 0.15s ease;
     gap: 0;
     border-left: 2px solid transparent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .qb-submenu .nav-link i {
-    width: 1.35rem;
-    font-size: 0.77rem;
+    width: 1.2rem;
+    font-size: 0.72rem;
     flex-shrink: 0;
     text-align: left;
     opacity: 0.55;
@@ -176,7 +179,10 @@
 }
 
 .qb-submenu .nav-link span {
-    margin-left: 0.5rem;
+    margin-left: 0.4rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .qb-submenu .nav-link:hover {
@@ -209,8 +215,8 @@
 .adminuiux-sidebar .menu-active-line .nav-link {
     color: rgba(200, 220, 255, 0.65) !important;
     border-radius: 10px;
-    margin: 1px 10px;
-    padding: 0.5rem 0.85rem;
+    margin: 1px 8px;
+    padding: 0.42rem 0.75rem;
     transition: background 0.18s ease, color 0.18s ease;
 }
 

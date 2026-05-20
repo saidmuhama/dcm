@@ -2,7 +2,7 @@
 $cv = $_GET['view'] ?? '';
 
 $groups = [
-    'menuAdmin'      => ['admin_dashboard','admin_users','admin_roles','admin_permissions','admin_courses','admin_course_detail'],
+    'menuAdmin'      => ['admin_dashboard','admin_users','admin_roles','admin_permissions','admin_courses','admin_course_detail','admin_payment_settings'],
     'menuCourseMgmt' => ['my_courses_online_contents_list_view','course_contents_management','view_course_details','teacher_study_notes','study_notes_manager'],
     'menuTaxonomy'   => ['qb_subjects','qb_levels','qb_chapters','qb_subtopics','qb_bloom_levels','qb_difficulty_levels','qb_sections'],
     'menuQuestions'  => ['qb_all_questions','qb_add_question','qb_bulk_upload','qb_draft_questions','qb_review_queue','qb_approved_questions','qb_published_questions','qb_archived_questions','qb_question_media'],
@@ -65,6 +65,11 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
                 <li class="nav-item">
                     <a href="../data_files/?view=admin_courses" class="<?= $lc('admin_courses') === 'nav-link active' || $lc('admin_course_detail') === 'nav-link active' ? 'nav-link active' : 'nav-link' ?>">
                         <i class="bi bi-collection-play-fill"></i><span>All Courses</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="../data_files/?view=admin_payment_settings" class="<?= $lc('admin_payment_settings') ?>">
+                        <i class="bi bi-credit-card"></i><span>Payment Settings</span>
                     </a>
                 </li>
             </ul>

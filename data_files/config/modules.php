@@ -22,7 +22,7 @@ define('APP_MODULES', [
 define('MODULE_VIEWS', [
     'course_management' => [
         'my_courses_online_contents_list_view','course_contents_management',
-        'view_course_details','teacher_study_notes','study_notes_manager',
+        'teacher_study_notes','study_notes_manager',
     ],
     'admin_courses' => ['admin_courses','admin_course_detail'],
     'qb_taxonomy' => [

@@ -57,11 +57,13 @@ while($chapter = mysqli_fetch_assoc($chapters_q)){
     ========================= */
     $lessons_q = mysqli_query($db,"
         SELECT id, lesson_title, description, file_path,
-               video_duration, isFreePreviewLesson
+               video_duration, isFreePreviewLesson,
+               storage, content_type, video_id, library_id, sort_order,
+               lesson_thumbnail
         FROM tbl_course_chapter_lessons
         WHERE chapter_id = '{$chapter['id']}'
         AND course_id = '$course_id'
-        ORDER BY id ASC
+        ORDER BY sort_order ASC, id ASC
     ");
 
     $lessons = [];

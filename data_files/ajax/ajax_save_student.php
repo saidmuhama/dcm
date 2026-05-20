@@ -1,100 +1,88 @@
 <?php
-header('Content-Type: application/json');
+ini_set('display_errors', 0);
+ob_start();
+include('../config/db.php');
+session_start();
 
-include('../config/db.php'); 
-$data = json_decode(file_get_contents("php://input"), true);
+function _sjs(array $d): never { ob_clean(); header('Content-Type: application/json'); echo json_encode($d); exit; }
 
-$id = $data['id'] ?? null;
+if (!isset($_SESSION['usr_code'])) _sjs(['status'=>'error','message'=>'Not authenticated']);
 
-// IMAGE
-$imagePath = "";
+$data = json_decode(file_get_contents('php://input'), true) ?? [];
+$usr  = $_SESSION['usr_code'];
 
-if(!empty($data['image'])){
-
-    // Ensure folder exists
-    $folder ="../uploads/";
-
-    if(!is_dir($folder)){
-        mkdir($folder, 0777, true);
-    }
-
-    // Clean base64
+/* ── Image upload ─────────────────────────────────────────── */
+$imagePath = '';
+if (!empty($data['image'])) {
+    $folder = '../uploads/';
+    if (!is_dir($folder)) mkdir($folder, 0755, true);
     $img = $data['image'];
+    if (str_contains($img, 'base64,')) $img = explode('base64,', $img)[1];
+    $decoded = base64_decode(str_replace(' ', '+', $img), true);
+    if (!$decoded) _sjs(['status'=>'error','message'=>'Invalid image data']);
+    $fileName = time() . '_' . bin2hex(random_bytes(4)) . '.png';
+    if (!file_put_contents($folder . $fileName, $decoded)) _sjs(['status'=>'error','message'=>'Could not save image']);
+    $imagePath = 'uploads/' . $fileName;
+}
 
-    if(strpos($img, 'base64,') !== false){
-        $img = explode('base64,', $img)[1];
-    }
+/* ── Bind values ──────────────────────────────────────────── */
+$fn  = trim($data['first_name']         ?? '');
+$mn  = trim($data['middle_name']         ?? '');
+$ln  = trim($data['last_name']           ?? '');
+$dob = trim($data['dob']                 ?? '');
+$dsc = trim($data['description']         ?? '');
+$sk  = trim($data['skill']               ?? '');
+$pn  = trim($data['parent_name']         ?? '');
+$ph  = trim($data['phone']               ?? '');
+$em  = trim($data['email']               ?? '');
+$sc  = trim($data['school']              ?? '');
+$co  = trim($data['course']              ?? '');
+$mal = (int)($data['main_academic_level']?? 0);
+$sal = (int)($data['sub_academic_level'] ?? 0);
+$sy  = (int)($data['start_year']         ?? date('Y'));
+$ey  = trim($data['end_year']            ?? 'Continuing');
 
-    $img = str_replace(' ', '+', $img);
+/* ── Upsert ───────────────────────────────────────────────── */
+$chk = $db->prepare("SELECT id FROM tbl_students WHERE usr_code = ?");
+$chk->bind_param('s', $usr);
+$chk->execute();
+$exists = (bool)$chk->get_result()->fetch_assoc();
 
-    // Decode
-    $decoded = base64_decode($img);
-
-    if($decoded === false){
-        echo json_encode(["status"=>"error","message"=>"Base64 decode failed"]);
-        exit;
-    }
-
-    // Save file
-    $fileName = time() . ".png";
-    $filePath = $folder . $fileName;
-
-    if(file_put_contents($filePath, $decoded)){
-        $imagePath = "uploads/" . $fileName; // save relative path for DB
+if ($exists) {
+    if ($imagePath) {
+        // UPDATE with image — 17 params: 11×s + 3×i + 3×s
+        $stmt = $db->prepare(
+            "UPDATE tbl_students SET first_name=?,middle_name=?,last_name=?,dob=?,description=?,skill=?,
+             parent_name=?,phone=?,email=?,school=?,course=?,
+             main_academic_level=?,sub_academic_level=?,start_year=?,end_year=?,image=?
+             WHERE usr_code=?"
+        );
+        $stmt->bind_param('sssssssssssiiisss',
+            $fn,$mn,$ln,$dob,$dsc,$sk,$pn,$ph,$em,$sc,$co,$mal,$sal,$sy,$ey,$imagePath,$usr);
     } else {
-        echo json_encode(["status"=>"error","message"=>"Failed to save image"]);
-        exit;
-    }
-
-}
-
-// ================= UPDATE =================
-if($id){
-
-
-    if($imagePath){
-        $sql = "UPDATE tbl_students SET end_year=?,start_year=?,sub_academic_level=?,main_academic_level=?,first_name=?,middle_name=?,last_name=?,dob=?,description=?,skill=?,parent_name=?,phone=?,email=?,school=?,course=?,image=? WHERE usr_code=?";
-        $stmt = $db->prepare($sql);
-        $stmt->bind_param("siiisssssssssssss",
-            $data['end_year'],$data['start_year'],$data['sub_academic_level'],$data['main_academic_level'],
-            $data['first_name'],$data['middle_name'],$data['last_name'],$data['dob'],
-            $data['description'],$data['skill'],$data['parent_name'],$data['phone'],
-            $data['email'],$data['school'],$data['course'],$imagePath,$id
+        // UPDATE without image — 16 params: 11×s + 3×i + 2×s
+        $stmt = $db->prepare(
+            "UPDATE tbl_students SET first_name=?,middle_name=?,last_name=?,dob=?,description=?,skill=?,
+             parent_name=?,phone=?,email=?,school=?,course=?,
+             main_academic_level=?,sub_academic_level=?,start_year=?,end_year=?
+             WHERE usr_code=?"
         );
-    }else{
-        $sql = "UPDATE tbl_students SET end_year=?, start_year=?,sub_academic_level=?,main_academic_level=?,first_name=?,middle_name=?,last_name=?,dob=?,description=?,skill=?,parent_name=?,phone=?,email=?,school=?,course=? WHERE usr_code=?";
-        $stmt = $db->prepare($sql);
-        $stmt->bind_param("siiissssssssssss",
-            $data['end_year'],$data['start_year'],$data['sub_academic_level'],$data['main_academic_level'],
-            $data['first_name'],$data['middle_name'],$data['last_name'],$data['dob'],
-            $data['description'],$data['skill'],$data['parent_name'],$data['phone'],
-            $data['email'],$data['school'],$data['course'],$id
-        );
+        $stmt->bind_param('sssssssssssiiiss',
+            $fn,$mn,$ln,$dob,$dsc,$sk,$pn,$ph,$em,$sc,$co,$mal,$sal,$sy,$ey,$usr);
     }
-
-    $stmt->execute();
-
-    echo json_encode(["status"=>"success","message"=>"Student Information Updated successfully","id"=>$id]);
-
-}else{
-
-// ================= INSERT =================
-
-    $sql = "INSERT INTO tbl_students(usr_code,end_year,start_year,sub_academic_level,main_academic_level,first_name,middle_name,last_name,dob,description,skill,parent_name,phone,email,school,course,image)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-
-    $stmt = $db->prepare($sql);
-    $stmt->bind_param("ssiiissssssssssss",
-        $data['usr_code'],$data['end_year'],$data['start_year'],$data['sub_academic_level'],$data['main_academic_level'],$data['first_name'],$data['middle_name'],$data['last_name'],$data['dob'],
-        $data['description'],$data['skill'],$data['parent_name'],$data['phone'],
-        $data['email'],$data['school'],$data['course'],$imagePath
+} else {
+    $img = $imagePath ?: '';
+    // INSERT — 17 params: 12×s + 3×i + 2×s
+    $stmt = $db->prepare(
+        "INSERT INTO tbl_students
+         (usr_code,first_name,middle_name,last_name,dob,description,skill,
+          parent_name,phone,email,school,course,main_academic_level,sub_academic_level,start_year,end_year,image)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     );
-
-    $stmt->execute();
-
-    echo json_encode([
-        "status"=>"success",
-        "message"=>"Student Information added",
-        "id"=>$stmt->insert_id
-    ]);
+    $stmt->bind_param('ssssssssssssiiiss',
+        $usr,$fn,$mn,$ln,$dob,$dsc,$sk,$pn,$ph,$em,$sc,$co,$mal,$sal,$sy,$ey,$img);
 }
+
+if (!$stmt || !$stmt->execute()) _sjs(['status'=>'error','message'=>$db->error ?: 'Database error']);
+
+_sjs(['status'=>'success','message'=>'Profile saved successfully']);

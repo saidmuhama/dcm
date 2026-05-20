@@ -256,4 +256,43 @@ if ($action === 'set_role_policy') {
     exit;
 }
 
+/* ── verify_reauth — verify TOTP for a sensitive page/action ─
+   Sets $_SESSION['reauth_<context>'] = time() on success.
+   The caller (e.g. admin_payment_settings) checks this stamp.       */
+if ($action === 'verify_reauth') {
+    requireAuth();
+    $code    = preg_replace('/\D/', '', $_POST['code']    ?? '');
+    $context = preg_replace('/[^a-z_]/', '', $_POST['context'] ?? 'general');
+
+    if (strlen($code) !== 6) {
+        echo json_encode(['status' => 'error', 'message' => 'Please enter all 6 digits']); exit;
+    }
+
+    $stmt = $db->prepare("SELECT totp_secret, totp_enabled FROM tbl_all_users WHERE usr_code = ? LIMIT 1");
+    $stmt->bind_param('s', $_SESSION['usr_code']);
+    $stmt->execute();
+    $user = $stmt->get_result()->fetch_assoc();
+
+    if (!$user || !$user['totp_enabled']) {
+        echo json_encode(['status' => 'error', 'message' => '2FA is not set up on your account']); exit;
+    }
+    if (!totp_verify($user['totp_secret'] ?? '', $code)) {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid code — please try again']); exit;
+    }
+
+    $_SESSION['reauth_' . $context] = time();
+    echo json_encode(['status' => 'success']); exit;
+}
+
+/* ── check_reauth — client can poll whether stamp is fresh ── */
+if ($action === 'check_reauth') {
+    requireAuth();
+    $context = preg_replace('/[^a-z_]/', '', $_GET['context'] ?? 'general');
+    $ttl     = 1200; // 20 minutes
+    $ts      = $_SESSION['reauth_' . $context] ?? 0;
+    $valid   = $ts && (time() - $ts) < $ttl;
+    echo json_encode(['status' => 'success', 'granted' => $valid, 'expires_in' => $valid ? ($ttl - (time() - $ts)) : 0]);
+    exit;
+}
+
 echo json_encode(['status' => 'error', 'message' => 'Unknown action']);

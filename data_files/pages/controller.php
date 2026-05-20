@@ -120,6 +120,10 @@ switch ($view) {
         include('pages/admin_2fa.php');
         break;
 
+    case 'admin_payment_settings':
+        include('pages/admin_payment_settings.php');
+        break;
+
     // ── QUESTION BANK ─────────────────────────────────────────
     // Taxonomy
     case 'qb_subjects':

@@ -1,1491 +1,1000 @@
-<?php 
-$course_id   = $_GET["course_id"];
-$courseTitle = App::getWhatFromWHere("title", "tbl_courses", "id", $course_id);
-$courseOwner = App::getWhatFromWHere("instructor_id","tbl_courses","id",$course_id);
-$library_id  = App::getWhatFromWHere("library_id", "tbl_courses", "id", $course_id);
+<?php
+$course_id   = (int)($_GET['course_id'] ?? 0);
+if (!$course_id) { echo '<p class="text-center p-4">Invalid course.</p>'; return; }
+
+$courseTitle = App::getWhatFromWHere('title',         'tbl_courses', 'id', $course_id);
+$courseOwner = App::getWhatFromWHere('instructor_id', 'tbl_courses', 'id', $course_id);
+$library_id  = App::getWhatFromWHere('library_id',   'tbl_courses', 'id', $course_id);
 $library_key = App::getBunnyLibraryKey($library_id, App::getBunnyNetApiKey());
 
-if($courseOwner != $_SESSION['usr_code']){
-    ?>
-    <script>
-         window.location.href = "../data_files/?view=3002";
-    </script>
-    <?php 
-    exit;
-}
+if ($courseOwner != ($_SESSION['usr_code'] ?? '')) { ?>
+    <script>window.location.href='../data_files/?view=3002';</script>
+<?php exit; }
 ?>
-<div class="container mt-4">
-    <div class="row gx-3 align-items-center">
-        <div class="col col-sm">
-            <h5>Course Name: <?php echo $courseTitle; ?></h5>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item bi"><a href="../data_files/?view=3002">Home</a></li>
-                    <li class="breadcrumb-item active bi" aria-current="page">Course Management</li>
-                </ol>
-            </nav>
-        </div>
-
-
-    </div>
-</div>
-<div class="container mb-3 mt-3" id="main-content">
-    <div class="inner-sidebar-wrap">
-        
-        <div class="inner-sidebar-content h-100">
-            <div class="row gx-3 h-100 mx-0">
-
-                <div class="col-12 col-md-6 col-lg-12 col-xl-5 col-xxl-4">
-                        <div class="card adminuiux-card shadow-sm mb-3 mt-3 mt-md-0">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0">Chapter Contents</h6>
-                            <div class="d-flex gap-2">
-                                <button id="toggleAllChaptersBtn" onclick="toggleAllChapters()" class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-chevron-bar-contract" id="toggleAllIcon"></i> Collapse All
-                                </button>
-                                <button data-bs-toggle="modal" data-bs-target="#createChapterModal" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-plus"></i> Add Chapter
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body py-0 px-2">
-                           
-                            <div class="accordion" id="accordionExample">
-                               
-                            </div>
-                           
-                            <hr/>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-lg-12 col-xl-7 col-xxl-8 height-dynamic mb-4 mb-xl-0"
-                    style="--h-dynamic: calc(100vh - 160px)">
-                    <div class="card adminuiux-card shadow-sm h-100 mb-3">
-                        <div class="card-header border-bottom">
-                            <div class="row gx-2">
-                                <div class="col-auto">
-                                    <div class="row gx-2">
-                                       
-                                        <div class="col">
-                                            <div class="row align-items-center">
-                                                
-                                                <div class="col-lg-12">
-                                                    <div class="d-flex justify-content-end gap-2">
-                                                        
-                                                        <button onclick="showCourseSettings()" type="button" class="btn btn-sm btn-outline-accent">
-                                                            <i data-feather="settings" class="me-1 align-middle"></i> Course Settings
-                                                        </button>
-                                                        <button onclick="showCourseSettings()" type="button" class="btn btn-sm btn-primary">
-                                                            <i data-feather="eye" class="me-1 align-middle"></i> Course Preview
-                                                        </button>
-                                                        <button id="statusBtn"
-                                                            onclick="changeCourseStatus()" 
-                                                            type="button" 
-                                                            class="btn btn-sm">
-                                                            <i data-feather="toggle-right" class="me-1 align-middle"></i>
-                                                            <span id="statusText">Change Status</span>
-                                                        </button>
-                                                        <!-- <button onclick="showCourseSettings()" type="button" class="btn btn-sm btn-danger">
-                                                            <i data-feather="trash" class="me-1 align-middle"></i> Delete Course
-                                                        </button> -->
-
-                                                    </div>
-                                                </div>
-
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-                                
-                            </div>
-                        </div>
-                        <div id="chapterContents" class="card-body overflow-y-auto">
-                            
-                           
-
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
-<div class="modal fade" id="editLessonTitleModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg rounded-4">
-
-      <!-- HEADER -->
-      <div class="modal-header border-0 pb-0">
-        <div>
-          <h5 class="modal-title fw-bold mb-0">Edit Lesson Title</h5>
-          <small class="text-muted">Update your lesson name below</small>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-
-      <!-- BODY -->
-      <div class="modal-body pt-3">
-
-        <div class="form-floating">
-          <input type="text" id="new_lesson_title" class="form-control rounded-3" placeholder="Lesson title">
-          <label>Lesson Title</label>
-        </div>
-
-        <input type="hidden" id="edit_lesson_id">
-
-      </div>
-
-      <!-- FOOTER -->
-      <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
-
-        <button class="btn btn-light px-4" data-bs-dismiss="modal">
-          Cancel
-        </button>
-
-        <button id="saveLessonTitleBtn" class="btn btn-primary px-4 d-flex align-items-center gap-2">
-          <i class="bi bi-check-lg"></i>
-          Update
-        </button>
-
-      </div>
-
-    </div>
-  </div>
-</div>
 
 <style>
-    /* ── Drag & Drop ── */
-    .lesson-item {
-        cursor: pointer;
-    }
-    .drag-handle {
-        cursor: grab;
-        opacity: 0.5;
-    }
-    .drag-handle:active {
-        cursor: grabbing;
-    }
-    .lesson-item:hover .drag-handle {
-        opacity: 1;
-    }
-    /* Dragula mirror (floating clone while dragging) */
-    .gu-mirror {
-        opacity: 0.85;
-        background: #fff;
-        border: 1px solid #0d6efd;
-        border-radius: 6px;
-        box-shadow: 0 4px 12px rgba(13,110,253,.25);
-        list-style: none;
-        padding: 8px 12px;
-        cursor: grabbing;
-    }
-    /* Drop-target highlight */
-    .lesson-sortable-list.gu-over {
-        background: rgba(13,110,253,.06);
-        border-radius: 6px;
-        outline: 2px dashed #0d6efd;
-        outline-offset: -2px;
-    }
-    /* Placeholder slot while dragging */
-    .gu-transit {
-        opacity: 0.3;
-    }
+/* ── Hero ── */
+.ccm-hero {
+    background: linear-gradient(135deg,#1a1a2e 0%,#16213e 45%,#0f3460 100%);
+    padding: 1.75rem 0 3.5rem; position: relative; overflow: hidden;
+}
+.ccm-hero::before {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background: radial-gradient(circle at 10% 60%,rgba(99,102,241,.18) 0%,transparent 55%),
+                radial-gradient(circle at 85% 20%,rgba(168,85,247,.13) 0%,transparent 50%);
+}
+.ccm-hero::after {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1.5' fill='%23fff' fill-opacity='.03'/%3E%3C/svg%3E");
+}
 
-    .modal-content {
-    transition: all 0.3s ease;
-    }
+/* ── Canvas ── */
+.ccm-canvas {
+    max-width: 1400px; margin: -2rem auto 2rem;
+    padding: 0 1rem; position: relative; z-index: 10;
+}
+.ccm-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1.25rem; align-items: start;
+}
+@media(max-width:991px){ .ccm-grid { grid-template-columns: 1fr; } }
 
-    .modal-content:hover {
-        transform: translateY(-2px);
-    }
+/* ── Panel card ── */
+.panel-card {
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.08);
+    border: 1px solid rgba(0,0,0,.05);
+    overflow: hidden;
+}
+.panel-header {
+    padding: .85rem 1rem; border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: .6rem;
+    background: linear-gradient(135deg,#fafbff,#f5f7ff);
+}
+.panel-title { font-size: .88rem; font-weight: 700; color: #1e293b; }
 
-    #saveLessonTitleBtn {
-        transition: 0.2s ease;
-    }
+/* ── Chapter accordion ── */
+.ch-item { border-bottom: 1px solid #f1f5f9; }
+.ch-item:last-child { border-bottom: none; }
+.ch-toggle {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .75rem 1rem; cursor: pointer;
+    background: none; border: none; width: 100%; text-align: left;
+    font-size: .84rem; font-weight: 600; color: #1e293b;
+    transition: background .15s;
+}
+.ch-toggle:hover { background: #f8f9ff; }
+.ch-toggle .ch-arrow { margin-left: auto; color: #94a3b8; transition: transform .2s; font-size: .75rem; }
+.ch-toggle.collapsed .ch-arrow { transform: rotate(-90deg); }
+.ch-badge { background: #eef2ff; color: #6366f1; border-radius: 20px;
+    font-size: .68rem; padding: .18rem .5rem; font-weight: 600; flex-shrink: 0; }
+.ch-drag-handle { color: #cbd5e1; cursor: grab; font-size: .85rem; flex-shrink: 0; }
 
-    #saveLessonTitleBtn:hover {
-        transform: scale(1.05);
-    }
+.lesson-list { padding: .25rem .5rem .5rem 2rem; margin: 0; list-style: none; }
+.lesson-item {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .55rem .65rem; border-radius: 9px; cursor: pointer;
+    font-size: .82rem; color: #475569; transition: all .15s; margin-bottom: .2rem;
+}
+.lesson-item:hover { background: #f8f9ff; color: #6366f1; }
+.lesson-item.active { background: #eef2ff; color: #6366f1; font-weight: 600; }
+.lesson-item .l-drag { color: #cbd5e1; cursor: grab; font-size: .78rem; flex-shrink: 0; }
+.lesson-item .l-type { font-size: .75rem; color: #94a3b8; flex-shrink: 0; }
+.lesson-item .l-free { background: #dcfce7; color: #16a34a; border-radius: 4px;
+    font-size: .62rem; padding: .1rem .3rem; font-weight: 700; flex-shrink: 0; }
+
+.add-lesson-row {
+    padding: .4rem .75rem .75rem 2.25rem;
+}
+.btn-add-lesson {
+    font-size: .75rem; font-weight: 600; color: #6366f1;
+    background: none; border: 1px dashed #c7d2fe; border-radius: 8px;
+    padding: .35rem .75rem; cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; gap: .3rem;
+}
+.btn-add-lesson:hover { background: #eef2ff; border-color: #6366f1; }
+
+/* ── Right panel ── */
+.right-panel { position: sticky; top: 1rem; }
+.rp-welcome {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 3rem 2rem; text-align: center; color: #94a3b8;
+}
+.rp-welcome .wi { font-size: 3rem; margin-bottom: 1rem; opacity: .4; }
+
+/* ── Lesson detail ── */
+.ld-section-title {
+    font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .7px;
+    color: #94a3b8; margin: 1.25rem 0 .75rem;
+    display: flex; align-items: center; gap: .5rem;
+}
+.ld-section-title::after { content:''; flex:1; height:1px; background:#f1f5f9; }
+.form-label-sm { font-size: .78rem; font-weight: 600; color: #475569; margin-bottom: .3rem; }
+.form-control-sm2 {
+    border-radius: 10px; border-color: #e2e8f0; font-size: .85rem;
+    padding: .6rem .85rem;
+}
+.form-control-sm2:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+.switch-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .7rem 0; border-bottom: 1px solid #f1f5f9;
+}
+.switch-row:last-child { border-bottom: none; }
+.switch-lbl { font-size: .84rem; color: #334155; }
+.switch-sub { font-size: .72rem; color: #94a3b8; }
+
+/* ── Media preview frame ── */
+.media-frame {
+    width: 100%; height: 240px; border: none; border-radius: 12px;
+    background: #000; display: block;
+}
+.media-thumb { width: 100%; height: 180px; object-fit: cover; border-radius: 12px; }
+
+/* ── Status badge ── */
+.status-chip { border-radius: 20px; padding: .28rem .75rem;
+    font-size: .72rem; font-weight: 700; display: inline-flex; align-items: center; gap: .3rem; }
+.status-chip.active   { background: #dcfce7; color: #15803d; }
+.status-chip.inactive { background: #fee2e2; color: #dc2626; }
+.status-chip.draft    { background: #fef9c3; color: #854d0e; }
+
+/* ── Drag mirror ── */
+.gu-mirror { opacity:.85; background:#fff; border:1px solid #6366f1;
+    border-radius:8px; box-shadow:0 4px 16px rgba(99,102,241,.2);
+    list-style:none; padding:8px 12px; cursor:grabbing; }
+.lesson-list.gu-over { background:rgba(99,102,241,.05); border-radius:8px;
+    outline:2px dashed #6366f1; outline-offset:-2px; }
+.gu-transit { opacity:.3; }
+
+/* dark mode */
+@media(prefers-color-scheme:dark){
+    .panel-card { background:#1e293b; border-color:rgba(255,255,255,.06); }
+    .panel-header { background:linear-gradient(135deg,#1e293b,#1a2440); border-color:rgba(255,255,255,.06); }
+    .panel-title { color:#e2e8f0; }
+    .ch-toggle { color:#e2e8f0; }
+    .ch-toggle:hover { background:rgba(99,102,241,.08); }
+    .ch-item { border-color:rgba(255,255,255,.06); }
+    .lesson-item { color:#94a3b8; }
+    .lesson-item:hover,.lesson-item.active { background:rgba(99,102,241,.12); color:#a5b4fc; }
+    .ld-section-title::after { background:rgba(255,255,255,.06); }
+    .switch-row { border-color:rgba(255,255,255,.06); }
+    .switch-lbl { color:#e2e8f0; }
+    .form-control,.form-select { background:#0f172a; border-color:#334155; color:#e2e8f0; }
+}
 </style>
 
+<!-- ══════════════════════ HERO ══════════════════════ -->
+<div class="ccm-hero">
+    <div class="container-xl position-relative" style="z-index:2">
+        <nav class="mb-2">
+            <ol class="breadcrumb mb-0" style="font-size:.76rem">
+                <li class="breadcrumb-item"><a href="../data_files/?view=3002" class="text-white-50 text-decoration-none">Dashboard</a></li>
+                <li class="breadcrumb-item active" style="color:rgba(255,255,255,.5)">Course Management</li>
+            </ol>
+        </nav>
+        <div class="d-flex flex-wrap align-items-center gap-3 justify-content-between">
+            <div>
+                <h4 class="text-white fw-bold mb-1" style="max-width:640px"><?= htmlspecialchars($courseTitle ?? '') ?></h4>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="heroStatusChip" class="status-chip draft"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> —</span>
+                    <span class="text-white-50 small" id="heroLessonCount"></span>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="../data_files/?view=view_course_details&course_id=<?= $course_id ?>" target="_blank"
+                   class="btn btn-sm btn-outline-light" style="border-radius:9px;font-size:.8rem">
+                    <i class="bi bi-eye me-1"></i>Preview
+                </a>
+                <button onclick="showCourseSettings()" class="btn btn-sm btn-outline-light" style="border-radius:9px;font-size:.8rem">
+                    <i class="bi bi-gear me-1"></i>Settings
+                </button>
+                <button id="statusToggleBtn" onclick="changeCourseStatus()"
+                    class="btn btn-sm" style="border-radius:9px;font-size:.8rem;background:#fff;color:#1e293b;font-weight:600">
+                    <i class="bi bi-toggle-off me-1" id="statusToggleIcon"></i><span id="statusText">Change Status</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════ CANVAS ══════════════════════ -->
+<div class="ccm-canvas">
+    <div class="ccm-grid">
+
+        <!-- ── LEFT: Chapter list ── -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <i class="bi bi-collection-play" style="color:#6366f1;font-size:1rem"></i>
+                <span class="panel-title">Course Chapters</span>
+                <div class="ms-auto d-flex gap-1">
+                    <button onclick="toggleAllChapters()" id="toggleAllBtn"
+                        class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;border-radius:7px;padding:.25rem .6rem">
+                        <i class="bi bi-chevron-bar-contract" id="toggleAllIcon"></i>
+                    </button>
+                    <button data-bs-toggle="modal" data-bs-target="#createChapterModal"
+                        class="btn btn-sm" style="font-size:.72rem;border-radius:7px;padding:.25rem .65rem;background:#6366f1;color:#fff;border:none">
+                        <i class="bi bi-plus-lg me-1"></i>Chapter
+                    </button>
+                </div>
+            </div>
+            <div id="chapterAccordion" style="max-height:calc(100vh - 200px);overflow-y:auto">
+                <!-- skeleton -->
+                <div class="p-3" id="chapterSkeleton">
+                    <?php for($i=0;$i<3;$i++): ?>
+                    <div style="height:44px;border-radius:8px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:sk 1.5s infinite;margin-bottom:.5rem"></div>
+                    <?php endfor; ?>
+                </div>
+            </div>
+            <style>@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}</style>
+        </div>
+
+        <!-- ── RIGHT: Lesson detail ── -->
+        <div class="panel-card right-panel" id="rightPanelCard">
+            <div id="chapterContents">
+                <div class="rp-welcome">
+                    <div class="wi"><i class="bi bi-play-circle"></i></div>
+                    <h6 class="fw-semibold" style="color:#334155">Select a lesson to edit</h6>
+                    <p class="small">Click any lesson from the left panel to view or edit it, or add a new lesson to a chapter.</p>
+                    <button onclick="showCourseSettings()" class="btn btn-sm mt-1"
+                        style="background:#eef2ff;color:#6366f1;border-radius:9px;font-size:.8rem;font-weight:600;border:none">
+                        <i class="bi bi-gear me-1"></i>Open Course Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ══════════════════════ EDIT LESSON TITLE MODAL ══════════════════════ -->
+<div class="modal fade" id="editLessonTitleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:16px">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h6 class="fw-bold mb-0">Edit Lesson Title</h6>
+                    <small class="text-muted">Update the lesson name</small>
+                </div>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" style="font-size:.78rem;font-weight:600;color:#475569">New Title</label>
+                <input type="text" id="new_lesson_title" class="form-control" placeholder="Lesson title" style="border-radius:10px">
+                <input type="hidden" id="edit_lesson_id">
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button class="btn btn-light" data-bs-dismiss="modal" style="border-radius:9px">Cancel</button>
+                <button id="saveLessonTitleBtn" class="btn" style="background:#6366f1;color:#fff;border-radius:9px">
+                    <i class="bi bi-check-lg me-1"></i>Update
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    $(document).ready(function(){
-        loadCourseStatus();
-    });
+/* ════════════════════════════════════════════════════════════
+   GLOBALS
+═══════════════════════════════════════════════════════════════ */
+const COURSE_ID = <?= (int)$course_id ?>;
+let _activeLessonId = null;
+let _lessonDragging = false;
 
-//EDIT LESSON OR VIDEO NAME TO BUNNY NET
-document.addEventListener("click", function(e){
+/* ════════════════════════════════════════════════════════════
+   CHAPTER LOADING  (global so save/delete can refresh it)
+═══════════════════════════════════════════════════════════════ */
+window.loadChapters = function(cid){
+    cid = cid || COURSE_ID;
+    fetch('ajax/ajax_get_chapters_lessons.php?course_id='+cid)
+    .then(r=>r.json())
+    .then(chapters=>{
+        const el = document.getElementById('chapterAccordion');
+        document.getElementById('chapterSkeleton')?.remove();
 
-    if(e.target && e.target.id === "editLessonTitleBtn"){
-
-        let title = e.target.getAttribute("data-title");
-        let lesson_id = document.getElementById("lesson_id").value;
-
-        document.getElementById("new_lesson_title").value = title;
-        document.getElementById("edit_lesson_id").value = lesson_id;
-
-        let modal = new bootstrap.Modal(document.getElementById('editLessonTitleModal'));
-        modal.show();
-    }
-
-});
-
-//Add chepter event
-document.addEventListener("DOMContentLoaded", function () {
-
-    const form = document.querySelector("#addChapterForm");
-    let isSubmitting = false;
-
-    form.addEventListener("submit", function (e) {
-
-        e.preventDefault();
-
-        if (isSubmitting) return;
-        isSubmitting = true;
-
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            isSubmitting = false;
+        if(!chapters.length){
+            el.innerHTML = `
+            <div class="p-4 text-center text-muted small">
+                <i class="bi bi-folder-x d-block mb-2" style="font-size:1.8rem;opacity:.35"></i>
+                No chapters yet. Click <strong>+ Chapter</strong> to get started.
+            </div>`;
+            document.getElementById('heroLessonCount').textContent = '';
             return;
         }
 
-        let chapterName = document.getElementById("validationTooltip02").value;
-
-        Swal.fire({
-            title: "Saving...",
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        fetch("ajax/ajax_save_chapter.php", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                title: chapterName,
-                course_id: <?php echo $course_id; ?>
-            })
-        })
-        .then(res => res.json())
-        .then(res => {
-
-            Swal.close();
-            isSubmitting = false;
-
-            if (res.status === "success") {
-
-                // Close modal and reset form without page reload
-                let modalEl = document.getElementById('createChapterModal');
-                let modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-                form.reset();
-                form.classList.remove('was-validated');
-
-                Swal.fire({
-                    icon: "success",
-                    title: "Chapter Added",
-                    text: res.message,
-                    timer: 1500,
-                    showConfirmButton: false
+        let totalLessons = 0;
+        let html = '';
+        chapters.forEach((ch,i)=>{
+            const colId = 'ch-col-'+i;
+            const lessonCount = (ch.lessons||[]).length;
+            totalLessons += lessonCount;
+            html += `
+            <div class="ch-item" data-chapter-id="${ch.id}">
+                <button class="ch-toggle" data-target="${colId}" onclick="toggleChapter(this,'${colId}')">
+                    <i class="bi bi-grip-vertical ch-drag-handle"></i>
+                    <i class="bi bi-folder2-open" style="color:#6366f1;font-size:.85rem"></i>
+                    <span style="flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(ch.chapter_title)}</span>
+                    <span class="ch-badge">${lessonCount}</span>
+                    <i class="bi bi-chevron-down ch-arrow"></i>
+                </button>
+                <div id="${colId}" class="ch-collapse">
+                    <ul class="lesson-list lesson-sortable-list" id="lessonList-${ch.id}" data-chapter-id="${ch.id}">`;
+            if(lessonCount){
+                ch.lessons.forEach(l=>{
+                    const typeIcon = l.content_type==='audio' ? 'bi-music-note' : l.content_type==='pdf' ? 'bi-file-pdf' : 'bi-play-circle';
+                    html += `
+                        <li class="lesson-item" data-lesson-id="${l.id}" onclick="handleLessonClick(${l.id},this)">
+                            <i class="bi bi-grip-vertical l-drag"></i>
+                            <i class="bi ${typeIcon} l-type"></i>
+                            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(l.lesson_title)}</span>
+                            ${l.isFreePreviewLesson==1?'<span class="l-free">FREE</span>':''}
+                        </li>`;
                 });
-
-                loadChapters(<?php echo $course_id; ?>);
-
             } else {
-                Swal.fire("Error", res.message, "error");
+                html += `<li class="list-group-item text-muted small empty-chapter-placeholder" style="list-style:none;padding:.4rem .65rem;font-size:.78rem">No lessons yet</li>`;
             }
-
-        })
-        .catch(() => {
-            Swal.fire("Error", "Something went wrong", "error");
-            isSubmitting = false;
-        });
-
-    });
-
-});
-
-
-document.addEventListener("click", function(e){
-
-    if(e.target && e.target.id === "saveLessonBtnNew"){
-
-        let title = document.getElementById("lesson_title").value.trim();
-        let content_type = document.getElementById("content_type").value.trim();
-        let chapter_id = document.getElementById("chapter_id").value.trim();
-        let course_id = <?php echo $course_id; ?>;
-
-        // ✅ VALIDATION
-        if(title === ""){
-            Swal.fire("Error","Lesson title is required","error");
-            return;
-        }
-
-        if(content_type === ""){
-            Swal.fire("Error","Content type is required","error");
-            return;
-        }
-
-        let formData = new FormData();
-        formData.append("lesson_title", title);
-        formData.append("course_id", course_id);
-        formData.append("chapter_id", chapter_id);
-        formData.append("content_type",content_type);
-
-        Swal.fire({
-            title: "Saving Lesson...",
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        fetch("ajax/ajax_save_lesson_new.php", {
-            method: "POST",
-            body: formData
-        })
-        .then(async (res) => {
-            let text = await res.text(); 
-            console.log("RAW RESPONSE:", text);
-
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                throw new Error("Invalid JSON response");
-            }
-        })
-        .then(res => {
-            console.log(res);
-            Swal.close();
-
-            if(res.status === "success"){
-
-                let chapter_id = document.getElementById("chapter_id").value;
-
-                // Refresh only the chapter list panel
-                loadChapters(<?php echo $course_id; ?>);
-
-                // Reset right panel to a clean success state
-                document.getElementById("chapterContents").innerHTML = `
-                    <div class="text-center py-5 text-success">
-                        <i class="bi bi-check-circle-fill fs-1 mb-3 d-block"></i>
-                        <h6 class="fw-semibold">Lesson Created Successfully</h6>
-                        <p class="text-muted small">Click a lesson from the left panel to view or edit it.</p>
-                        <button class="btn btn-sm btn-outline-primary mt-2"
-                            onclick="showLessonInputForm(${chapter_id})">
-                            <i class="bi bi-plus"></i> Add Another Lesson
+            html += `</ul>
+                    <div class="add-lesson-row">
+                        <button class="btn-add-lesson" onclick="showLessonInputForm(${ch.id})">
+                            <i class="bi bi-plus-lg"></i> Add Lesson
                         </button>
-                    </div>`;
-
-                Swal.fire({
-                    icon: "success",
-                    title: "Lesson Created",
-                    text: res.message,
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-
-            } else {
-                Swal.fire("Error", res.message, "error");
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            Swal.fire("Error", err.message || "Something went wrong", "error");
-        });
-
-    }
-
-});
-
-
-document.addEventListener("click", function(e){
-
-    if(e.target && e.target.id === "saveLessonBtn"){
-
-        let title = document.getElementById("lesson_title").value.trim();
-        let video = document.getElementById("video_url").value.trim();
-        let chapter_id = document.getElementById("chapter_id").value;
-        let content_type = document.getElementById("content_type").value;
-
-        let fileInput = document.getElementById("upload_file");
-        let file = fileInput.files[0];
-
-        let description = document.querySelector('#lesson_description').value;
-
-        let isFree = document.getElementById("isFreePreviewLesson").checked ? 1 : 0;
-        let discussion = document.getElementById("enableDiscussions").checked ? 1 : 0;
-        let downloadable = document.getElementById("isDownloadable").checked ? 1 : 0;
-
-        let course_id = <?php echo $course_id; ?>;
-
-        // ✅ VALIDATION
-        if(title === ""){
-            Swal.fire("Error","Lesson title is required","error");
-            return;
-        }
-
-        if(content_type === "video" && video === ""){
-            Swal.fire("Error","Video URL is required","error");
-            return;
-        }
-
-        if((content_type === "pdf" || content_type === "presentation") && !file){
-            Swal.fire("Error","Please upload file","error");
-            return;
-        }
-
-        let formData = new FormData();
-        formData.append("lesson_title", title);
-        formData.append("video_url", video);
-        formData.append("description", description);
-        formData.append("isFreePreviewLesson", isFree);
-        formData.append("enableDiscussions", discussion);
-        formData.append("isDownloadable", downloadable);
-        formData.append("course_id", course_id);
-        formData.append("chapter_id", chapter_id);
-        formData.append("content_type", content_type);
-
-        if(file){
-            formData.append("file", file);
-        }
-
-        Swal.fire({
-            title: "Saving Lesson...",
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        fetch("ajax/ajax_save_lesson.php",{
-            method: "POST",
-            body: formData
-        })
-        .then(res => res.json())
-        .then(res => {
-
-            Swal.close();
-
-            if(res.status === "success"){
-                Swal.fire("Success", res.message, "success")
-                loadChapters(<?php echo $course_id; ?>);
-            } else {
-                Swal.fire("Error", res.message, "error");
-            }
-
-        })
-        .catch(()=>{
-            Swal.fire("Error","Something went wrong","error");
-        });
-
-    }
-
-});
- 
-//update course status 
-function changeCourseStatus(){
-
-    const params = new URLSearchParams(window.location.search);
-    const course_id = params.get("course_id");
-
-    if(!course_id){
-        Swal.fire("Error", "Course ID not found", "error");
-        return;
-    }
-
-    // 🔥 Fetch current status first
-    fetch("ajax/ajax_get_course_status.php?course_id=" + course_id)
-    .then(res => res.json())
-    .then(res => {
-
-        if(res.status !== "success"){
-            Swal.fire("Error", "Failed to load course status", "error");
-            return;
-        }
-
-        let currentStatus = res.course_status;
-
-        // ✅ Determine next action
-        let actionText = "";
-        let newStatus = "";
-
-        if(currentStatus === "active"){
-            actionText = "Unpublish this course?";
-            newStatus = "inactive";
-        }
-        else if(currentStatus === "inactive"){
-            actionText = "Publish this course?";
-            newStatus = "active";
-        }
-        else{
-            actionText = "Publish this course?";
-            newStatus = "active";
-        }
-
-        // 🎯 SweetAlert
-        Swal.fire({
-            title: actionText,
-            text: "You can change this later anytime",
-            icon: "question",
-            showCancelButton: true,
-            confirmButtonText: "Yes, continue",
-            cancelButtonText: "Cancel"
-        }).then((result) => {
-
-            if(result.isConfirmed){
-
-                // 🚀 Update status
-                fetch("ajax/ajax_update_course_status.php", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        course_id: course_id,
-                        status: newStatus
-                    })
-                })
-                .then(res => res.json())
-                .then(res => {
-
-                    if(res.status === "success"){
-                        Swal.fire("Success", "Course status updated", "success");
-
-                        // optional refresh
-                        loadCourseStatus(); // 🔥 instead of reload
-                    }else{
-                        Swal.fire("Error", res.message, "error");
-                    }
-
-                });
-
-            }
-
-        });
-
-    });
-
-}
-//load course status 
-function loadCourseStatus(){
-
-    const params = new URLSearchParams(window.location.search);
-    const course_id = params.get("course_id");
-
-    if(!course_id) return;
-
-    fetch("ajax/ajax_get_course_status.php?course_id=" + course_id)
-    .then(res => res.json())
-    .then(res => {
-
-        if(res.status !== "success") return;
-
-        let status = res.course_status;
-
-        let btn = document.getElementById("statusBtn");
-        let text = document.getElementById("statusText");
-
-        // 🔥 RESET CLASSES
-        btn.classList.remove("btn-success","btn-danger","btn-info");
-
-        if(status === "active"){
-            btn.classList.add("btn-success");
-            text.innerText = "Published";
-        }
-        else if(status === "inactive"){
-            btn.classList.add("btn-danger");
-            text.innerText = "Unpublished";
-        }
-        else{
-            btn.classList.add("btn-info");
-            text.innerText = "Draft";
-        }
-
-    });
-}
-
-//show course Settings
-function showCourseSettings() {
-
-    fetch("pages/course_settings.php?course_id=" + <?php echo $_GET['course_id']; ?>)
-    .then(res => res.text())
-    .then(html => {
-
-        document.getElementById("chapterContents").innerHTML = html;
-
-        // ✅ Wait a bit for DOM to render
-        setTimeout(() => {
-
-            if (typeof FroalaEditor !== "undefined") {
-
-                new FroalaEditor('#course_description', {
-                    height: 160
-                });
-
-            } else {
-                console.error("Froala not loaded!");
-            }
-
-        }, 200);
-
-    })
-    .catch(err => {
-        console.error("Error loading form:", err);
-    });
-}
-
-//delete nunny video library
-document.addEventListener("click", function(e){
-
-    if(e.target && e.target.id === "deleteCourseBtn"){
-
-        let title = document.getElementById("course_name").value.trim();
-        let course_id = document.getElementById("course_id").value;
-
-        // 🔥 CONFIRMATION FIRST
-        Swal.fire({
-                title: "⚠️ Are you sure?",
-                html: `
-                    <b>Delete course "${title}"?</b><br>
-                    <small>All associated lessons will also be permanently deleted.</small>
-                `,
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonText: "Yes, delete it!",
-                cancelButtonText: "Cancel",
-
-                // 🔥 Colors
-                confirmButtonColor: "#dc3545", // bootstrap danger
-                cancelButtonColor: "#6c757d",
-
-                // 🔥 Background styling
-                background: "#fff3f3",
-                color: "#842029",
-
-                // 🔥 Optional custom class
-                customClass: {
-                    popup: "border border-danger shadow-lg",
-                    title: "text-danger",
-                    confirmButton: "btn btn-danger",
-                    cancelButton: "btn btn-secondary"
-                }
-
-            }).then((result) => {
-
-            if(result.isConfirmed){
-
-                let formData = new FormData();
-                formData.append("course_name", title);
-                formData.append("course_id", course_id);
-
-                // 🔄 LOADING
-                Swal.fire({
-                    title: "Deleting...",
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading()
-                });
-
-                fetch("ajax/ajax_delete_course.php", {
-                    method: "POST",
-                    body: formData
-                })
-                .then(res => res.json())
-                .then(res => {
-
-                    Swal.close();
-
-                    if(res.status === "success"){
-                        Swal.fire({
-                            title: "Deleted!",
-                            text: res.message,
-                            icon: "success"
-                        }).then(() => {
-                            location.reload();
-                        });
-
-                    } else {
-                        Swal.fire("Error", res.message, "error");
-                    }
-
-                })
-                .catch(() => {
-                    Swal.fire("Error","Something went wrong","error");
-                });
-
-            }
-
-        });
-
-    }
-
-});
-
-//submit course settings.
-document.addEventListener("click", function(e){
-
-    if(e.target && e.target.id === "saveCourseSettingsBtn"){
-
-        let title           = document.getElementById("course_name").value.trim();
-        let old_course_name = document.getElementById("old_course_name").value;
-        let library_id      = document.getElementById("library_id").value;
-        let price           = document.getElementById("course_price").value.trim();
-        let discount        = document.getElementById("course_discount").value.trim();
-        let description     = document.getElementById("course_description").value;
-        let course_id       = document.getElementById("course_id").value;
-        let library_key     = document.getElementById("library_key").value;
-
-        let certificate     = document.getElementById("isCertificateOffered").checked ? 1 : 0;
-        let qna             = document.getElementById("isQandAEnabled").checked ? 1 : 0;
-
-        let fileInput       = document.getElementById("course_thumbnail");
-        let file            = fileInput.files[0];
-
-        if(title === "" || price === ""){
-            Swal.fire("Error","Course name and price required","error");
-            return;
-        }
-
-        let formData = new FormData();
-        formData.append("course_name", title);
-        formData.append("course_price", price);
-        formData.append("course_discount", discount);
-        formData.append("course_description", description);
-        formData.append("course_id", course_id);
-        formData.append("isCertificateOffered", certificate);
-        formData.append("isQandAEnabled", qna);
-        formData.append("old_course_name", old_course_name);
-        formData.append("library_id", library_id);
-        formData.append("library_key", library_key);
-
-        if(file){
-            formData.append("thumbnail", file);
-        }
-
-        Swal.fire({
-            title: "Updating...",
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        fetch("ajax/ajax_update_course_settings.php", {
-            method: "POST",
-            body: formData
-        })
-        .then(res => res.json())
-        .then(res => {
-
-            Swal.close();
-
-            if(res.status === "success"){
-                Swal.fire("Success", res.message, "success");
-            } else {
-                Swal.fire("Error", res.message, "error");
-            }
-
-        })
-        .catch(() => {
-            Swal.fire("Error","Something went wrong","error");
-        });
-
-    }
-
-});
-
-document.addEventListener("DOMContentLoaded", function(){
-
-    let course_id = <?php echo $course_id; ?>; 
-
-    loadChapters(course_id);
-
-    function loadChapters(course_id){
-
-        fetch(`ajax/ajax_get_chapters_lessons.php?course_id=${course_id}`)
-        .then(res => res.json())
-        .then(data => {
-
-            let html = "";
-            let index = 1;
-
-            data.forEach((chapter, i) => {
-
-                let collapseId = "collapse" + i;
-
-                html += `
-                <div class="accordion-item">
-                    <div class="accordion-header">
-                        <button class="accordion-button"
-                                type="button"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#${collapseId}">
-                            
-                            <i class="bi bi-grid-3x3-gap"></i>&nbsp; ${chapter.chapter_title}
-                        </button>
-                    </div>
-
-                    <div id="${collapseId}" class="accordion-collapse collapse show">
-                        <div class="accordion-body">
-
-                            <div class="row">
-                                <div class="col-12">
-
-                                    <ol class="list-group adminuiux-list-group lesson-sortable-list"
-                    id="lessonList-${chapter.id}"
-                    data-chapter-id="${chapter.id}">
-                `;
-
-                // LESSONS LOOP
-                if(chapter.lessons.length > 0){
-
-                    chapter.lessons.forEach(lesson => {
-                        html += `
-                        <li class="list-group-item lesson-item"
-                            data-lesson-id="${lesson.id}"
-                            onclick="showLessonContents(${lesson.id})">
-                            <i class="bi bi-grip-vertical text-muted drag-handle me-1"></i>
-                            <i class="bi bi-play-circle"></i>&nbsp; ${lesson.lesson_title}
-                        </li>
-                        `;
-                    });
-
-                } else {
-                    html += `<li class="list-group-item text-muted empty-chapter-placeholder">No lessons yet</li>`;
-                }
-
-                html += `
-                                    </ol>
-
-                                    <center class="mt-3">
-                                        <button class="btn btn-default addLessonBtn"
-                                            data-chapter="${chapter.id}" onclick="showLessonInputForm(${chapter.id})">
-                                            <i class="bi bi-plus"></i> Add Lesson
-                                        </button>
-                                    </center>
-
-                                </div>
-                            </div>
-
-                        </div>
                     </div>
                 </div>
-                `;
-            });
-
-            document.getElementById("accordionExample").innerHTML = html;
-
-            initLessonDragDrop();
-
+            </div>`;
         });
-    }
 
-});
+        el.innerHTML = html;
+        document.getElementById('heroLessonCount').textContent = totalLessons+' lesson'+(totalLessons!==1?'s':'');
 
-//Rename Video/Lesson Title
-document.addEventListener("click", function(e){
-
-    if(e.target && e.target.id === "saveLessonTitleBtn"){
-
-        let newTitle = document.getElementById("new_lesson_title").value.trim();
-        let lesson_id = document.getElementById("edit_lesson_id").value;
-
-        if(newTitle === ""){
-            Swal.fire("Error","Title is required","error");
-            return;
+        // Restore active lesson highlight
+        if(_activeLessonId){
+            const li = el.querySelector(`[data-lesson-id="${_activeLessonId}"]`);
+            if(li) li.classList.add('active');
         }
+        initLessonDragDrop();
+    })
+    .catch(console.error);
+};
 
-        // ✅ CONFIRMATION
-        Swal.fire({
-            title: "Confirm Update",
-            text: `Rename this lesson to "${newTitle}"?`,
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#0d6efd",
-            cancelButtonColor: "#6c757d",
-            confirmButtonText: "Yes, update",
-            cancelButtonText: "Cancel"
-        }).then((result) => {
-
-            if(!result.isConfirmed) return;
-
-            // 🔄 LOADING
-            Swal.fire({
-                title: "Updating...",
-                text: "Please wait",
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            fetch("ajax/ajax_rename_lesson.php", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    lesson_id: lesson_id,
-                    lesson_title: newTitle
-                })
-            })
-            .then(res => res.json())
-            .then(res => {
-
-                Swal.close();
-
-                if(res.status === "success"){
-
-                    Swal.fire("Success", res.message, "success");
-
-                    // close modal safely
-                    let modalEl = document.getElementById('editLessonTitleModal');
-                    let modal = bootstrap.Modal.getInstance(modalEl);
-                    if(modal) modal.hide();
-
-                    // refresh UI
-                    showLessonContents(lesson_id);
-
-                } else {
-                    Swal.fire("Error", res.message, "error");
-                }
-
-            })
-            .catch((err)=>{
-                console.error(err);
-                Swal.fire("Error","Something went wrong","error");
-            });
-
-        });
-
-    }
-
-});
-// ─── EXPAND / COLLAPSE ALL CHAPTERS ─────────────────────────────────────────
-function toggleAllChapters() {
-    let panels  = document.querySelectorAll('#accordionExample .accordion-collapse');
-    let btn     = document.getElementById('toggleAllChaptersBtn');
-    let icon    = document.getElementById('toggleAllIcon');
-    let allOpen = Array.from(panels).every(p => p.classList.contains('show'));
-
-    panels.forEach(function(panel) {
-        let instance = bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false });
-        allOpen ? instance.hide() : instance.show();
-    });
-
-    if (allOpen) {
-        icon.className = 'bi bi-chevron-bar-expand';
-        btn.innerHTML  = '<i class="bi bi-chevron-bar-expand" id="toggleAllIcon"></i> Expand All';
-    } else {
-        icon.className = 'bi bi-chevron-bar-contract';
-        btn.innerHTML  = '<i class="bi bi-chevron-bar-contract" id="toggleAllIcon"></i> Collapse All';
-    }
+/* ════════════════════════════════════════════════════════════
+   CHAPTER TOGGLE
+═══════════════════════════════════════════════════════════════ */
+function toggleChapter(btn, colId){
+    const col = document.getElementById(colId);
+    const open = col.style.display !== 'none';
+    col.style.display = open ? 'none' : '';
+    btn.classList.toggle('collapsed', open);
 }
 
-// ─── DRAG & DROP LESSONS BETWEEN CHAPTERS ───────────────────────────────────
-function initLessonDragDrop() {
-    let lists = Array.from(document.querySelectorAll('.lesson-sortable-list'));
-    if (!lists.length) return;
+function toggleAllChapters(){
+    const cols   = document.querySelectorAll('.ch-collapse');
+    const btns   = document.querySelectorAll('.ch-toggle');
+    const icon   = document.getElementById('toggleAllIcon');
+    const allOpen = Array.from(cols).every(c=>c.style.display!=='none');
+    cols.forEach(c=>{ c.style.display = allOpen ? 'none' : ''; });
+    btns.forEach(b=>{ b.classList.toggle('collapsed', allOpen); });
+    icon.className = allOpen ? 'bi bi-chevron-bar-expand' : 'bi bi-chevron-bar-contract';
+}
 
-    window._lessonDragging = false;
+/* ════════════════════════════════════════════════════════════
+   LESSON CLICK  (guard against drag-end firing click)
+═══════════════════════════════════════════════════════════════ */
+function handleLessonClick(lessonId, el){
+    if(_lessonDragging) return;
+    document.querySelectorAll('.lesson-item').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+    _activeLessonId = lessonId;
+    showLessonContents(lessonId);
+}
 
-    let drake = dragula(lists, {
-        moves: function(el) {
-            return el.classList.contains('lesson-item');
-        },
-        accepts: function(el, target) {
-            return target.classList.contains('lesson-sortable-list');
-        }
+/* ════════════════════════════════════════════════════════════
+   DRAG & DROP
+═══════════════════════════════════════════════════════════════ */
+function initLessonDragDrop(){
+    const lists = Array.from(document.querySelectorAll('.lesson-sortable-list'));
+    if(!lists.length || typeof dragula === 'undefined') return;
+
+    const drake = dragula(lists,{
+        moves: el=>el.classList.contains('lesson-item'),
+        accepts: (el,target)=>target.classList.contains('lesson-sortable-list')
     });
-
-    drake.on('drag', function() {
-        window._lessonDragging = true;
-    });
-
-    drake.on('dragend', function() {
-        setTimeout(function() { window._lessonDragging = false; }, 100);
-    });
-
-    drake.on('drop', function(el, target, source) {
-        let newChapterId = target.dataset.chapterId;
-        let oldChapterId = source.dataset.chapterId;
-
-        if (newChapterId === oldChapterId) return;
-
-        let lessonId = el.dataset.lessonId;
-
-        // Remove empty placeholder from target if present
-        let placeholder = target.querySelector('.empty-chapter-placeholder');
-        if (placeholder) placeholder.remove();
-
-        fetch('ajax/ajax_move_lesson.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lesson_id: lessonId, chapter_id: newChapterId })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(r) {
-            if (r.status !== 'success') {
-                Swal.fire('Error', r.message, 'error');
-                drake.cancel(true);
-            }
-            // If source chapter is now empty, add placeholder
-            if (source.querySelectorAll('.lesson-item').length === 0) {
-                let li = document.createElement('li');
-                li.className = 'list-group-item text-muted empty-chapter-placeholder';
-                li.textContent = 'No lessons yet';
+    drake.on('drag',     ()=>{ _lessonDragging=true; });
+    drake.on('dragend',  ()=>{ setTimeout(()=>{ _lessonDragging=false; },150); });
+    drake.on('drop',(el,target,source)=>{
+        const newCh = target.dataset.chapterId;
+        const oldCh = source.dataset.chapterId;
+        if(newCh===oldCh) return;
+        const lid = el.dataset.lessonId;
+        // Remove placeholder
+        target.querySelector('.empty-chapter-placeholder')?.remove();
+        fetch('ajax/ajax_move_lesson.php',{
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({lesson_id:lid,chapter_id:newCh})
+        }).then(r=>r.json()).then(r=>{
+            if(r.status!=='success'){ Swal.fire('Error',r.message,'error'); drake.cancel(true); }
+            if(!source.querySelectorAll('.lesson-item').length){
+                const li = document.createElement('li');
+                li.className='list-group-item text-muted small empty-chapter-placeholder';
+                li.style='list-style:none;padding:.4rem .65rem;font-size:.78rem';
+                li.textContent='No lessons yet';
                 source.appendChild(li);
             }
-        })
-        .catch(function() {
-            Swal.fire('Error', 'Could not move lesson', 'error');
-            drake.cancel(true);
+            // update chapter badges
+            source.closest('.ch-item')?.querySelector('.ch-badge')
+                && (source.closest('.ch-item').querySelector('.ch-badge').textContent = source.querySelectorAll('.lesson-item').length);
+            target.closest('.ch-item')?.querySelector('.ch-badge')
+                && (target.closest('.ch-item').querySelector('.ch-badge').textContent = target.querySelectorAll('.lesson-item').length);
+        }).catch(()=>{ Swal.fire('Error','Could not move lesson','error'); drake.cancel(true); });
+    });
+}
+
+/* ════════════════════════════════════════════════════════════
+   COURSE STATUS
+═══════════════════════════════════════════════════════════════ */
+function loadCourseStatus(){
+    fetch('ajax/ajax_get_course_status.php?course_id='+COURSE_ID)
+    .then(r=>r.json()).then(r=>{
+        if(r.status!=='success') return;
+        const s   = r.course_status;
+        const chip= document.getElementById('heroStatusChip');
+        const txt = document.getElementById('statusText');
+        const ico = document.getElementById('statusToggleIcon');
+        chip.className='status-chip '+(s==='active'?'active':s==='inactive'?'inactive':'draft');
+        chip.innerHTML=`<i class="bi bi-circle-fill" style="font-size:.45rem"></i> ${s.charAt(0).toUpperCase()+s.slice(1)}`;
+        txt.textContent = s==='active' ? 'Published' : s==='inactive' ? 'Unpublished' : 'Draft';
+        ico.className = s==='active' ? 'bi bi-toggle-on me-1 text-success' : 'bi bi-toggle-off me-1 text-muted';
+    }).catch(console.error);
+}
+
+function changeCourseStatus(){
+    fetch('ajax/ajax_get_course_status.php?course_id='+COURSE_ID)
+    .then(r=>r.json()).then(r=>{
+        if(r.status!=='success') return;
+        const cur = r.course_status;
+        const next = cur==='active' ? 'inactive' : 'active';
+        Swal.fire({
+            title: next==='active' ? 'Publish this course?' : 'Unpublish this course?',
+            text: 'You can change this anytime.',
+            icon: 'question', showCancelButton: true,
+            confirmButtonText: 'Yes, proceed',
+            confirmButtonColor: next==='active' ? '#16a34a' : '#dc2626'
+        }).then(res=>{
+            if(!res.isConfirmed) return;
+            fetch('ajax/ajax_update_course_status.php',{
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({course_id:COURSE_ID, status:next})
+            }).then(r=>r.json()).then(r=>{
+                if(r.status==='success'){
+                    Swal.fire({icon:'success',title:'Updated!',timer:1200,showConfirmButton:false});
+                    loadCourseStatus();
+                } else Swal.fire('Error',r.message,'error');
+            });
         });
     });
 }
 
-// ─── PLYR AUDIO PLAYER ───────────────────────────────────────────────────────
-function initAudioPlayer() {
-    function doInit() {
-        const el = document.getElementById('lesson-audio-player');
-        if (!el) return;
-        new Plyr(el, {
-            controls: ['play', 'progress', 'current-time', 'duration', 'mute', 'volume'],
-            resetOnEnd: false
-        });
-    }
-
-    if (window.Plyr) { doInit(); return; }
-
-    if (!document.getElementById('plyr-css')) {
-        const link = document.createElement('link');
-        link.id   = 'plyr-css';
-        link.rel  = 'stylesheet';
-        link.href = 'https://cdn.plyr.io/3.7.8/plyr.css';
-        document.head.appendChild(link);
-    }
-
-    const script  = document.createElement('script');
-    script.src    = 'https://cdn.plyr.io/3.7.8/plyr.polyfilled.js';
-    script.onload = doInit;
-    document.head.appendChild(script);
+/* ════════════════════════════════════════════════════════════
+   COURSE SETTINGS
+═══════════════════════════════════════════════════════════════ */
+function showCourseSettings(){
+    document.getElementById('chapterContents').innerHTML=`
+        <div class="text-center p-4"><div class="spinner-border text-primary spinner-border-sm"></div><p class="small text-muted mt-2">Loading settings…</p></div>`;
+    fetch('pages/course_settings.php?course_id='+COURSE_ID)
+    .then(r=>r.text()).then(html=>{
+        document.getElementById('chapterContents').innerHTML=html;
+        setTimeout(()=>{
+            if(typeof FroalaEditor!=='undefined') new FroalaEditor('#course_description',{height:160});
+        },200);
+    }).catch(console.error);
 }
 
-//show lesson contents
-function showLessonContents(lessonId){
-    if (window._lessonDragging) return;
+/* ════════════════════════════════════════════════════════════
+   ADD CHAPTER FORM SUBMIT
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+    const form = document.querySelector('#addChapterForm');
+    if(!form) return;
+    let submitting = false;
+    form.addEventListener('submit',e=>{
+        e.preventDefault();
+        if(submitting) return; submitting=true;
+        if(!form.checkValidity()){ form.classList.add('was-validated'); submitting=false; return; }
+        const title = document.getElementById('validationTooltip02').value;
+        Swal.fire({title:'Saving…',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+        fetch('ajax/ajax_save_chapter.php',{
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({title, course_id:COURSE_ID})
+        }).then(r=>r.json()).then(r=>{
+            Swal.close(); submitting=false;
+            if(r.status==='success'){
+                bootstrap.Modal.getInstance(document.getElementById('createChapterModal'))?.hide();
+                form.reset(); form.classList.remove('was-validated');
+                Swal.fire({icon:'success',title:'Chapter Added',timer:1300,showConfirmButton:false});
+                loadChapters(COURSE_ID);
+            } else Swal.fire('Error',r.message,'error');
+        }).catch(()=>{ Swal.fire('Error','Something went wrong','error'); submitting=false; });
+    });
+});
 
-    // Loader (optional UX)
-    document.getElementById("chapterContents").innerHTML = `
-        <div class="text-center p-3">
-            <div class="spinner-border"></div>
-            <p>Loading lesson...</p>
-        </div>
-    `;
+/* ════════════════════════════════════════════════════════════
+   ADD LESSON (step 1: create blank lesson)
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('click',e=>{
+    if(!e.target || e.target.id!=='saveLessonBtnNew') return;
+    const title       = document.getElementById('lesson_title').value.trim();
+    const content_type= document.getElementById('content_type').value.trim();
+    const chapter_id  = document.getElementById('chapter_id').value.trim();
+    if(!title){ Swal.fire('Error','Lesson title is required','error'); return; }
+    if(!content_type){ Swal.fire('Error','Content type is required','error'); return; }
+    const fd = new FormData();
+    fd.append('lesson_title',title); fd.append('course_id',COURSE_ID);
+    fd.append('chapter_id',chapter_id); fd.append('content_type',content_type);
+    Swal.fire({title:'Creating lesson…',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+    fetch('ajax/ajax_save_lesson_new.php',{method:'POST',body:fd})
+    .then(r=>r.text()).then(t=>{
+        let res; try{ res=JSON.parse(t); }catch(e){ throw new Error('Invalid response'); }
+        Swal.close();
+        if(res.status==='success'){
+            loadChapters(COURSE_ID);
+            document.getElementById('chapterContents').innerHTML=`
+                <div class="rp-welcome">
+                    <div style="font-size:2.5rem;color:#22c55e;margin-bottom:.75rem"><i class="bi bi-check-circle-fill"></i></div>
+                    <h6 class="fw-semibold" style="color:#334155">Lesson Created!</h6>
+                    <p class="small">Click the lesson from the left panel to upload content.</p>
+                    <button class="btn btn-sm mt-1" style="background:#eef2ff;color:#6366f1;border-radius:9px;font-size:.8rem;font-weight:600;border:none"
+                        onclick="showLessonInputForm(${chapter_id})">
+                        <i class="bi bi-plus-lg me-1"></i>Add Another
+                    </button>
+                </div>`;
+            Swal.fire({icon:'success',title:'Lesson Created',timer:1300,showConfirmButton:false});
+        } else Swal.fire('Error',res.message,'error');
+    }).catch(err=>Swal.fire('Error',err.message||'Something went wrong','error'));
+});
 
-    fetch("ajax/ajax_get_lesson.php?id=" + lessonId)
-    .then(res => res.json())
-    .then(res => {
+/* ════════════════════════════════════════════════════════════
+   SHOW LESSON INPUT FORM
+═══════════════════════════════════════════════════════════════ */
+window.showLessonInputForm = function(chapterId){
+    document.getElementById('chapterContents').innerHTML=`
+        <div class="text-center p-4"><div class="spinner-border text-primary spinner-border-sm"></div></div>`;
+    fetch('pages/lesson_input_form_new.php?chapter_id='+chapterId)
+    .then(r=>r.text()).then(html=>{
+        document.getElementById('chapterContents').innerHTML=html;
+        setTimeout(()=>{
+            if(typeof FroalaEditor!=='undefined') new FroalaEditor('#lesson_description',{height:160});
+        },200);
+    }).catch(console.error);
+};
 
-        if(res.status !== "success"){
-            document.getElementById("chapterContents").innerHTML = "<p>Error loading lesson</p>";
+/* ════════════════════════════════════════════════════════════
+   AUDIO HELPERS  (window-level so onclick= works)
+═══════════════════════════════════════════════════════════════ */
+window._removeAudioThumb = false;
+window.previewAudioThumb = function(input){
+    if(!input.files||!input.files[0]) return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+        document.getElementById('audioThumbImg').src=e.target.result;
+        document.getElementById('audioThumbPreview').classList.remove('d-none');
+    };
+    reader.readAsDataURL(input.files[0]);
+    window._removeAudioThumb=false;
+};
+window.removeAudioThumb = function(){
+    document.getElementById('audioThumbPreview').classList.add('d-none');
+    document.getElementById('audio_thumbnail_input').value='';
+    window._removeAudioThumb=true;
+};
+
+function initAudioPlayer(){
+    const doInit=()=>{
+        const el=document.getElementById('lesson-audio-player');
+        if(!el) return;
+        new Plyr(el,{controls:['play','progress','current-time','duration','mute','volume'],resetOnEnd:false});
+    };
+    if(window.Plyr){ doInit(); return; }
+    if(!document.getElementById('plyr-css')){
+        const l=document.createElement('link');
+        l.id='plyr-css'; l.rel='stylesheet';
+        l.href='https://cdn.plyr.io/3.7.8/plyr.css';
+        document.head.appendChild(l);
+    }
+    const s=document.createElement('script');
+    s.src='https://cdn.plyr.io/3.7.8/plyr.polyfilled.js';
+    s.onload=doInit;
+    document.head.appendChild(s);
+}
+
+/* ════════════════════════════════════════════════════════════
+   SHOW LESSON CONTENTS
+═══════════════════════════════════════════════════════════════ */
+/* ── Build embeddable URL from lesson fields (mirrors PHP buildEmbedUrl) ── */
+function buildEmbedUrl(l){
+    const vid  = l.video_id   || '';
+    const lib  = l.library_id || '';
+    const path = l.file_path  || '';
+
+    // BunnyCDN stream via video_id + library_id
+    if(vid && lib)
+        return `https://iframe.mediadelivery.net/embed/${lib}/${vid}?autoplay=false&preload=true`;
+
+    // BunnyCDN player URL → embed URL
+    const m1 = path.match(/player\.mediadelivery\.net\/play\/(\d+)\/([a-f0-9\-]+)/i);
+    if(m1) return `https://iframe.mediadelivery.net/embed/${m1[1]}/${m1[2]}?autoplay=false`;
+
+    // Already an embed URL
+    if(path.includes('iframe.mediadelivery.net/embed')) return path;
+
+    // YouTube watch or short
+    const m2 = path.match(/youtube\.com\/watch\?v=([^&]+)/i);
+    if(m2) return `https://www.youtube.com/embed/${m2[1]}`;
+    const m3 = path.match(/youtu\.be\/([^?]+)/i);
+    if(m3) return `https://www.youtube.com/embed/${m3[1]}`;
+    if(path.includes('youtube.com/embed')) return path;
+
+    return path || null;
+}
+
+window.showLessonContents = function(lessonId){
+    if(_lessonDragging) return;
+    _activeLessonId = lessonId;
+    document.getElementById('chapterContents').innerHTML=`
+        <div class="text-center p-4">
+            <div class="spinner-border text-primary spinner-border-sm"></div>
+            <p class="small text-muted mt-2">Loading lesson…</p>
+        </div>`;
+    fetch('ajax/ajax_get_lesson.php?id='+lessonId)
+    .then(r=>r.json()).then(res=>{
+        if(res.status!=='success'){
+            document.getElementById('chapterContents').innerHTML='<p class="p-3 text-danger">Error loading lesson.</p>';
             return;
         }
+        const l = res.data;
+        const ct = (l.content_type||'video').toLowerCase();
 
-        let lesson = res.data;
+        /* ── Build media preview block ── */
+        let mediaBlock = '';
 
-        // Build media block based on content_type
-        function buildMediaBlock(lesson) {
-            if (!lesson.file_path) return '';
-            if (lesson.content_type === 'audio') {
-                const mime = lesson.file_path.toLowerCase().endsWith('.mp4') ? 'audio/mp4' : 'audio/mpeg';
-                const thumbUrl = lesson.lesson_thumbnail ? lesson.lesson_thumbnail : '';
-                return `
+        if(ct === 'audio'){
+            const path  = l.file_path || '';
+            const mime  = path.toLowerCase().endsWith('.mp4') ? 'audio/mp4' : 'audio/mpeg';
+            const thumb = l.lesson_thumbnail || '';
+            if(path){
+                mediaBlock = `
+                <div class="ld-section-title">Preview</div>
                 <div class="mb-3">
-                    ${thumbUrl ? `<div class="rounded mb-2 overflow-hidden" style="max-height:220px;background:#000">
-                        <img src="${thumbUrl}" class="w-100 d-block" style="max-height:220px;object-fit:cover;opacity:.9" alt="Audio cover">
-                    </div>` : ''}
-                    <audio id="lesson-audio-player" controls crossorigin playsinline style="width:100%">
-                        <source src="${lesson.file_path}" type="${mime}">
+                    ${thumb?`<img src="${escHtml(thumb)}" class="media-thumb mb-2" alt="Cover">`:''}
+                    <audio id="lesson-audio-player" controls crossorigin playsinline style="width:100%;border-radius:10px">
+                        <source src="${escHtml(path)}" type="${mime}">
                     </audio>
                 </div>
-                <!-- Audio Thumbnail Upload -->
-                <div class="mb-3 p-3 border rounded bg-light">
-                    <label class="form-label small fw-medium mb-2">
-                        <i class="bi bi-image me-1 text-primary"></i>Audio Cover Image
-                        <span class="text-muted fw-normal">(optional — shown above the player)</span>
-                    </label>
-                    <input type="file" id="audio_thumbnail_input" class="form-control form-control-sm"
-                           accept="image/*" onchange="previewAudioThumb(this)">
-                    <div id="audioThumbPreview" class="mt-2 ${thumbUrl ? '' : 'd-none'}">
-                        <img id="audioThumbImg" src="${thumbUrl}" class="rounded" style="max-height:100px;max-width:200px;object-fit:cover">
-                        <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeAudioThumb()">
-                            <i class="bi bi-trash"></i> Remove
-                        </button>
+                <div class="mb-3 p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
+                    <label class="form-label-sm"><i class="bi bi-image me-1 text-primary"></i>Audio Cover Image <span class="text-muted fw-normal">(optional)</span></label>
+                    <input type="file" id="audio_thumbnail_input" class="form-control form-control-sm mt-1" accept="image/*" onchange="previewAudioThumb(this)" style="border-radius:8px">
+                    <div id="audioThumbPreview" class="mt-2 ${thumb?'':'d-none'}">
+                        <img id="audioThumbImg" src="${escHtml(thumb)}" class="rounded" style="max-height:90px;max-width:180px;object-fit:cover">
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeAudioThumb()"><i class="bi bi-trash"></i></button>
                     </div>
                 </div>`;
+            } else {
+                mediaBlock = `<div class="ld-section-title">Preview</div>
+                <div class="mb-3 p-3 rounded text-center text-muted" style="background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px">
+                    <i class="bi bi-music-note-beamed d-block mb-1" style="font-size:1.5rem;opacity:.4"></i>
+                    <small>No audio uploaded yet. Upload a file below.</small>
+                </div>`;
             }
-            return `
-            <div class="mb-3">
-                <iframe
-                    style="width:100%; height:400px; border:0; display:block;"
-                    src="${lesson.file_path}"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerpolicy="strict-origin-when-cross-origin"
-                    allowfullscreen>
-                </iframe>
-            </div>`;
-        }
-
-        window._removeAudioThumb = false;
-        function previewAudioThumb(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    document.getElementById('audioThumbImg').src = e.target.result;
-                    document.getElementById('audioThumbPreview').classList.remove('d-none');
-                };
-                reader.readAsDataURL(input.files[0]);
-                window._removeAudioThumb = false;
-            }
-        }
-        function removeAudioThumb() {
-            document.getElementById('audioThumbPreview').classList.add('d-none');
-            document.getElementById('audio_thumbnail_input').value = '';
-            window._removeAudioThumb = true;
-        }
-
-        // Inject HTML
-       document.getElementById("chapterContents").innerHTML = `
-            <div class="card adminuiux-card shadow-sm overflow-hidden z-index-0 mb-4">
-
-
-                <div class="card-body pb-0">
-                    <h6 class="mb-3">Lesson Basic Details</h6>
-
-                    <!-- MEDIA PLAYER -->
-                    ${buildMediaBlock(lesson)}
-
-                    <!-- TITLE -->
-                    <div class="mb-3">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                            <label class="fw-bold mb-0">Lesson Title</label>
-                            <i class="bi bi-pencil-square text-primary" 
-                            style="cursor:pointer;" 
-                            id="editLessonTitleBtn"
-                            data-title="${lesson.lesson_title}">
-                            </i>
-                        </div>
-
-                        <div class="form-floating">
-                            <input id="lesson_title" disabled readonly class="form-control" value="${lesson.lesson_title}">
-                            <label>Lesson Title</label>
-                        </div>
-                    </div>
-
-
-                    <!-- CONTENT TYPE -->
-                    <div class="mb-3">
-                        <div class="form-floating">
-                            <input id="content_type" disabled readonly class="form-control" value="${lesson.content_type}">
-                            <label>Content Type</label>
-                        </div>
-                    </div>
-<!-- 
-                    <div class="col-12 col-sm-12 col-lg-12 col-xl-12 mb-3">
-                        <div class="form-floating">
-                            <select class="form-select" id="content_type">
-                                <option value="${lesson.content_type}">${lesson.content_type}</option>
-                                <option value="">Select Content Type</option>
-                                <option value="video">Video</option>
-                                <option value="pdf">PDF</option>
-                                <option value="presentation">Presentation</option>
-                            </select> 
-                            <label for="content_type">Content-Type</label>
-                        </div>
-                    </div>
--->
-                    <div class="col-12 col-md-12 col-lg-12 col-xl-12">
-                        <div class="form-floating mb-3">
-                            <input id="upload_file" type="file" required="" class="form-control"> 
-                            <label>Upload File</label>
-                        </div>
-                        <div class="invalid-feedback">Please Attach File</div>
-                    </div>
-
-                    <!-- HIDDEN FIELDS -->
-                    <input type="hidden" id="lesson_id" value="${lesson.id}">
-                    <input type="hidden" id="chapter_id" value="${lesson.chapter_id}">
-
-                    <!-- DESCRIPTION -->
-                    <h6 class="mb-3">Lesson Description</h6>
-                    <div class="mb-4">
-                        <textarea id="lesson_description">${lesson.description ?? ''}</textarea>
-                    </div>
-
-                
-                    <!-- SETTINGS -->
-                    <h6 class="mb-3">Lesson Settings</h6>
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="isFreePreviewLesson" ${lesson.isFreePreviewLesson == 1 ? "checked" : ""}>
-                                <label class="form-check-label">Free Preview</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-4 mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="enableDiscussions" ${lesson.enableDiscussions == 1 ? "checked" : ""}>
-                                <label class="form-check-label">Discussions</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-4 mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="isDownloadable" ${lesson.isDownloadable == 1 ? "checked" : ""}>
-                                <label class="form-check-label">Downloadable</label>
-                            </div>
-                            
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- FOOTER -->
-                <div class="card-footer d-flex flex-wrap gap-2">
-                    <button id="updateLessonBtn" class="btn btn-theme">Update Lesson</button>
-                    <button id="deleteLessonBtn" class="btn btn-danger">Delete Lesson</button>
-                    <a href="../data_files/?view=study_notes_manager&lesson_id=${lesson.id}&course_id=${lesson.course_id}&chapter_id=${lesson.chapter_id}" class="btn btn-outline-secondary ms-auto">
-                        <i class="bi bi-journal-bookmark me-1"></i>Q&amp;A Notes
+        } else if(ct === 'pdf' || ct === 'presentation'){
+            const path = l.file_path || '';
+            if(path){
+                mediaBlock = `
+                <div class="ld-section-title">Preview</div>
+                <div class="mb-3" style="position:relative">
+                    <iframe src="${escHtml(path)}" class="media-frame mb-1"
+                        style="height:320px" allowfullscreen></iframe>
+                    <a href="${escHtml(path)}" target="_blank" class="btn btn-sm btn-outline-secondary"
+                       style="font-size:.75rem;border-radius:8px;position:absolute;top:.5rem;right:.5rem;background:rgba(255,255,255,.9)">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Open
                     </a>
+                </div>`;
+            } else {
+                const icon = ct==='pdf' ? 'bi-file-pdf' : 'bi-file-slides';
+                mediaBlock = `<div class="ld-section-title">Preview</div>
+                <div class="mb-3 p-3 rounded text-center text-muted" style="background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px">
+                    <i class="bi ${icon} d-block mb-1" style="font-size:1.5rem;opacity:.4"></i>
+                    <small>No ${ct} uploaded yet. Upload a file below.</small>
+                </div>`;
+            }
+        } else {
+            /* Video — try BunnyCDN embed or YouTube */
+            const embedUrl = buildEmbedUrl(l);
+            if(embedUrl){
+                mediaBlock = `
+                <div class="ld-section-title">Preview</div>
+                <div class="mb-3" style="position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;background:#000">
+                    <iframe src="${escHtml(embedUrl)}"
+                        style="position:absolute;top:0;left:0;width:100%;height:100%;border:none"
+                        allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture;fullscreen"
+                        allowfullscreen></iframe>
+                </div>`;
+            } else {
+                mediaBlock = `<div class="ld-section-title">Preview</div>
+                <div class="mb-3 p-3 rounded text-center text-muted" style="background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px">
+                    <i class="bi bi-play-circle d-block mb-1" style="font-size:1.5rem;opacity:.4"></i>
+                    <small>No video uploaded yet. Upload a file below.</small>
+                </div>`;
+            }
+        }
+
+        const checked = v => v==1 ? 'checked' : '';
+
+        document.getElementById('chapterContents').innerHTML = `
+        <div style="padding:1.25rem">
+
+            <!-- Header row -->
+            <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                <div style="flex:1">
+                    <div class="fw-bold" style="font-size:.95rem;color:#1e293b">${escHtml(l.lesson_title)}</div>
+                    <div class="text-muted small">${escHtml(l.content_type||'Video')} lesson</div>
                 </div>
-
+                <button class="btn btn-sm btn-outline-secondary" style="border-radius:8px;font-size:.76rem"
+                    onclick="openEditTitleModal(${l.id},'${escHtml(l.lesson_title).replace(/'/g,"\\'")}')">
+                    <i class="bi bi-pencil me-1"></i>Rename
+                </button>
             </div>
-            `;
 
-            // ✅ Initialize Froala + Plyr AFTER render
-            setTimeout(() => {
-                if (typeof FroalaEditor !== "undefined") {
-                    new FroalaEditor('#lesson_description');
-                }
-                if (lesson.content_type === 'audio' && lesson.file_path) {
-                    initAudioPlayer();
-                }
-            }, 200);
+            <!-- Media block -->
+            ${mediaBlock}
 
-    })
-    .catch(err => {
+            <!-- Upload new file -->
+            <div class="ld-section-title">Replace Media File</div>
+            <div class="mb-3">
+                <label class="form-label-sm">Upload new file <span class="text-muted fw-normal">(leave empty to keep current)</span></label>
+                <input type="file" id="upload_file" class="form-control form-control-sm" style="border-radius:10px">
+            </div>
+
+            <!-- Description -->
+            <div class="ld-section-title">Description</div>
+            <div class="mb-3">
+                <textarea id="lesson_description" style="width:100%;min-height:80px;border-radius:10px;border:1px solid #e2e8f0;padding:.65rem .85rem;font-size:.84rem;resize:vertical">${escHtml(l.description||'')}</textarea>
+            </div>
+
+            <!-- Settings toggles -->
+            <div class="ld-section-title">Settings</div>
+            <div class="mb-3 px-1">
+                <div class="switch-row">
+                    <div><div class="switch-lbl">Free Preview</div><div class="switch-sub">Students can watch without enrolling</div></div>
+                    <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="isFreePreviewLesson" ${checked(l.isFreePreviewLesson)}></div>
+                </div>
+                <div class="switch-row">
+                    <div><div class="switch-lbl">Enable Discussions</div><div class="switch-sub">Allow Q&amp;A on this lesson</div></div>
+                    <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="enableDiscussions" ${checked(l.enableDiscussions)}></div>
+                </div>
+                <div class="switch-row">
+                    <div><div class="switch-lbl">Downloadable</div><div class="switch-sub">Students can download the file</div></div>
+                    <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="isDownloadable" ${checked(l.isDownloadable)}></div>
+                </div>
+            </div>
+
+            <!-- Hidden -->
+            <input type="hidden" id="lesson_id"   value="${l.id}">
+            <input type="hidden" id="chapter_id"  value="${l.chapter_id}">
+            <input type="hidden" id="lesson_title_hidden" value="${escHtml(l.lesson_title)}">
+            <input type="hidden" id="content_type" value="${escHtml(l.content_type||'Video')}">
+
+            <!-- Actions -->
+            <div class="d-flex flex-wrap gap-2 pt-2 border-top mt-3">
+                <button id="updateLessonBtn" class="btn btn-sm" style="background:#6366f1;color:#fff;border-radius:9px;font-size:.82rem;font-weight:600">
+                    <i class="bi bi-cloud-upload me-1"></i>Save Changes
+                </button>
+                <button id="deleteLessonBtn" class="btn btn-sm btn-outline-danger" style="border-radius:9px;font-size:.82rem">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </button>
+                <a href="../data_files/?view=study_notes_manager&lesson_id=${l.id}&course_id=${l.course_id}&chapter_id=${l.chapter_id}"
+                   class="btn btn-sm btn-outline-secondary ms-auto" style="border-radius:9px;font-size:.82rem">
+                    <i class="bi bi-journal-bookmark me-1"></i>Q&amp;A Notes
+                </a>
+            </div>
+        </div>`;
+
+        setTimeout(()=>{
+            if(l.content_type==='audio'&&l.file_path) initAudioPlayer();
+        },200);
+
+    }).catch(err=>{
         console.error(err);
-        document.getElementById("chapterContents").innerHTML = "<p>Error loading lesson</p>";
+        document.getElementById('chapterContents').innerHTML='<p class="p-3 text-danger">Error loading lesson.</p>';
     });
+};
 
-}
+/* ════════════════════════════════════════════════════════════
+   UPDATE LESSON  (file optional — just updates settings/desc if no file)
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('click',e=>{
+    if(!e.target||e.target.id!=='updateLessonBtn') return;
+    const fileInput= document.getElementById('upload_file');
+    const file     = fileInput?.files?.[0];
+    const lesson_id    = document.getElementById('lesson_id').value;
+    const chapter_id   = document.getElementById('chapter_id').value;
+    const title        = document.getElementById('lesson_title_hidden').value;
+    const content_type = document.getElementById('content_type').value;
+    const description  = document.getElementById('lesson_description').value;
+    const isFree       = document.getElementById('isFreePreviewLesson').checked ? 1 : 0;
+    const discuss      = document.getElementById('enableDiscussions').checked ? 1 : 0;
+    const download     = document.getElementById('isDownloadable').checked ? 1 : 0;
 
+    const fd = new FormData();
+    fd.append('lesson_id',lesson_id); fd.append('chapter_id',chapter_id);
+    fd.append('lesson_title',title);  fd.append('description',description);
+    fd.append('content_type',content_type);
+    fd.append('isFreePreviewLesson',isFree);
+    fd.append('enableDiscussions',discuss);
+    fd.append('isDownloadable',download);
+    if(file) fd.append('file',file);
 
-//update lesson
-document.addEventListener("click", function(e){
+    const thumbInput = document.getElementById('audio_thumbnail_input');
+    if(thumbInput?.files?.[0]) fd.append('lesson_thumbnail',thumbInput.files[0]);
+    if(window._removeAudioThumb) fd.append('remove_thumbnail','1');
 
-    if(e.target && e.target.id === "updateLessonBtn"){
-
-        let fileInput = document.getElementById("upload_file");
-        let file = fileInput.files[0];
-
-        let lesson_id    = document.getElementById("lesson_id").value;
-        let chapter_id   = document.getElementById("chapter_id").value;
-        let title        = document.getElementById("lesson_title").value;
-        let content_type = document.getElementById("content_type").value;
-        let description  = document.getElementById("lesson_description").value;
-
-
-        let isDownloadable = document.getElementById("isDownloadable").checked ? 1 : 0;
-        let enableDiscussions = document.getElementById("enableDiscussions").checked ? 1 : 0;
-        let isFreePreviewLesson = document.getElementById("isFreePreviewLesson").checked ? 1 : 0;
-        
-        if(!file){
-            Swal.fire("Error","Please select a Media file","error");
-            return;
-        }
-
-        let formData = new FormData();
-        formData.append("file", file);
-        formData.append("lesson_id", lesson_id);
-        formData.append("chapter_id", chapter_id);
-        formData.append("lesson_title", title);
-        formData.append("description", description);
-        formData.append("content_type", content_type);
-        formData.append("isDownloadable", isDownloadable);
-        formData.append("enableDiscussions", enableDiscussions);
-        formData.append("isFreePreviewLesson", isFreePreviewLesson);
-
-        // Audio thumbnail
-        const thumbInput = document.getElementById('audio_thumbnail_input');
-        if (thumbInput && thumbInput.files[0]) {
-            formData.append("lesson_thumbnail", thumbInput.files[0]);
-        }
-        if (window._removeAudioThumb) {
-            formData.append("remove_thumbnail", "1");
-        }
-
-        Swal.fire({
-            title: "Uploading Media File...",
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });         
-
-        fetch("ajax/ajax_update_lesson.php",{
-            method: "POST",
-            body: formData
-        })
-        .then(res => res.json())
-        .then(res => {
-            Swal.close();
-
-            if(res.status === "success"){
-                Swal.fire("Success", res.message, "success");
-                showLessonContents(lesson_id);
-            } else {
-                Swal.fire("Error", res.message, "error");
-            }
-        })
-        .catch(err=>{
-            console.error(err);
-            Swal.fire("Error","Upload failed "+err,"error");
-        });
-
-    }
-
+    Swal.fire({title:file?'Uploading…':'Saving…',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+    fetch('ajax/ajax_update_lesson.php',{method:'POST',body:fd})
+    .then(r=>r.json()).then(r=>{
+        Swal.close();
+        if(r.status==='success'){
+            Swal.fire({icon:'success',title:'Saved!',timer:1200,showConfirmButton:false});
+            showLessonContents(lesson_id);
+            loadChapters(COURSE_ID);
+        } else Swal.fire('Error',r.message,'error');
+    }).catch(()=>Swal.fire('Error','Upload failed','error'));
 });
 
-
-//delete lesson
-document.addEventListener("click", function(e){
-
-    let btn = e.target.closest("#deleteLessonBtn");
-
-    if(!btn) return;
-
-    // GET FROM BUTTON DATA ATTRIBUTE
-    let lesson_id = document.getElementById("lesson_id").value;
-
-    if(!lesson_id){
-
-        Swal.fire("Error", "Lesson ID missing", "error");
-        return;
-    }
-
+/* ════════════════════════════════════════════════════════════
+   DELETE LESSON
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('click',e=>{
+    if(!e.target?.closest('#deleteLessonBtn')) return;
+    const lid = document.getElementById('lesson_id')?.value;
+    if(!lid){ Swal.fire('Error','Lesson ID missing','error'); return; }
     Swal.fire({
-        title: "⚠️ Are you sure?",
-        text: "This will delete the lesson AND all associated video/file. This cannot be undone!",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#dc3545",
-        cancelButtonColor: "#6c757d",
-        confirmButtonText: "Yes, delete it",
-        cancelButtonText: "Cancel"
-    }).then((result) => {
-
-        if (!result.isConfirmed) return;
-
-        Swal.fire({
-            title: "Deleting...",
-            text: "Removing lesson and resources",
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        let formData = new FormData();
-
-        formData.append("lesson_id", lesson_id);
-
-        fetch("ajax/ajax_delete_lesson.php", {
-            method: "POST",
-            body: formData
-        })
-
-        .then(res => res.json())
-
-        .then(res => {
-
+        title:'Delete this lesson?',
+        text:'This will also remove the associated media file. This cannot be undone.',
+        icon:'warning', showCancelButton:true,
+        confirmButtonColor:'#dc2626', confirmButtonText:'Yes, delete'
+    }).then(r=>{
+        if(!r.isConfirmed) return;
+        Swal.fire({title:'Deleting…',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+        const fd=new FormData(); fd.append('lesson_id',lid);
+        fetch('ajax/ajax_delete_lesson.php',{method:'POST',body:fd})
+        .then(r=>r.json()).then(r=>{
             Swal.close();
-
-            if (res.status === "success") {
-
-                Swal.fire("Deleted!", res.message, "success");
-
-                // reload contents
-                showLessonContents();
-
-            } else {
-
-                Swal.fire("Error", res.message, "error");
-            }
-
-        })
-
-        .catch(err => {
-
-            console.error(err);
-
-            Swal.fire("Error", "Something went wrong", "error");
-        });
-
+            if(r.status==='success'){
+                _activeLessonId=null;
+                Swal.fire({icon:'success',title:'Deleted!',timer:1200,showConfirmButton:false});
+                loadChapters(COURSE_ID);
+                document.getElementById('chapterContents').innerHTML=`
+                    <div class="rp-welcome">
+                        <div class="wi"><i class="bi bi-play-circle"></i></div>
+                        <h6 class="fw-semibold" style="color:#334155">Lesson deleted</h6>
+                        <p class="small">Select another lesson or add a new one.</p>
+                    </div>`;
+            } else Swal.fire('Error',r.message,'error');
+        }).catch(()=>Swal.fire('Error','Something went wrong','error'));
     });
-
 });
-//show lesson input form
-function showLessonInputForm(chapterId) {
 
-    fetch("pages/lesson_input_form_new.php?chapter_id=" + chapterId)
-    .then(res => res.text())
-    .then(html => {
+/* ════════════════════════════════════════════════════════════
+   RENAME LESSON TITLE
+═══════════════════════════════════════════════════════════════ */
+window.openEditTitleModal = function(id, title){
+    document.getElementById('new_lesson_title').value = title;
+    document.getElementById('edit_lesson_id').value   = id;
+    new bootstrap.Modal(document.getElementById('editLessonTitleModal')).show();
+};
 
-        document.getElementById("chapterContents").innerHTML = html;
+document.addEventListener('click',e=>{
+    if(!e.target||e.target.id!=='saveLessonTitleBtn') return;
+    const newTitle  = document.getElementById('new_lesson_title').value.trim();
+    const lesson_id = document.getElementById('edit_lesson_id').value;
+    if(!newTitle){ Swal.fire('Error','Title cannot be empty','error'); return; }
+    Swal.fire({title:'Updating…',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+    fetch('ajax/ajax_rename_lesson.php',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({lesson_id, lesson_title:newTitle})
+    }).then(r=>r.json()).then(r=>{
+        Swal.close();
+        if(r.status==='success'){
+            bootstrap.Modal.getInstance(document.getElementById('editLessonTitleModal'))?.hide();
+            showLessonContents(lesson_id);
+            loadChapters(COURSE_ID);
+            Swal.fire({icon:'success',title:'Renamed!',timer:1100,showConfirmButton:false});
+        } else Swal.fire('Error',r.message,'error');
+    }).catch(()=>Swal.fire('Error','Something went wrong','error'));
+});
 
-        // ✅ Wait a bit for DOM to render
-        setTimeout(() => {
+/* ════════════════════════════════════════════════════════════
+   COURSE SETTINGS — SAVE & DELETE
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('click',e=>{
+    if(!e.target||e.target.id!=='saveCourseSettingsBtn') return;
+    const title     = document.getElementById('course_name')?.value.trim();
+    const price     = document.getElementById('course_price')?.value.trim();
+    const discount  = document.getElementById('course_discount')?.value.trim();
+    const desc      = document.getElementById('course_description')?.value;
+    const cid       = document.getElementById('course_id')?.value;
+    const lid       = document.getElementById('library_id')?.value;
+    const lkey      = document.getElementById('library_key')?.value;
+    const oldName   = document.getElementById('old_course_name')?.value;
+    const cert      = document.getElementById('isCertificateOffered')?.checked ? 1 : 0;
+    const qna       = document.getElementById('isQandAEnabled')?.checked ? 1 : 0;
+    const fileInput = document.getElementById('course_thumbnail');
+    const file      = fileInput?.files?.[0];
+    if(!title||!price){ Swal.fire('Error','Course name and price are required','error'); return; }
+    const fd=new FormData();
+    fd.append('course_name',title); fd.append('course_price',price);
+    fd.append('course_discount',discount||0); fd.append('course_description',desc||'');
+    fd.append('course_id',cid); fd.append('isCertificateOffered',cert);
+    fd.append('isQandAEnabled',qna); fd.append('old_course_name',oldName);
+    fd.append('library_id',lid); fd.append('library_key',lkey);
+    if(file) fd.append('thumbnail',file);
+    Swal.fire({title:'Updating…',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+    fetch('ajax/ajax_update_course_settings.php',{method:'POST',body:fd})
+    .then(r=>r.json()).then(r=>{
+        Swal.close();
+        r.status==='success' ? Swal.fire({icon:'success',title:'Saved!',timer:1200,showConfirmButton:false})
+                             : Swal.fire('Error',r.message,'error');
+    }).catch(()=>Swal.fire('Error','Something went wrong','error'));
+});
 
-            if (typeof FroalaEditor !== "undefined") {
-
-                new FroalaEditor('#lesson_description', {
-                    height: 160
-                });
-
-            } else {
-                console.error("Froala not loaded!");
-            }
-
-        }, 200);
-
-    })
-    .catch(err => {
-        console.error("Error loading form:", err);
+document.addEventListener('click',e=>{
+    if(!e.target?.closest('#deleteCourseBtn')) return;
+    const title = document.getElementById('course_name')?.value.trim();
+    const cid   = document.getElementById('course_id')?.value;
+    Swal.fire({
+        title:'Delete course?', icon:'warning',
+        html:`<b>${escHtml(title)}</b><br><small>All chapters and lessons will be permanently deleted.</small>`,
+        showCancelButton:true, confirmButtonColor:'#dc2626', confirmButtonText:'Yes, delete it!'
+    }).then(r=>{
+        if(!r.isConfirmed) return;
+        Swal.fire({title:'Deleting…',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+        const fd=new FormData(); fd.append('course_name',title); fd.append('course_id',cid);
+        fetch('ajax/ajax_delete_course.php',{method:'POST',body:fd})
+        .then(r=>r.json()).then(r=>{
+            Swal.close();
+            if(r.status==='success') Swal.fire({icon:'success',title:'Deleted!',timer:1200,showConfirmButton:false})
+                .then(()=>{ window.location.href='../data_files/?view=3002'; });
+            else Swal.fire('Error',r.message,'error');
+        }).catch(()=>Swal.fire('Error','Something went wrong','error'));
     });
+});
+
+/* ════════════════════════════════════════════════════════════
+   CONTENT TYPE TOGGLE (in add-lesson form)
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('change',e=>{
+    if(!e.target||e.target.id!=='content_type') return;
+    const type     = e.target.value;
+    const videoF   = document.getElementById('video_url');
+    const fileF    = document.getElementById('upload_file');
+    if(videoF&&fileF){
+        videoF.parentElement.style.display = type==='Video' ? 'block' : 'none';
+        fileF.parentElement.style.display  = type==='Video' ? 'none'  : 'block';
+    }
+});
+
+/* ════════════════════════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════════════════════════ */
+function escHtml(s){
+    if(!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-
-
-// AJAX FOR SAVING LESSONS 
-
-document.addEventListener("change", function(e){
-
-    if(e.target && e.target.id === "content_type"){
-
-        let type = e.target.value;
-
-        let videoField = document.getElementById("video_url");
-        let fileField = document.getElementById("upload_file");
-
-        if(videoField && fileField){
-            videoField.parentElement.style.display =
-                (type === "Video") ? "block" : "none";
-
-            fileField.parentElement.style.display =
-                (type === "Video") ? "none" : "block";
-        }
+/* ════════════════════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════════════════════ */
+(function boot(){
+    if(document.readyState==='loading'){
+        document.addEventListener('DOMContentLoaded',()=>{ loadChapters(COURSE_ID); loadCourseStatus(); });
+    } else {
+        loadChapters(COURSE_ID); loadCourseStatus();
     }
-
-});
-
-
-
-
+})();
 </script>

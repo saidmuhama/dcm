@@ -1,956 +1,702 @@
-<?php 
-//fixed tutor information
-$emailAddress = @App::getWhatFromWHere('email_address','tbl_all_users', 'usr_code',$usr_code); 
-$phoneNumber  = @App::getWhatFromWHere('phone_number','tbl_all_users', 'usr_code',$usr_code); 
-$user_status  = @App::getWhatFromWHere('user_status','tbl_all_users', 'usr_code',$usr_code); 
-
-$city = @App::getWhatFromWHere('city','tbl_tutors', 'usr_code',$usr_code); 
-$country = @App::getWhatFromWHere('country','tbl_tutors','usr_code',$usr_code);
-$description = @App::getWhatFromWHere('description','tbl_tutors','usr_code',$usr_code);
-$course = @App::getWhatFromWHere('course','tbl_tutors','usr_code',$usr_code);
-$salutation = @App::getWhatFromWHere('main_academic_level','tbl_tutors','usr_code',$usr_code);
-$university = @App::getWhatFromWHere('sub_academic_level','tbl_tutors','usr_code',$usr_code);
-$start_year = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr_code);
+<?php
+$emailAddress = @App::getWhatFromWHere('email_address','tbl_all_users', 'usr_code',$usr_code);
+$phoneNumber  = @App::getWhatFromWHere('phone_number','tbl_all_users', 'usr_code',$usr_code);
+$user_status  = @App::getWhatFromWHere('user_status','tbl_all_users', 'usr_code',$usr_code);
+$city         = @App::getWhatFromWHere('city','tbl_tutors', 'usr_code',$usr_code);
+$country      = @App::getWhatFromWHere('country','tbl_tutors','usr_code',$usr_code);
+$description  = @App::getWhatFromWHere('description','tbl_tutors','usr_code',$usr_code);
+$course       = @App::getWhatFromWHere('course','tbl_tutors','usr_code',$usr_code);
+$salutation   = @App::getWhatFromWHere('main_academic_level','tbl_tutors','usr_code',$usr_code);
+$university   = @App::getWhatFromWHere('sub_academic_level','tbl_tutors','usr_code',$usr_code);
+$start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr_code);
 ?>
-<div class="container mt-4">
-    <div class="row align-items-center">
-        <div class="col-12 col-md">
-            <h5>Teacher Profile</h5>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-3 mb-md-0">
-                    <li class="breadcrumb-item bi"><a href="../data_files/?view=3002">Dashboard</a></li>
-                    <li class="breadcrumb-item bi"><a href="">Teacher</a></li>
-                    <li class="breadcrumb-item active bi" aria-current="page">Teacher Profile</li>
-                </ol>
-            </nav>
-        </div>
-        <div class="col-auto col-md-auto">
-            <a href="../data_files/?view=my_courses_online_contents_list_view" class="btn btn-success"><i
-                    data-feather="eye" class="me-1"></i> View my Courses</a>
-        
-            <a data-bs-toggle="modal" data-bs-target="#addCourseModal" href="../data_files/?view=create_new_course" class="btn btn-theme"><i
-                    data-feather="plus" class="me-1"></i> Create New Course</a>
-        </div>
-    </div>
-</div>
-<div class="container mt-4" id="main-content">
-    <div class="row">
-        <div class="col-12 col-md-5 col-lg-4 col-xl-3">
-            <div class="height-300 w-100 rounded coverimg position-relative mb-3"><img
-                    src="<?php echo $userProfileImage; ?>" alt=""></div>
-            <div class="row gx-3 align-items-center justify-content-center mb-3">
-                <div class="col-auto"><button class="btn btn-square rounded-circle btn-outline-theme theme-green"
-                        data-bs-toggle="modal" data-bs-target="#callmodal"><i class="bi bi-telephone"></i></button>
-                </div>
-                <div class="col-auto"><button class="btn btn-square rounded-circle btn-outline-theme"
-                        data-bs-toggle="modal" data-bs-target="#callmodal"><i class="bi bi-camera-reels"></i></button>
-                </div>
-                <div class="col-auto"><button class="btn btn-square rounded-circle btn-outline-theme theme-orange"
-                        data-bs-toggle="modal" data-bs-target="#chatmodal"><i class="bi bi-chat-left-text"></i></button>
-                </div>
-            </div>
-            <h5 class="mb-0"><?php echo $fullname; ?></h5>
-            <p class="text-secondary mb-2"> <?php echo $roleTitle; ?></p>
-            <p><span class="badge badge-light text-bg-theme-1 theme-green"><i
-                        class="bi bi-check-all me-1"></i><?php echo $course; ?></span></p>
-            <p class="text-secondary"><i class="bi bi-envelope me-1"></i> <?php echo $emailAddress; ?></p>
-            <p class="text-secondary"><i class="bi bi-telephone me-1"></i> <?php echo $phoneNumber; ?></p>
-            <p class="text-secondary"><i class="bi bi-geo-alt me-1"></i><?php echo $city . ', ' . $country; ?></p>
-            <a href="../data_files/?view=teacher_profile_completion"  class="btn btn-theme w-100">Edit Profile <i class="bi bi-arrow-right"></i></a>
-        </div>
-        <div class="col-12 col-md-7 col-lg-8 col-xl-9">
-
-        <div class="card adminuiux-card shadow-sm mb-4">
-                <div class="card-header">
-                    <div class="row">
-                        <div class="col-auto mb-3 col-sm-0"><span
-                                class="avatar avatar-40 rounded bg-theme-1-subtle text-theme-1"><i
-                                    class="bi bi-person"></i></span></div>
-                        <div class="col mb-3 col-sm-0">
-                            <h6 class="mb-0">Course Statistics</h6>
-                            <p class="small text-secondary">Average Sales & Enrollemnt</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body py-0">
-                    <div class="height-420 mb-3">
-                        <div class="row" id="courseAnalytics"></div>
-                    </div>
-                 
-                </div>
-        </div>
-
-        <div class="row mb-4" id="dashboardStats"></div>
-
-            <!-- <div class="row mb-3" id="latestCourses">
-                
-            </div> -->
-
-
-            <div class="card adminuiux-card shadow-sm mb-4">
-                <div class="card-header">
-                    <div class="row align-items-center">
-                        <div class="col-auto"><span class="avatar avatar-30 rounded bg-theme-1-subtle text-theme-1"><i
-                                    class="bi bi-play-btn"></i></span></div>
-                        <div class="col">
-                            <h6>My Courses</h6>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body pt-3">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" id="dataTable">
-
-                            <!-- HEADER -->
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="fw-semibold">Course</th>
-                                    <th class="fw-semibold">Duration</th>
-                                    <th class="fw-semibold">Schedule</th>
-                                    <th class="fw-semibold">Status</th>
-                                    <th class="fw-semibold text-center">Chat</th>
-                                    <th class="fw-semibold text-center">Action</th>
-                                </tr>
-                            </thead>
-
-                            <!-- BODY -->
-                            <tbody id="instructorCourses">
-                                <!-- Dynamic courses -->
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                </div>
-            </div>
-
-            
-            <div class="card adminuiux-card shadow-sm mb-4">
-                <div class="card-body">
-                    <div class="row align-items-center mb-3">
-                        <div class="col-auto"><span class="avatar avatar-30 rounded bg-theme-1-subtle text-theme-1"><i
-                                    class="bi bi-person"></i></span></div>
-                        <div class="col">
-                            <h6>About Instructor/Teacher</h6>
-                        </div>
-                    </div>
-                    <p class="text-secondary"><?php echo $description; ?></p><span
-                        class="badge badge-light me-1 mb-2 text-bg-theme-1">Teaching</span> <span
-                        class="badge badge-light me-1 mb-2 text-bg-theme-1">Online Education</span> <span
-                        class="badge badge-light me-1 mb-1 text-bg-theme-1">School Education</span> <span
-                        class="badge badge-light me-1 mb-1 text-bg-theme-1">Language</span>
-                </div>
-            </div>
-            <div class="card adminuiux-card shadow-sm mb-4">
-                <div class="card-header z-index-1">
-                    <div class="row align-items-center">
-                        <div class="col-auto"><span class="avatar avatar-30 rounded bg-theme-1-subtle text-theme-1"><i
-                                    class="bi bi-book"></i></span></div>
-                        <div class="col">
-                            <h6>Education</h6>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body pb-0">
-                    <div class="row align-items-center mb-3">
-                        <div class="col-auto"><span class="avatar avatar-50 rounded coverimg"><img
-                                    src="assets/img/logo-512.png" alt=""></span></div>
-                        <div class="col col-lg px-0">
-                            <div class="row align-items-center">
-                                <div class="col-12 col-lg">
-                                    <h6 class="mb-0"><?php echo $university; ?></h6>
-                                    <p><?php echo $course; ?></p>
-                                </div>
-                                <div class="col col-lg-auto">
-                                    <p class="text-secondary mb-0"><?php echo $salutation; ?>-<?php echo $start_year; ?></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                 
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
-
 
 <style>
-
-.custom-table {
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    .custom-table thead {
-        background: linear-gradient(45deg, #0d6efd, #0a58ca);
-        color: #fff;
-    }
-
-    .custom-table th {
-        font-weight: 600;
-        font-size: 14px;
-        padding: 14px;
-        border: none;
-    }
-
-    .custom-table td {
-        font-size: 14px;
-        padding: 14px;
-        vertical-align: middle;
-        border-color: #f1f1f1;
-    }
-
-    .custom-table tbody tr {
-        transition: all 0.2s ease;
-    }
-
-    .custom-table tbody tr:hover {
-        background: #f8f9ff;
-        transform: scale(1.005);
-    }
-
-    .course-img {
-        width: 45px;
-        height: 45px;
-        border-radius: 10px;
-        object-fit: cover;
-    }
-
-    .status-badge {
-        padding: 5px 10px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-    .status-active {
-        background: #e6f4ea;
-        color: #198754;
-    }
-
-    .status-draft {
-        background: #fff3cd;
-        color: #856404;
-    }
-
-    .status-inactive {
-        background: #fdecea;
-        color: #dc3545;
-    }
-
-    .action-btn {
-        border-radius: 8px;
-        font-size: 13px;
-        padding: 5px 10px;
-    }
-
-/* Table spacing */
-#dataTable td, #dataTable th {
-    padding: 14px 12px;
-    vertical-align: middle;
-}
-
-/* Header styling */
-#dataTable thead th {
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #6c757d;
-}
-
-/* Row hover effect */
-#dataTable tbody tr {
-    transition: all 0.2s ease;
-}
-
-#dataTable tbody tr:hover {
-    background-color: #f8f9fa;
-    transform: scale(1.005);
-}
-
-/* Avatar image */
-.avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* Status badges */
-.badge {
-    padding: 6px 10px;
-    font-size: 12px;
-    border-radius: 8px;
-}
-
-/* Action buttons */
-.btn-sm {
-    padding: 4px 10px;
-    font-size: 12px;
-}
-
-/* Rounded card look */
-.card {
-    border-radius: 12px;
+/* ── Hero ── */
+.inst-hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+    padding: 2.5rem 0 4rem;
+    position: relative;
     overflow: hidden;
 }
+.inst-hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle at 20% 50%, rgba(99,102,241,.18) 0%, transparent 60%),
+                      radial-gradient(circle at 80% 20%, rgba(168,85,247,.12) 0%, transparent 50%);
+    pointer-events: none;
+}
+.inst-hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='20' cy='20' r='1.5'/%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+}
+.inst-avatar-wrap {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,.25);
+    box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.inst-avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.inst-hero .badge-role {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #c7d2fe;
+    font-size: .75rem;
+    padding: .35rem .75rem;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+}
+.inst-hero .stat-pill {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    padding: .5rem 1rem;
+    text-align: center;
+    backdrop-filter: blur(4px);
+    min-width: 90px;
+}
+.inst-hero .stat-pill .val { font-size: 1.1rem; font-weight: 700; color: #fff; }
+.inst-hero .stat-pill .lbl { font-size: .68rem; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: .5px; }
 
-/* Chat icon spacing */
-.bi-chat-text {
-    font-size: 16px;
+/* ── Canvas ── */
+.inst-canvas {
+    max-width: 1280px;
+    margin: -2.5rem auto 0;
+    padding: 0 1rem 2rem;
+    position: relative;
+    z-index: 10;
 }
 
-/* Table borders soft */
-.table {
-    border-color: #f1f1f1;
+/* ── Metric cards ── */
+.metric-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,.07);
+    border: 1px solid rgba(0,0,0,.05);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform .2s, box-shadow .2s;
+}
+.metric-card:hover { transform: translateY(-3px); box-shadow: 0 6px 24px rgba(0,0,0,.1); }
+.metric-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; flex-shrink: 0;
+}
+.metric-val { font-size: 1.5rem; font-weight: 700; line-height: 1; color: #1e293b; }
+.metric-lbl { font-size: .78rem; color: #64748b; margin-top: .2rem; }
+.metric-trend { font-size: .72rem; font-weight: 600; }
+.metric-trend.up { color: #16a34a; }
+.metric-trend.neutral { color: #64748b; }
+
+/* ── Profile card ── */
+.profile-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.07);
+    border: 1px solid rgba(0,0,0,.05);
+    overflow: hidden;
+}
+.profile-card .prof-banner {
+    height: 70px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+.profile-card .prof-body { padding: 0 1.25rem 1.25rem; }
+.profile-card .prof-avatar {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    margin-top: -36px;
+    overflow: hidden;
+}
+.profile-card .prof-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.prof-info-row { display: flex; align-items: center; gap: .5rem; font-size: .82rem; color: #64748b; padding: .3rem 0; border-bottom: 1px solid #f1f5f9; }
+.prof-info-row:last-child { border-bottom: none; }
+.prof-info-row i { width: 16px; color: #94a3b8; }
+
+/* ── Section card ── */
+.sect-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.07);
+    border: 1px solid rgba(0,0,0,.05);
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+}
+.sect-card .sect-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: .75rem;
+}
+.sect-card .sect-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+}
+.sect-card .sect-body { padding: 1.25rem; }
+.sect-card .sect-title { font-size: .92rem; font-weight: 600; color: #1e293b; margin: 0; }
+.sect-card .sect-sub { font-size: .75rem; color: #94a3b8; }
+
+/* ── Course analytics cards ── */
+.course-card {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,.07);
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+    height: 100%;
+}
+.course-card:hover { transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,.1); }
+.course-card .cc-thumb {
+    height: 160px; overflow: hidden; position: relative;
+}
+.course-card .cc-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
+.course-card:hover .cc-thumb img { transform: scale(1.05); }
+.course-card .cc-status {
+    position: absolute; top: .6rem; right: .6rem;
+    padding: .3rem .65rem; border-radius: 20px; font-size: .7rem; font-weight: 600;
+}
+.course-card .cc-body { padding: 1rem; }
+.course-card .cc-title { font-size: .88rem; font-weight: 600; color: #1e293b; line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.course-card .cc-meta { font-size: .75rem; color: #64748b; margin-top: .35rem; }
+.course-card .cc-earn { font-size: 1.1rem; font-weight: 700; color: #16a34a; }
+.course-card .cc-bar { height: 5px; border-radius: 99px; background: #f1f5f9; margin: .75rem 0 .85rem; overflow: hidden; }
+.course-card .cc-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg,#6366f1,#8b5cf6); }
+.course-card .cc-actions { display: flex; gap: .5rem; }
+.course-card .cc-btn {
+    flex: 1; font-size: .75rem; font-weight: 600;
+    padding: .4rem .5rem; border-radius: 8px; text-align: center;
+    border: none; cursor: pointer; transition: all .15s;
 }
 
+/* ── My Courses table ── */
+#instCoursesTable thead th {
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .6px;
+    color: #94a3b8; font-weight: 600; border-bottom: 2px solid #f1f5f9;
+    padding: .75rem 1rem; white-space: nowrap;
+}
+#instCoursesTable tbody td { padding: .85rem 1rem; vertical-align: middle; font-size: .84rem; }
+#instCoursesTable tbody tr { border-bottom: 1px solid #f8fafc; transition: background .15s; }
+#instCoursesTable tbody tr:hover { background: #f8f9ff; }
+.cthumbnail { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; }
+.status-chip { padding: .3rem .7rem; border-radius: 20px; font-size: .72rem; font-weight: 600; display: inline-flex; align-items: center; gap: .3rem; }
+.status-chip.active  { background: #dcfce7; color: #15803d; }
+.status-chip.inactive{ background: #fee2e2; color: #dc2626; }
+.status-chip.draft   { background: #fef9c3; color: #854d0e; }
+.tbl-action-btn { font-size: .75rem; padding: .3rem .65rem; border-radius: 7px; font-weight: 500; }
+
+/* ── Education card ── */
+.edu-row {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: .85rem 0; border-bottom: 1px solid #f1f5f9;
+}
+.edu-row:last-child { border-bottom: none; padding-bottom: 0; }
+.edu-logo { width: 44px; height: 44px; border-radius: 10px; overflow: hidden; flex-shrink: 0;
+    background: linear-gradient(135deg,#6366f1,#8b5cf6); display: flex; align-items: center; justify-content: center; }
+.edu-logo img { width: 100%; height: 100%; object-fit: contain; }
+
+/* ── Quick actions ── */
+.qa-btn { border-radius: 12px; font-weight: 600; font-size: .85rem; padding: .6rem 1.2rem; }
+
+/* ── Skeleton ── */
+.skel { background: linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);
+    background-size: 200% 100%; animation: skel-anim 1.5s infinite; border-radius: 8px; }
+@keyframes skel-anim { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* dark mode compat */
+@media (prefers-color-scheme: dark) {
+    .metric-card,.profile-card,.sect-card,.course-card { background: #1e293b; border-color: rgba(255,255,255,.06); }
+    .metric-val { color: #f1f5f9; }
+    .metric-lbl,.sect-sub { color: #94a3b8; }
+    .sect-title,.cc-title { color: #e2e8f0; }
+    #instCoursesTable thead th { border-color: rgba(255,255,255,.06); }
+    #instCoursesTable tbody tr { border-color: rgba(255,255,255,.04); }
+    #instCoursesTable tbody tr:hover { background: rgba(99,102,241,.05); }
+    .prof-info-row { border-color: rgba(255,255,255,.06); color: #94a3b8; }
+    .cc-bar { background: rgba(255,255,255,.08); }
+    .edu-row { border-color: rgba(255,255,255,.06); }
+    .skel { background: linear-gradient(90deg,#1e293b 25%,#334155 50%,#1e293b 75%);
+        background-size: 200% 100%; }
+}
 </style>
 
-<script>
-document.addEventListener("DOMContentLoaded", function(){
-    // The appd9fa.js bundle calls window.dataTables() on window.load, which would try
-    // to re-initialise #dataTable after loadInstructorCourses() already owns it.
-    // Override it here (deferred bundle has already defined it; window.load hasn't fired yet).
-    window.dataTables = function() {};
+<!-- ═══════════════════════════════ HERO ═══════════════════════════════ -->
+<div class="inst-hero">
+    <div class="container-xl position-relative" style="z-index:2">
 
-    loadInstructorCourses();
-    loadLatestCourses();
-    loadCourseAnalytics();
-    loadDashboardStats();
-});
+        <!-- breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0" style="font-size:.78rem">
+                <li class="breadcrumb-item"><a href="../data_files/?view=3002" class="text-white-50 text-decoration-none">Dashboard</a></li>
+                <li class="breadcrumb-item active" style="color:rgba(255,255,255,.55)">Instructor Overview</li>
+            </ol>
+        </nav>
 
-function loadDashboardStats(){
+        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-3">
 
-    fetch("ajax/ajax_fetch_instructor_courses_analytics.php")
-    .then(res => res.json())
-    .then(res => {
+            <!-- avatar -->
+            <div class="inst-avatar-wrap">
+                <img src="<?= htmlspecialchars($userProfileImage ?? 'assets/img/logo-512.png') ?>" alt="Profile">
+            </div>
 
-        let totalCourses = res.data.length;
-        let totalStudents = 0;
-        let totalEarnings = 0;
+            <!-- name + meta -->
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h4 class="text-white mb-0 fw-bold"><?= htmlspecialchars($fullname ?? '') ?></h4>
+                    <span class="badge-role"><?= htmlspecialchars($roleTitle ?? 'Instructor') ?></span>
+                </div>
+                <div class="d-flex flex-wrap gap-3 mb-2" style="font-size:.82rem; color:rgba(255,255,255,.6)">
+                    <?php if($course): ?><span><i class="bi bi-mortarboard me-1"></i><?= htmlspecialchars($course) ?></span><?php endif; ?>
+                    <?php if($city || $country): ?><span><i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars(trim($city.', '.$country, ', ')) ?></span><?php endif; ?>
+                    <?php if($emailAddress): ?><span><i class="bi bi-envelope me-1"></i><?= htmlspecialchars($emailAddress) ?></span><?php endif; ?>
+                </div>
+                <!-- hero stat pills -->
+                <div class="d-flex flex-wrap gap-2 mt-1" id="heroStatPills">
+                    <div class="stat-pill"><div class="val" id="hsCourses">—</div><div class="lbl">Courses</div></div>
+                    <div class="stat-pill"><div class="val" id="hsStudents">—</div><div class="lbl">Students</div></div>
+                    <div class="stat-pill"><div class="val" id="hsEarnings">—</div><div class="lbl">Earnings</div></div>
+                    <div class="stat-pill"><div class="val" id="hsSales">—</div><div class="lbl">Sales</div></div>
+                </div>
+            </div>
 
-        res.data.forEach(c => {
-            totalStudents += parseInt(c.students);
-            totalEarnings += parseFloat(c.net_earnings);
-        });
-
-        document.getElementById("dashboardStats").innerHTML = `
-        <div class="col-md-4">
-            <div class="card p-3 text-center shadow-sm">
-                <h4>${totalCourses}</h4>
-                <small>Total Courses</small>
+            <!-- CTAs -->
+            <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
+                <a href="../data_files/?view=teacher_profile_completion" class="btn btn-light qa-btn">
+                    <i class="bi bi-pencil me-1"></i> Edit Profile
+                </a>
+                <a href="../data_files/?view=my_courses_online_contents_list_view" class="btn btn-outline-light qa-btn">
+                    <i class="bi bi-collection-play me-1"></i> My Courses
+                </a>
+                <a data-bs-toggle="modal" data-bs-target="#addCourseModal"
+                   href="../data_files/?view=create_new_course"
+                   class="btn qa-btn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none">
+                    <i class="bi bi-plus-lg me-1"></i> New Course
+                </a>
             </div>
         </div>
+    </div>
+</div>
 
-        <div class="col-md-4">
-            <div class="card p-3 text-center shadow-sm">
-                <h4>${totalStudents}</h4>
-                <small>Students</small>
-            </div>
-        </div>
+<!-- ═══════════════════════════════ CANVAS ════════════════════════════ -->
+<div class="inst-canvas">
 
-        <div class="col-md-4">
-            <div class="card p-3 text-center shadow-sm">
-                <h4 class="text-success">
-                    TZS ${totalEarnings.toLocaleString()}
-                </h4>
-                <small>Total Earnings</small>
-            </div>
-        </div>
-        `;
-    });
-}
-
-function toggleCourseStatus(course_id, status){
-
-    Swal.fire({
-        title: status === 'active' ? "Publish Course?" : "Unpublish Course?",
-        text: "You can change this anytime",
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonText: "Yes, proceed"
-    }).then((result) => {
-
-        if(result.isConfirmed){
-
-            fetch("ajax/ajax_toggle_course_status.php", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({course_id, status})
-            })
-            .then(res => res.json())
-            .then(res => {
-
-                if(res.status === "success"){
-                    Swal.fire("Updated!", "", "success");
-                    loadCourseAnalytics();
-                }else{
-                    Swal.fire("Error", res.message, "error");
-                }
-
-            });
-
-        }
-    });
-}
-
-function loadCourseAnalytics(){
-
-    fetch("ajax/ajax_fetch_instructor_courses_analytics.php")
-    .then(res => res.json())
-    .then(res => {
-
-        let container = document.getElementById("courseAnalytics");
-
-        if(res.status !== "success"){
-            container.innerHTML = "No courses found";
-            return;
-        }
-
-        let html = "";
-
-        res.data.forEach(course => {
-
-            let thumbnail = course.thumbnail || "assets/img/default-course.png";
-
-            let statusBadge = "";
-            let toggleBtn = "";
-
-            if(course.status === "active"){
-                statusBadge = `<span class="badge bg-success">Live</span>`;
-                toggleBtn = `
-                    <button onclick="toggleCourseStatus(${course.id}, 'inactive')" 
-                        class="btn btn-sm btn-outline-danger">
-                        Unpublish
-                    </button>`;
-            } else {
-                statusBadge = `<span class="badge bg-warning text-dark">Draft</span>`;
-                toggleBtn = `
-                    <button onclick="toggleCourseStatus(${course.id}, 'active')" 
-                        class="btn btn-sm btn-outline-success">
-                        Go Live
-                    </button>`;
-            }
-
-            html += `
-            <div class="col-12 col-md-6 col-lg-4 mb-4">
-
-                <div class="card shadow-sm h-100">
-
-                    <!-- IMAGE -->
-                    <div class="position-relative">
-                        <img src="${thumbnail}" class="w-100" style="height:180px; object-fit:cover;">
-                        <div class="position-absolute top-0 end-0 m-2">
-                            ${statusBadge}
-                        </div>
+    <!-- ── Metric cards row ── -->
+    <div class="row g-3 mb-4" id="metricCards">
+        <?php
+        $metrics = [
+            ['id'=>'mc0','icon'=>'bi-collection-play','color'=>'#6366f1','bg'=>'#eef2ff','label'=>'Total Courses','val'=>'—','trend'=>''],
+            ['id'=>'mc1','icon'=>'bi-people','color'=>'#0ea5e9','bg'=>'#e0f2fe','label'=>'Total Students','val'=>'—','trend'=>''],
+            ['id'=>'mc2','icon'=>'bi-currency-exchange','color'=>'#16a34a','bg'=>'#dcfce7','label'=>'Net Earnings (TZS)','val'=>'—','trend'=>''],
+            ['id'=>'mc3','icon'=>'bi-cart-check','color'=>'#f59e0b','bg'=>'#fef3c7','label'=>'Total Sales','val'=>'—','trend'=>''],
+        ];
+        foreach($metrics as $m): ?>
+        <div class="col-6 col-lg-3">
+            <div class="metric-card">
+                <div class="metric-icon" style="background:<?= $m['bg'] ?>;color:<?= $m['color'] ?>">
+                    <i class="bi <?= $m['icon'] ?>"></i>
+                </div>
+                <div>
+                    <div class="metric-val" id="<?= $m['id'] ?>">
+                        <span class="skel d-inline-block" style="width:60px;height:22px"></span>
                     </div>
+                    <div class="metric-lbl"><?= $m['label'] ?></div>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
 
-                    <!-- BODY -->
-                    <div class="card-body">
+    <!-- ── Main two-column ── -->
+    <div class="row g-4">
 
-                        <h6 class="fw-bold">${course.title}</h6>
+        <!-- LEFT column -->
+        <div class="col-12 col-lg-4 col-xl-3">
 
-                        <p class="small text-muted mb-2">
-                            ${course.students} Students • ${course.total_sales} Sales
-                        </p>
-
-                        <!-- EARNINGS -->
-                        <div class="mb-2">
-                            <small class="text-muted">Earnings</small>
-                            <h5 class="text-success">
-                                TZS ${Number(course.net_earnings).toLocaleString()}
-                            </h5>
-                        </div>
-
-                        <!-- PROGRESS BAR (SALES PERFORMANCE) -->
-                        <div class="progress mb-3" style="height:6px;">
-                            <div class="progress-bar bg-success" 
-                                style="width:${Math.min(course.total_sales * 10,100)}%">
-                            </div>
-                        </div>
-
-                        <!-- ACTIONS -->
-                        <div class="d-flex justify-content-between">
-
-                            ${toggleBtn}
-
-                            <a href="../data_files/?view=course_contents_management&course_id=${course.id}" 
-                                class="btn btn-sm btn-outline-primary">
-                                View
-                            </a>
-
-                        </div>
-
+            <!-- Profile card -->
+            <div class="profile-card mb-4">
+                <div class="prof-banner"></div>
+                <div class="prof-body">
+                    <div class="prof-avatar mb-2">
+                        <img src="<?= htmlspecialchars($userProfileImage ?? 'assets/img/logo-512.png') ?>" alt="">
+                    </div>
+                    <h6 class="fw-bold mb-0"><?= htmlspecialchars($fullname ?? '') ?></h6>
+                    <div class="text-muted small mb-2"><?= htmlspecialchars($roleTitle ?? 'Instructor') ?></div>
+                    <?php if($course): ?>
+                    <span class="badge text-bg-primary mb-3" style="border-radius:20px;font-size:.72rem">
+                        <i class="bi bi-mortarboard me-1"></i><?= htmlspecialchars($course) ?>
+                    </span>
+                    <?php endif; ?>
+                    <div class="mt-1">
+                        <?php if($emailAddress): ?>
+                        <div class="prof-info-row"><i class="bi bi-envelope-fill"></i><?= htmlspecialchars($emailAddress) ?></div>
+                        <?php endif; ?>
+                        <?php if($phoneNumber): ?>
+                        <div class="prof-info-row"><i class="bi bi-telephone-fill"></i><?= htmlspecialchars($phoneNumber) ?></div>
+                        <?php endif; ?>
+                        <?php if($city || $country): ?>
+                        <div class="prof-info-row"><i class="bi bi-geo-alt-fill"></i><?= htmlspecialchars(trim($city.', '.$country, ', ')) ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-sm btn-outline-secondary rounded-circle"
+                                style="width:36px;height:36px" data-bs-toggle="modal" data-bs-target="#callmodal">
+                            <i class="bi bi-telephone"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary rounded-circle"
+                                style="width:36px;height:36px" data-bs-toggle="modal" data-bs-target="#callmodal">
+                            <i class="bi bi-camera-video"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary rounded-circle"
+                                style="width:36px;height:36px" data-bs-toggle="modal" data-bs-target="#chatmodal">
+                            <i class="bi bi-chat-left-text"></i>
+                        </button>
+                        <a href="../data_files/?view=teacher_profile_completion"
+                           class="btn btn-sm ms-auto" style="background:#6366f1;color:#fff;border-radius:10px;font-size:.78rem">
+                            Edit Profile
+                        </a>
                     </div>
                 </div>
-
             </div>
-            `;
-        });
 
-        container.innerHTML = html;
-
-    });
-}
-
-function loadLatestCourses(){
-
-    fetch("ajax/ajax_fetch_latest_courses.php")
-    .then(res => res.json())
-    .then(res => {
-
-        let container = document.getElementById("latestCourses");
-
-        if(res.status !== "success" || res.data.length === 0){
-            container.innerHTML = `
-                <div class="col-12 text-center text-muted">
-                    No published courses yet
+            <!-- About card -->
+            <?php if($description): ?>
+            <div class="sect-card mb-4">
+                <div class="sect-header">
+                    <div class="sect-icon" style="background:#f0fdf4;color:#16a34a"><i class="bi bi-person-lines-fill"></i></div>
+                    <div>
+                        <div class="sect-title">About</div>
+                    </div>
                 </div>
-            `;
-            return;
-        }
+                <div class="sect-body">
+                    <p class="text-muted small mb-2" style="line-height:1.6"><?= nl2br(htmlspecialchars($description)) ?></p>
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        <span class="badge text-bg-primary" style="border-radius:20px;font-size:.7rem">Teaching</span>
+                        <span class="badge text-bg-info" style="border-radius:20px;font-size:.7rem">Online Education</span>
+                        <span class="badge text-bg-success" style="border-radius:20px;font-size:.7rem">E-Learning</span>
+                        <span class="badge text-bg-secondary" style="border-radius:20px;font-size:.7rem">Language</span>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
-        let html = "";
+            <!-- Education card -->
+            <?php if($university || $salutation): ?>
+            <div class="sect-card mb-4">
+                <div class="sect-header">
+                    <div class="sect-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-mortarboard-fill"></i></div>
+                    <div>
+                        <div class="sect-title">Education</div>
+                    </div>
+                </div>
+                <div class="sect-body" style="padding-top:.75rem">
+                    <div class="edu-row">
+                        <div class="edu-logo">
+                            <img src="assets/img/logo-512.png" alt="">
+                        </div>
+                        <div>
+                            <div class="fw-semibold" style="font-size:.85rem;color:#1e293b"><?= htmlspecialchars($university ?? '') ?></div>
+                            <div class="text-muted small"><?= htmlspecialchars($course ?? '') ?></div>
+                            <div class="text-muted" style="font-size:.72rem"><?= htmlspecialchars($salutation ?? '') ?><?= $start_year ? ' · '.$start_year : '' ?></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
-        res.data.forEach((course, index) => {
-        
-            let thumbnail = course.thumbnail 
-                ? course.thumbnail 
-                : "assets/img/default-course.png";
-    
-            let bgClass = index === 0 ? "bg-theme-1 text-white" : "";
+        </div><!-- /LEFT -->
 
-            html += `
-            <div class="col-12 col-md-12 col-lg-4">
-                <div class="card adminuiux-card shadow-sm mb-2 ${bgClass}">
-                    
-                    <div class="card-body">
+        <!-- RIGHT column -->
+        <div class="col-12 col-lg-8 col-xl-9">
 
-                        <div class="row align-items-center">
-                            <div class="col-auto mb-3">
-                                <div class="avatar avatar-50 coverimg rounded">
-                                    <img src="${thumbnail}">
+            <!-- Course Analytics grid -->
+            <div class="sect-card mb-4">
+                <div class="sect-header justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="sect-icon" style="background:#eef2ff;color:#6366f1"><i class="bi bi-grid-1x2-fill"></i></div>
+                        <div>
+                            <div class="sect-title">Course Performance</div>
+                            <div class="sect-sub">Sales &amp; enrollment per course</div>
+                        </div>
+                    </div>
+                    <a href="../data_files/?view=my_courses_online_contents_list_view"
+                       class="btn btn-sm btn-outline-secondary" style="font-size:.78rem;border-radius:8px">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="sect-body">
+                    <div class="row g-3" id="courseAnalytics">
+                        <!-- skeleton -->
+                        <?php for($i=0;$i<3;$i++): ?>
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <div class="course-card">
+                                <div class="skel" style="height:160px;border-radius:0"></div>
+                                <div class="cc-body">
+                                    <div class="skel mb-2" style="height:14px;width:80%"></div>
+                                    <div class="skel mb-3" style="height:12px;width:50%"></div>
+                                    <div class="skel" style="height:20px;width:60%"></div>
                                 </div>
                             </div>
-
-                            <div class="col mb-3">
-                                <h6 class="mb-0">${course.title}</h6>
-                                <p class="small opacity-75">Your Course</p>
-                            </div>
                         </div>
-
-                        <p class="small opacity-75 mb-0">
-                            Duration: ${course.duration || 'N/A'}
-                        </p>
-
-                        <p class="small opacity-75">
-                            Published
-                        </p>
-
-                        <div class="row align-items-center">
-                            <div class="col-auto">
-                                <p class="small">
-                                    ${new Date(course.created_at).toLocaleDateString()}
-                                </p>
-                            </div>
-
-                            <div class="col text-center opacity-75">
-                                <p class="small">
-                                    <i class="bi bi-clock me-1"></i>Live Course
-                                </p>
-                            </div>
-
-                            <div class="col-auto">
-                                <button class="btn btn-sm btn-outline-light"
-                                    onclick="window.location='course-details.php?id=${course.id}'">
-                                    View
-                                </button>
-                            </div>
-                        </div>
-
+                        <?php endfor; ?>
                     </div>
-
-                    <div class="progress height-dynamic" style="--h-dynamic:5px">
-                        <div class="progress-bar bg-success" style="width:100%"></div>
-                    </div>
-
                 </div>
             </div>
-            `;
-        });
 
-        container.innerHTML = html;
+            <!-- My Courses table -->
+            <div class="sect-card">
+                <div class="sect-header justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="sect-icon" style="background:#fef3c7;color:#d97706"><i class="bi bi-list-ul"></i></div>
+                        <div>
+                            <div class="sect-title">All My Courses</div>
+                            <div class="sect-sub">Manage status, view details</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sect-body" style="padding:0">
+                    <div class="table-responsive">
+                        <table class="table mb-0" id="instCoursesTable">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Chapters</th>
+                                    <th>Students</th>
+                                    <th>Earnings</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="instCoursesTbody">
+                                <tr><td colspan="6" class="text-center text-muted py-4">
+                                    <div class="skel mx-auto" style="height:14px;width:40%"></div>
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
-    })
-    .catch(err => {
-        console.error(err);
-    });
-}
+        </div><!-- /RIGHT -->
+    </div><!-- /row -->
+</div><!-- /canvas -->
 
-// let statusBadge = `
-// <span class="badge 
-//     ${course.status === 'active' ? 'bg-success' : 
-//       course.status === 'inactive' ? 'bg-danger' : 
-//       'bg-warning text-dark'}">
-//     ${course.status}
-// </span>
-// `;
+<script>
+(function(){
+    // prevent bundle from reiniting the table
+    window.dataTables = function(){};
 
+    /* ── helpers ── */
+    function fmt(n){ return Number(n||0).toLocaleString(); }
+    function fmtShort(n){
+        n = Number(n||0);
+        if(n >= 1e6) return (n/1e6).toFixed(1)+'M';
+        if(n >= 1e3) return (n/1e3).toFixed(1)+'K';
+        return n.toLocaleString();
+    }
 
-// function getStatusBadge(status){
+    /* ── Analytics + Metrics ── */
+    function loadAnalytics(){
+        fetch("ajax/ajax_fetch_instructor_courses_analytics.php")
+        .then(r=>r.json()).then(res=>{
+            if(res.status !== 'success') return;
 
-//     if(status === "active"){
-//         return `<span class="badge bg-success">Active</span>`;
-//     }
-
-//     if(status === "inactive"){
-//         return `<span class="badge bg-danger">Inactive</span>`;
-//     }
-
-//     return `<span class="badge bg-warning text-dark">Draft</span>`;
-// }
-//change or update course status 
-function changeCourseStatus(course_id, newStatus){
-
-    Swal.fire({
-        title: "Confirm Action",
-        text: `Do you want to ${newStatus === 'active' ? 'publish' : 'unpublish'} this course?`,
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonText: "Yes"
-    }).then(result => {
-
-        if(result.isConfirmed){
-
-            fetch("ajax/ajax_update_my_course_status.php", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    course_id: course_id,
-                    status: newStatus
-                })
-            })
-            .then(res => res.json())
-            .then(res => {
-
-                if(res.status === "success"){
-                    Swal.fire("Success", "Course updated", "success");
-                    loadInstructorCourses();
-                    loadLatestCourses();
-                }else{
-                    Swal.fire("Error", res.message, "error");
-                }
-
+            let totalCourses=res.data.length, totalStudents=0, totalEarnings=0, totalSales=0;
+            res.data.forEach(c=>{
+                totalStudents += parseInt(c.students||0);
+                totalEarnings += parseFloat(c.net_earnings||0);
+                totalSales    += parseInt(c.total_sales||0);
             });
-        }
-    });
-}
 
-function loadInstructorCourses(){
+            /* Hero pills */
+            document.getElementById('hsCourses').textContent   = totalCourses;
+            document.getElementById('hsStudents').textContent  = fmt(totalStudents);
+            document.getElementById('hsEarnings').textContent  = 'TZS '+fmtShort(totalEarnings);
+            document.getElementById('hsSales').textContent     = fmt(totalSales);
 
-    fetch("ajax/ajax_fetch_instructor_courses.php")
+            /* Metric cards */
+            document.getElementById('mc0').textContent = totalCourses;
+            document.getElementById('mc1').textContent = fmt(totalStudents);
+            document.getElementById('mc2').textContent = 'TZS '+fmtShort(totalEarnings);
+            document.getElementById('mc3').textContent = fmt(totalSales);
 
-    .then(res => res.json())
+            /* Course cards */
+            let maxSales = Math.max(...res.data.map(c=>parseInt(c.total_sales||0)), 1);
+            let html = '';
+            res.data.forEach(c=>{
+                let thumb  = c.thumbnail || 'assets/img/default-course.png';
+                let isLive = c.status === 'active';
+                let pct    = Math.round((parseInt(c.total_sales||0)/maxSales)*100);
 
-    .then(res => {
+                let statusChip = isLive
+                    ? `<span class="status-chip active"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> Live</span>`
+                    : `<span class="status-chip draft"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> Draft</span>`;
 
-        // =========================
-        // DESTROY OLD DATATABLE
-        // =========================
-        if ($.fn.DataTable.isDataTable('#dataTable')) {
+                let toggleBtn = isLive
+                    ? `<button onclick="toggleStatus(${c.id},'inactive')" class="cc-btn" style="background:#fee2e2;color:#dc2626">Unpublish</button>`
+                    : `<button onclick="toggleStatus(${c.id},'active')"   class="cc-btn" style="background:#dcfce7;color:#15803d">Go Live</button>`;
 
-            $('#dataTable').DataTable().destroy();
+                html += `
+                <div class="col-12 col-md-6 col-xl-4">
+                  <div class="course-card">
+                    <div class="cc-thumb">
+                      <img src="${thumb}" alt="">
+                      <div class="cc-status">${statusChip}</div>
+                    </div>
+                    <div class="cc-body">
+                      <div class="cc-title">${c.title}</div>
+                      <div class="cc-meta">${fmt(c.students)} students &middot; ${fmt(c.total_sales)} sales</div>
+                      <div class="cc-earn">TZS ${fmt(c.net_earnings)}</div>
+                      <div class="cc-bar"><div class="cc-bar-fill" style="width:${pct}%"></div></div>
+                      <div class="cc-actions">
+                        ${toggleBtn}
+                        <a href="../data_files/?view=course_contents_management&course_id=${c.id}"
+                           class="cc-btn" style="background:#eef2ff;color:#6366f1;text-decoration:none">
+                           Manage
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+            });
 
-        }
+            document.getElementById('courseAnalytics').innerHTML = html || '<div class="col-12 text-center text-muted py-3">No courses yet</div>';
+        }).catch(console.error);
+    }
 
-        // OPTIONAL
-        // clears old table completely
-        $('#dataTable tbody').empty();
+    /* ── Courses table ── */
+    function loadCoursesTable(){
+        fetch("ajax/ajax_fetch_instructor_courses.php")
+        .then(r=>r.json()).then(res=>{
 
-        let html = "";
+            if($.fn.DataTable.isDataTable('#instCoursesTable')) $('#instCoursesTable').DataTable().destroy();
 
-        // =========================
-        // EMPTY STATE
-        // =========================
-        if(res.status !== "success"){
+            if(res.status !== 'success' || !res.data.length){
+                document.getElementById('instCoursesTbody').innerHTML =
+                    '<tr><td colspan="6" class="text-center text-muted py-4">No courses found</td></tr>';
+                return;
+            }
 
-            html = `
-            <tr>
-                <td colspan="6" class="text-center text-muted">
-                    No courses found
-                </td>
-            </tr>
-            `;
-        }
+            /* We need per-course student/earnings — we'll get that from analytics cache
+               stored in window.analyticsData, or fallback zeros */
+            let html = '';
+            res.data.forEach(c=>{
+                let thumb = c.thumbnail || 'assets/img/default-course.png';
+                let aData = (window._analyticsMap||{})[c.id] || {};
 
-        // =========================
-        // LOOP COURSES
-        // =========================
-        else{
+                let chip = '';
+                if(c.status==='active')   chip = `<span class="status-chip active"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Active</span>`;
+                else if(c.status==='inactive') chip = `<span class="status-chip inactive"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Inactive</span>`;
+                else                      chip = `<span class="status-chip draft"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Draft</span>`;
 
-            res.data.forEach(course => {
-
-                let thumbnail = course.thumbnail
-                    ? course.thumbnail
-                    : "assets/img/default-course.png";
-
-                let statusBadge = "";
-                let actionBtn = "";
-
-                if(course.status === "active"){
-
-                    statusBadge = `
-                    <span class="badge bg-success">
-                        Active
-                    </span>`;
-
-                    actionBtn = `
-                    <button onclick="changeCourseStatus(${course.id}, 'inactive')"
-                        class="btn btn-sm btn-outline-danger">
-                        Unpublish
-                    </button>`;
-                }
-
-                else if(course.status === "inactive"){
-
-                    statusBadge = `
-                    <span class="badge bg-danger">
-                        Inactive
-                    </span>`;
-
-                    actionBtn = `
-                    <button onclick="changeCourseStatus(${course.id}, 'active')"
-                        class="btn btn-sm btn-outline-success">
-                        Publish
-                    </button>`;
-                }
-
-                else{
-
-                    statusBadge = `
-                    <span class="badge bg-warning text-dark">
-                        Draft
-                    </span>`;
-
-                    actionBtn = `
-                    <button onclick="changeCourseStatus(${course.id}, 'active')"
-                        class="btn btn-sm btn-outline-success">
-                        Publish
-                    </button>`;
-                }
+                let toggleBtn = '';
+                if(c.status==='active')
+                    toggleBtn = `<button onclick="toggleStatus(${c.id},'inactive')" class="btn btn-sm tbl-action-btn btn-outline-danger">Unpublish</button>`;
+                else
+                    toggleBtn = `<button onclick="toggleStatus(${c.id},'active')" class="btn btn-sm tbl-action-btn btn-outline-success">Publish</button>`;
 
                 html += `
                 <tr>
-
-                    <!-- COURSE -->
-                    <td>
-                        <div class="d-flex align-items-center">
-
-                            <img src="${thumbnail}"
-                                class="rounded shadow-sm me-2"
-                                width="45"
-                                height="45"
-                                style="object-fit:cover;">
-
-                            <div>
-                                <h6 class="mb-0 fw-semibold">
-                                    ${course.title}
-                                </h6>
-
-                                <small class="text-muted">
-                                    ${course.type || 'Course'}
-                                </small>
-                            </div>
-
-                        </div>
-                    </td>
-
-                    <!-- DURATION -->
-                    <td>
-                        <div class="fw-semibold">
-                            ${course.duration || 'N/A'}
-                        </div>
-
-                        <small class="text-muted">
-                            ${course.total_chapters} Chapters
-                        </small>
-                    </td>
-
-                    <!-- SCHEDULE -->
-                    <td>
-                        <div>
-                            ${course.duration || 'N/A'}
-                        </div>
-
-                        <small class="text-muted">
-                            ${course.start_date || 'No date'}
-                        </small>
-                    </td>
-
-                    <!-- STATUS -->
-                    <td>
-                        ${statusBadge}
-                    </td>
-
-                    <!-- CHAT -->
-                    <td class="text-center">
-
-                        <button class="btn btn-sm btn-light border">
-
-                            <i class="bi bi-chat"></i> 0
-
-                        </button>
-
-                    </td>
-
-                    <!-- ACTION -->
-                    <td class="text-center">
-
-                        ${actionBtn}
-
-                        <div class="dropdown d-inline-block">
-
-                            <a class="btn btn-sm btn-light border"
-                                data-bs-toggle="dropdown">
-
-                                <i class="bi bi-three-dots"></i>
-
-                            </a>
-
-                            <ul class="dropdown-menu dropdown-menu-end">
-
-                                <li>
-                                    <a class="dropdown-item"
-                                        href="../data_files/?view=course_contents_management&course_id=${course.id}">
-
-                                        View Details
-                                    </a>
-                                </li>
-
-                                <li>
-                                    <a class="dropdown-item"
-                                        href="../data_files/?view=edit_course&course_id=${course.id}">
-
-                                        Edit Course
-                                    </a>
-                                </li>
-
-                            </ul>
-
-                        </div>
-
-                    </td>
-
-                </tr>
-                `;
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <img src="${thumb}" class="cthumbnail">
+                      <div>
+                        <div class="fw-semibold" style="font-size:.84rem">${c.title}</div>
+                        <div class="text-muted" style="font-size:.72rem">${c.type||'Course'}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>${c.total_chapters||0}</td>
+                  <td>${fmt(aData.students||0)}</td>
+                  <td class="fw-semibold text-success" style="font-size:.82rem">TZS ${fmt(aData.net_earnings||0)}</td>
+                  <td>${chip}</td>
+                  <td class="text-center">
+                    <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                      ${toggleBtn}
+                      <div class="dropdown">
+                        <button class="btn btn-sm btn-light border tbl-action-btn" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size:.82rem;border-radius:12px">
+                          <li><a class="dropdown-item" href="../data_files/?view=course_contents_management&course_id=${c.id}"><i class="bi bi-eye me-2"></i>View Details</a></li>
+                          <li><a class="dropdown-item" href="../data_files/?view=edit_course&course_id=${c.id}"><i class="bi bi-pencil me-2"></i>Edit Course</a></li>
+                          <li><a class="dropdown-item" href="../data_files/?view=view_course_details&course_id=${c.id}"><i class="bi bi-box-arrow-up-right me-2"></i>Preview Page</a></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </td>
+                </tr>`;
             });
-        }
 
-        // =========================
-        // LOAD HTML
-        // =========================
-        $('#dataTable tbody').html(html);
+            document.getElementById('instCoursesTbody').innerHTML = html;
 
-        // =========================
-        // INIT DATATABLE
-        // =========================
-        $('#dataTable').DataTable({
-
-            destroy: true,
-
-            responsive: true,
-
-            autoWidth: false,
-
-            pageLength: 5,
-
-            lengthMenu: [5, 10, 25, 50],
-
-            order: [[0, "asc"]],
-
-            language: {
-
-                search: "_INPUT_",
-
-                searchPlaceholder: "Search courses...",
-
-                lengthMenu: "Show _MENU_ courses",
-
-                info: "Showing _START_ to _END_ of _TOTAL_ courses",
-
-                paginate: {
-                    previous: "‹",
-                    next: "›"
+            $('#instCoursesTable').DataTable({
+                destroy:true, responsive:true, autoWidth:false,
+                pageLength:10, lengthMenu:[5,10,25,50],
+                order:[[0,'asc']],
+                language:{
+                    search:'_INPUT_', searchPlaceholder:'Search courses…',
+                    lengthMenu:'Show _MENU_ courses',
+                    info:'Showing _START_–_END_ of _TOTAL_ courses',
+                    paginate:{previous:'‹',next:'›'}
                 }
-            }
-        });
+            });
 
-    })
+        }).catch(console.error);
+    }
 
-    .catch(err => {
-
-        console.error(err);
-
-    });
-}
-
-
-document.addEventListener("DOMContentLoaded", function(){
-  
-    const form = document.querySelector("form.needs-validation");
- 
-    form.addEventListener("submit", function(e){
-
-        e.preventDefault();
-
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            return;
-        }
-
-        let courseName = document.getElementById("validationTooltip01").value;
-
+    /* ── Toggle status ── */
+    window.toggleStatus = function(course_id, status){
         Swal.fire({
-            title: "Saving...",
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
+            title: status==='active' ? 'Publish Course?' : 'Unpublish Course?',
+            text: 'You can change this anytime.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, proceed',
+            confirmButtonColor: status==='active' ? '#16a34a' : '#dc2626'
+        }).then(r=>{
+            if(!r.isConfirmed) return;
+            fetch('ajax/ajax_toggle_course_status.php',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({course_id, status})
+            }).then(r=>r.json()).then(r=>{
+                if(r.status==='success'){
+                    Swal.fire({icon:'success',title:'Updated!',timer:1200,showConfirmButton:false});
+                    setTimeout(()=>{ loadAnalytics(); loadCoursesTable(); }, 1300);
+                } else {
+                    Swal.fire('Error', r.message, 'error');
+                }
+            });
         });
+    };
 
-        fetch("ajax/ajax_save_course.php", { 
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json" 
-            },
-            body: JSON.stringify({
-                title: courseName 
-            })
-        })
-        .then(res => res.json()) 
-        .then(res => {
-
-            Swal.close();
-
-            if (res.status === "success") {
-
-                Swal.fire("Success", res.message, "success")
-                .then(() => {
-                    window.location.href = "?view=my_courses_online_contents_list_view";
-                });
-
-            } else {
-                Swal.fire("Error", res.message, "error");
+    /* ── Bootstrap on DOMContentLoaded ── */
+    function boot(){
+        /* First load analytics so we have the map ready */
+        fetch("ajax/ajax_fetch_instructor_courses_analytics.php")
+        .then(r=>r.json()).then(res=>{
+            if(res.status==='success'){
+                window._analyticsMap = {};
+                res.data.forEach(c=>{ window._analyticsMap[c.id] = c; });
             }
+            loadAnalytics();
+            loadCoursesTable();
+        }).catch(()=>{ loadAnalytics(); loadCoursesTable(); });
+    }
 
-        })
-        .catch(() => {
-            Swal.fire("Error","Something went wrong","error");
-        });
-
-    });
-
-});
-
+    if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+})();
 </script>

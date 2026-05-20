@@ -1093,48 +1093,43 @@ class App
         return $whatToReturn;
     }
     //profile completion status
-    public static function getProfileCompletionStatus($usr_code,$user_role)
+    public static function getProfileCompletionStatus($usr_code, $user_role)
     {
         include('db.php');
-        if($user_role == '1')
-        {
-                $sql = mysqli_query($db, "SELECT * FROM tbl_students WHERE usr_code = '$usr_code'");
-                $row = mysqli_fetch_array($sql);
-                if($row['sub_academic_level'] != '' || $row['sub_academic_level'] != NULL)
-                {
-                    $completionPercentage = 87;
-                    self::markProfileAsCompleted($usr_code);
-                }
-                elseif($row['parent_name'] != '' && $row['parent_name'] != NULL && $row['sub_academic_level'] != '' && $row['sub_academic_level'] != NULL)
-                {
-                    $completionPercentage = 98;
-                    self::markProfileAsCompleted($usr_code);
-                }
-                else 
-                {
-                    $completionPercentage = 30;
-                }
-        }
-        elseif($user_role == '3')
-        {
-            //tutor profile completion status
-            $sql = mysqli_query($db, "SELECT * FROM tbl_tutors WHERE usr_code = '$usr_code'");
-            $row = mysqli_fetch_array($sql);
-            if(@$row['sub_academic_level'] != '' || @$row['sub_academic_level'] != NULL)
-            {
-                $completionPercentage = 87;
-                self::markProfileAsCompleted($usr_code);
-            }
-            elseif(@$row['parent_name'] != '' && @$row['parent_name'] != NULL && @$row['sub_academic_level'] != '' && @$row['sub_academic_level'] != NULL)
-            {
+        $completionPercentage = 10;
+
+        if ($user_role == '1') {
+            $sql = mysqli_query($db, "SELECT * FROM tbl_students WHERE usr_code = '" . mysqli_real_escape_string($db, $usr_code) . "'");
+            $row = $sql ? mysqli_fetch_array($sql) : null;
+            if (!$row) {
+                $completionPercentage = 10;
+            } elseif (!empty($row['parent_name']) && !empty($row['sub_academic_level'])) {
                 $completionPercentage = 98;
                 self::markProfileAsCompleted($usr_code);
+            } elseif (!empty($row['sub_academic_level'])) {
+                $completionPercentage = 87;
+                self::markProfileAsCompleted($usr_code);
+            } elseif (!empty($row['first_name'])) {
+                $completionPercentage = 50;
+            } else {
+                $completionPercentage = 30;
             }
-            else 
-            {
+        } elseif ($user_role == '3') {
+            $sql = mysqli_query($db, "SELECT * FROM tbl_tutors WHERE usr_code = '" . mysqli_real_escape_string($db, $usr_code) . "'");
+            $row = $sql ? mysqli_fetch_array($sql) : null;
+            if (!$row) {
+                $completionPercentage = 10;
+            } elseif (!empty($row['parent_name']) && !empty($row['sub_academic_level'])) {
+                $completionPercentage = 98;
+                self::markProfileAsCompleted($usr_code);
+            } elseif (!empty($row['sub_academic_level'])) {
+                $completionPercentage = 87;
+                self::markProfileAsCompleted($usr_code);
+            } else {
                 $completionPercentage = 30;
             }
         }
+
         return $completionPercentage;
     }
     
