@@ -5,9 +5,12 @@ if (!$course_id) { echo '<div class="p-4 text-center text-muted">Invalid course.
 $usr = $_SESSION['usr_code'] ?? '';
 
 /* ── Course ─────────────────────────────────────────────── */
+$is_admin   = (($user_role ?? 0) == 5);
+$statusFilter = $is_admin ? '' : "AND status = 'active'";
+
 $course = $db->query("
     SELECT * FROM tbl_courses
-    WHERE id = {$course_id} AND status = 'active' AND deleted_at IS NULL
+    WHERE id = {$course_id} {$statusFilter} AND deleted_at IS NULL
     LIMIT 1
 ")->fetch_assoc();
 if (!$course) { echo '<div class="p-4 text-center text-muted">Course not found.</div>'; return; }
@@ -68,7 +71,21 @@ if ($demoSrc) {
 }
 
 $thumb = !empty($course['thumbnail']) ? $course['thumbnail'] : 'uploads/course_default.png';
+$approval_status = $course['is_approved'] ?? 'pending';
 ?>
+<?php if ($is_admin && $course['status'] !== 'active'): ?>
+<div style="background:linear-gradient(90deg,#1e1b4b,#4338ca);color:#fff;padding:.7rem 1.4rem;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:.6rem;position:sticky;top:0;z-index:9999">
+    <i class="bi bi-shield-check"></i>
+    Admin Preview —
+    <span style="background:rgba(255,255,255,.15);border-radius:20px;padding:.15rem .65rem;font-size:.75rem">
+        <?= $approval_status === 'pending' ? 'Pending Review' : ucfirst(str_replace('_',' ',$approval_status)) ?>
+    </span>
+    <span style="opacity:.6;font-weight:400">· This course is not yet live to students</span>
+    <a href="?view=admin_course_reviews" style="margin-left:auto;color:#a5b4fc;font-size:.78rem;text-decoration:none">
+        <i class="bi bi-arrow-left me-1"></i>Back to Review Queue
+    </a>
+</div>
+<?php endif; ?>
 <style>
 /* ═══════════════════════════════════════════════════════
    COURSE PREVIEW  (cv-*)
