@@ -105,7 +105,7 @@ if ($action === 'list' && $role == 5) {
     $countStmt = $db->prepare("
         SELECT COUNT(*) FROM tbl_course_review_requests r
         JOIN tbl_courses c ON c.id = r.course_id
-        JOIN tbl_users u ON u.usr_code = r.instructor_id
+        JOIN tbl_all_users u ON u.usr_code = r.instructor_id
         WHERE $whereStr
     ");
     if ($types) { $countStmt->bind_param($types, ...$params); }
@@ -120,7 +120,7 @@ if ($action === 'list' && $role == 5) {
                (SELECT COUNT(*) FROM tbl_course_chapter_lessons l WHERE l.course_id = r.course_id AND l.status='active') AS lessons
         FROM tbl_course_review_requests r
         JOIN tbl_courses c ON c.id = r.course_id
-        JOIN tbl_users u ON u.usr_code = r.instructor_id
+        JOIN tbl_all_users u ON u.usr_code = r.instructor_id
         WHERE $whereStr
         ORDER BY FIELD(r.status,'pending','revision_needed','rejected','approved'), r.submitted_at DESC
         LIMIT ? OFFSET ?
@@ -153,7 +153,7 @@ if ($action === 'get' && $role == 5) {
                (SELECT COUNT(*) FROM tbl_course_chapter_lessons l WHERE l.course_id = r.course_id AND l.isFreePreviewLesson=1 AND l.status='active') AS free_lessons
         FROM tbl_course_review_requests r
         JOIN tbl_courses c ON c.id = r.course_id
-        JOIN tbl_users u ON u.usr_code = r.instructor_id
+        JOIN tbl_all_users u ON u.usr_code = r.instructor_id
         WHERE r.id = ?
     ");
     $stmt->bind_param("i", $id);
