@@ -2,7 +2,7 @@
 $cv = $_GET['view'] ?? '';
 
 $groups = [
-    'menuAdmin'      => ['admin_dashboard','admin_users','admin_roles','admin_permissions','admin_courses','admin_course_detail','admin_payment_settings'],
+    'menuAdmin'      => ['admin_dashboard','admin_users','admin_roles','admin_permissions','admin_courses','admin_course_detail','admin_payment_settings','admin_course_reviews'],
     'menuCourseMgmt' => ['my_courses_online_contents_list_view','course_contents_management','view_course_details','teacher_study_notes','study_notes_manager'],
     'menuTaxonomy'   => ['qb_subjects','qb_levels','qb_chapters','qb_subtopics','qb_bloom_levels','qb_difficulty_levels','qb_sections'],
     'menuQuestions'  => ['qb_all_questions','qb_add_question','qb_bulk_upload','qb_draft_questions','qb_review_queue','qb_approved_questions','qb_published_questions','qb_archived_questions','qb_question_media'],
@@ -68,6 +68,13 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="../data_files/?view=admin_course_reviews" class="<?= $lc('admin_course_reviews') ?>" id="sideReviewLink">
+                        <i class="bi bi-shield-check"></i>
+                        <span>Course Reviews</span>
+                        <span id="sideReviewBadge" style="display:none;margin-left:auto;background:#f59e0b;color:#fff;border-radius:20px;font-size:.62rem;font-weight:700;padding:.1rem .45rem;line-height:1.6"></span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="../data_files/?view=admin_payment_settings" class="<?= $lc('admin_payment_settings') ?>">
                         <i class="bi bi-credit-card"></i><span>Payment Settings</span>
                     </a>
@@ -76,6 +83,17 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
         </div>
     </li>
     <?php endif; ?>
+    <script>
+    (function(){
+        fetch('../data_files/ajax/ajax_course_review.php?action=stats')
+        .then(r=>r.json()).then(r=>{
+            if(r.status==='success' && r.pending > 0){
+                const b = document.getElementById('sideReviewBadge');
+                if(b){ b.textContent = r.pending; b.style.display='inline'; }
+            }
+        }).catch(()=>{});
+    })();
+    </script>
 
     <!-- Course Management -->
     <?php if (canAccessModule($user_perms, 'course_management')): ?>

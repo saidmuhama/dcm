@@ -109,8 +109,9 @@ $stmt->bind_param("ssss", $instructor_id, $title, $library_id, $library_key);
 
 if($stmt->execute()){
     echo json_encode([
-        "status" => "success",
-        "message" => "Course + Library created successfully"
+        "status"    => "success",
+        "message"   => "Course + Library created successfully",
+        "course_id" => $stmt->insert_id
     ]);
 }else{
     echo json_encode([

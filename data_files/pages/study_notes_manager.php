@@ -38,7 +38,7 @@ if (!$lesson || $lesson['instructor_id'] != $_SESSION['usr_code']) {
                 <span><i class="bi bi-play-circle me-1"></i><?= htmlspecialchars($lesson['lesson_title']) ?></span>
             </p>
         </div>
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#noteModal" onclick="openAddModal()">
+        <button class="btn btn-primary btn-sm" onclick="openAddModal()">
             <i class="bi bi-plus-lg me-1"></i> Add Q&amp;A Note
         </button>
     </div>
@@ -162,6 +162,7 @@ function openAddModal() {
     document.getElementById('noteAnswer').value = '';
     document.getElementById('noteLanguage').value = 'EN';
     document.getElementById('noteImportant').checked = false;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('noteModal')).show();
 }
 
 function openEditModal(id) {
@@ -173,7 +174,7 @@ function openEditModal(id) {
     document.getElementById('noteAnswer').value = n.answer;
     document.getElementById('noteLanguage').value = n.language;
     document.getElementById('noteImportant').checked = n.is_important == 1;
-    new bootstrap.Modal(document.getElementById('noteModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('noteModal')).show();
 }
 
 // ── Save ───────────────────────────────────────────────────────────────────
@@ -209,16 +210,19 @@ async function saveNote() {
 
 // ── Delete ─────────────────────────────────────────────────────────────────
 async function deleteNote(id) {
-    const result = await Swal.fire({
+    const n = notes.find(x => x.id == id);
+    const { isConfirmed } = await Swal.fire({
         title: 'Delete this note?',
-        text: 'This cannot be undone.',
+        html: n ? `<span class="text-muted small">"${escHtml(n.question.substring(0, 80))}${n.question.length > 80 ? '…' : ''}"</span><br><span class="text-danger small mt-1 d-block">This action cannot be undone.</span>` : 'This action cannot be undone.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Delete',
-        customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-secondary' },
-        buttonsStyling: false
+        confirmButtonText: '<i class="bi bi-trash me-1"></i>Yes, Delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true
     });
-    if (!result.isConfirmed) return;
+    if (!isConfirmed) return;
 
     const res = await fetch(AJAX_URL, {
         method: 'POST',
@@ -228,6 +232,7 @@ async function deleteNote(id) {
 
     if (res.status === 'success') {
         loadNotes();
+        Swal.fire({ icon: 'success', title: 'Deleted', text: 'Note removed successfully.', timer: 1500, showConfirmButton: false });
     } else {
         Swal.fire('Error', res.message, 'error');
     }

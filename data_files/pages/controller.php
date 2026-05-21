@@ -1,5 +1,5 @@
 <?php
-$view = $_GET['view'];
+$view = $_GET['view'] ?? '';
 $user_perms = $user_perms ?? [];   // defined by index.php; default silences static-analysis warnings
 
 // ── Module-level access gate (skip for super admin and non-module views) ──
@@ -122,6 +122,10 @@ switch ($view) {
 
     case 'admin_payment_settings':
         include('pages/admin_payment_settings.php');
+        break;
+
+    case 'admin_course_reviews':
+        include('pages/admin_course_reviews.php');
         break;
 
     // ── QUESTION BANK ─────────────────────────────────────────

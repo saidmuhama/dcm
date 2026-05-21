@@ -120,6 +120,51 @@
   </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('createCourseForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const titleInput = document.getElementById('newCourseTitle');
+        const title = titleInput.value.trim();
+        const btn = document.getElementById('saveCourseBtn');
+
+        if (!title) {
+            titleInput.classList.add('is-invalid');
+            return;
+        }
+        titleInput.classList.remove('is-invalid');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creating…';
+
+        fetch('ajax/ajax_save_course.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === 'success' && res.course_id) {
+                window.location.href = '?view=course_contents_management&course_id=' + res.course_id;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-right-circle-fill me-1"></i>Save &amp; Proceed';
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'Could not create course.' });
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-right-circle-fill me-1"></i>Save &amp; Proceed';
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Network error. Please try again.' });
+        });
+    });
+});
+</script>
+
 <!-- dcm-btn base styles (shared with all pages) -->
 <style>
   .dcm-btn {

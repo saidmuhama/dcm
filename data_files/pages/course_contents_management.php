@@ -188,9 +188,9 @@ if ($courseOwner != ($_SESSION['usr_code'] ?? '')) { ?>
                 <button onclick="showCourseSettings()" class="btn btn-sm btn-outline-light" style="border-radius:9px;font-size:.8rem">
                     <i class="bi bi-gear me-1"></i>Settings
                 </button>
-                <button id="statusToggleBtn" onclick="changeCourseStatus()"
+                <button id="statusToggleBtn" onclick="handlePublishClick()"
                     class="btn btn-sm" style="border-radius:9px;font-size:.8rem;background:#fff;color:#1e293b;font-weight:600">
-                    <i class="bi bi-toggle-off me-1" id="statusToggleIcon"></i><span id="statusText">Change Status</span>
+                    <i class="bi bi-send me-1" id="statusToggleIcon"></i><span id="statusText">Submit for Review</span>
                 </button>
             </div>
         </div>
@@ -428,49 +428,145 @@ function initLessonDragDrop(){
 }
 
 /* ════════════════════════════════════════════════════════════
-   COURSE STATUS
+   COURSE STATUS + REVIEW WORKFLOW
 ═══════════════════════════════════════════════════════════════ */
+let _reviewStatus = null; // cached from last fetch
+
 function loadCourseStatus(){
-    fetch('ajax/ajax_get_course_status.php?course_id='+COURSE_ID)
+    fetch('ajax/ajax_course_review.php?action=get_status&course_id='+COURSE_ID)
     .then(r=>r.json()).then(r=>{
         if(r.status!=='success') return;
-        const s   = r.course_status;
-        const chip= document.getElementById('heroStatusChip');
-        const txt = document.getElementById('statusText');
-        const ico = document.getElementById('statusToggleIcon');
-        chip.className='status-chip '+(s==='active'?'active':s==='inactive'?'inactive':'draft');
-        chip.innerHTML=`<i class="bi bi-circle-fill" style="font-size:.45rem"></i> ${s.charAt(0).toUpperCase()+s.slice(1)}`;
-        txt.textContent = s==='active' ? 'Published' : s==='inactive' ? 'Unpublished' : 'Draft';
-        ico.className = s==='active' ? 'bi bi-toggle-on me-1 text-success' : 'bi bi-toggle-off me-1 text-muted';
+        const d = r.data || {};
+        _reviewStatus = d;
+        const approval = d.is_approved || 'pending';
+        const status   = d.course_status || 'is_draft';
+
+        const chip = document.getElementById('heroStatusChip');
+        const txt  = document.getElementById('statusText');
+        const ico  = document.getElementById('statusToggleIcon');
+        const btn  = document.getElementById('statusToggleBtn');
+
+        // Status chip reflects course live status
+        if (status === 'active') {
+            chip.className = 'status-chip active';
+            chip.innerHTML = '<i class="bi bi-circle-fill" style="font-size:.45rem"></i> Live';
+        } else {
+            chip.className = 'status-chip draft';
+            chip.innerHTML = '<i class="bi bi-circle-fill" style="font-size:.45rem"></i> Draft';
+        }
+
+        // Button state based on review/approval status
+        if (status === 'active' && approval === 'approved') {
+            ico.className = 'bi bi-toggle-on me-1 text-success';
+            txt.textContent = 'Published';
+            btn.style.background = '#dcfce7';
+            btn.style.color = '#15803d';
+            btn.disabled = false;
+        } else if (approval === 'pending') {
+            ico.className = 'bi bi-hourglass-split me-1 text-warning';
+            txt.textContent = 'Pending Review';
+            btn.style.background = '#fef9c3';
+            btn.style.color = '#92400e';
+            btn.disabled = false;
+        } else if (approval === 'rejected') {
+            ico.className = 'bi bi-x-circle me-1 text-danger';
+            txt.textContent = 'Rejected — Resubmit';
+            btn.style.background = '#fee2e2';
+            btn.style.color = '#b91c1c';
+            btn.disabled = false;
+        } else {
+            ico.className = 'bi bi-send me-1';
+            txt.textContent = 'Submit for Review';
+            btn.style.background = '#fff';
+            btn.style.color = '#1e293b';
+            btn.disabled = false;
+        }
     }).catch(console.error);
 }
 
-function changeCourseStatus(){
-    fetch('ajax/ajax_get_course_status.php?course_id='+COURSE_ID)
-    .then(r=>r.json()).then(r=>{
-        if(r.status!=='success') return;
-        const cur = r.course_status;
-        const next = cur==='active' ? 'inactive' : 'active';
+function handlePublishClick(){
+    const d = _reviewStatus || {};
+    const approval = d.is_approved || '';
+    const status   = d.course_status || '';
+
+    if (status === 'active' && approval === 'approved') {
+        // Already live — offer to unpublish
         Swal.fire({
-            title: next==='active' ? 'Publish this course?' : 'Unpublish this course?',
-            text: 'You can change this anytime.',
-            icon: 'question', showCancelButton: true,
-            confirmButtonText: 'Yes, proceed',
-            confirmButtonColor: next==='active' ? '#16a34a' : '#dc2626'
-        }).then(res=>{
-            if(!res.isConfirmed) return;
-            fetch('ajax/ajax_update_course_status.php',{
+            title: 'Unpublish this course?',
+            text: 'It will be hidden from students until you resubmit for review.',
+            icon: 'warning', showCancelButton: true,
+            confirmButtonText: 'Unpublish', confirmButtonColor: '#dc2626', reverseButtons: true
+        }).then(res => {
+            if (!res.isConfirmed) return;
+            fetch('ajax/ajax_update_course_status.php', {
                 method:'POST', headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({course_id:COURSE_ID, status:next})
-            }).then(r=>r.json()).then(r=>{
-                if(r.status==='success'){
-                    Swal.fire({icon:'success',title:'Updated!',timer:1200,showConfirmButton:false});
-                    loadCourseStatus();
-                } else Swal.fire('Error',r.message,'error');
+                body: JSON.stringify({course_id:COURSE_ID, status:'inactive'})
+            }).then(r=>r.json()).then(r => {
+                if (r.status==='success') { Swal.fire({icon:'success',title:'Unpublished',timer:1200,showConfirmButton:false}); loadCourseStatus(); }
+                else Swal.fire('Error', r.message, 'error');
             });
+        });
+        return;
+    }
+
+    if (approval === 'pending') {
+        Swal.fire({
+            title: 'Under Review',
+            html: '<p class="text-muted small mb-0">Your course has been submitted and is awaiting admin review. You will be notified once a decision is made.</p>',
+            icon: 'info', confirmButtonText: 'OK'
+        });
+        return;
+    }
+
+    // Show submit modal (draft or rejected resubmit)
+    const isResubmit = approval === 'rejected';
+    const adminComment = d.admin_comment || '';
+    Swal.fire({
+        title: isResubmit ? '<i class="bi bi-arrow-repeat me-2" style="color:#d97706"></i>Resubmit for Review' : '<i class="bi bi-send me-2" style="color:#6366f1"></i>Submit for Review',
+        html: `
+            ${isResubmit && adminComment ? `
+            <div class="text-start p-3 mb-3 rounded-3" style="background:#fff1f2;border:1px solid #fecaca">
+                <div class="fw-semibold small mb-1" style="color:#b91c1c"><i class="bi bi-chat-dots me-1"></i>Admin Feedback</div>
+                <p class="mb-0 small" style="color:#7f1d1d;white-space:pre-wrap">${esc(adminComment)}</p>
+            </div>` : ''}
+            <div class="text-start">
+                <label class="form-label small fw-semibold">Message to Admin <span class="text-muted fw-normal">(optional)</span></label>
+                <textarea id="submitNoteInput" class="form-control form-control-sm" rows="3"
+                    placeholder="Describe changes made or any notes for the reviewer…" style="border-radius:10px;resize:none"></textarea>
+            </div>`,
+        showCancelButton: true,
+        confirmButtonText: isResubmit ? 'Resubmit' : 'Submit for Review',
+        confirmButtonColor: '#6366f1',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true,
+        didOpen: () => { document.getElementById('submitNoteInput').focus(); }
+    }).then(res => {
+        if (!res.isConfirmed) return;
+        const note = document.getElementById('submitNoteInput')?.value?.trim() || '';
+        const btn  = document.getElementById('statusToggleBtn');
+        btn.disabled = true;
+
+        fetch('ajax/ajax_course_review.php', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({action:'submit', course_id:COURSE_ID, note})
+        }).then(r=>r.json()).then(r => {
+            btn.disabled = false;
+            if (r.status === 'success') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Submitted!',
+                    text: 'Your course is now in the review queue. The admin will review and respond shortly.',
+                    confirmButtonColor: '#6366f1'
+                });
+                loadCourseStatus();
+            } else {
+                Swal.fire('Error', r.message, 'error');
+            }
         });
     });
 }
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 /* ════════════════════════════════════════════════════════════
    COURSE SETTINGS
