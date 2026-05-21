@@ -1,6 +1,7 @@
 <?php
 /* ── Course data ──────────────────────────────────────────────── */
-$_cid = (int)($_GET['course_id'] ?? 0);
+require_once __DIR__ . '/../config/url_crypt_config.php';
+$_cid = decryptURLId($_GET['course_id'] ?? '', ctx: 'course');
 if (!$_cid) { echo '<div class="p-4 text-center text-danger">Invalid course.</div>'; return; }
 
 $_cs = $db->prepare("SELECT * FROM tbl_courses WHERE id = ? AND deleted_at IS NULL LIMIT 1");
@@ -79,7 +80,36 @@ $_final     = $_price > 0 ? $_price - ($_price * $_disc / 100) : 0;
                    display:flex;align-items:center;justify-content:center;overflow:hidden; }
 .cr-viewer-inner iframe,
 .cr-viewer-inner embed  { width:100%;height:100%;border:0; }
-.cr-viewer-inner audio  { width:90%;border-radius:12px; }
+/* ── Custom Audio Player ── */
+#crAP { position:relative;width:100%;height:100%;background:#0d0d1a;overflow:hidden;display:flex;flex-direction:column; }
+#crAP-bg { position:absolute;inset:-20px;background-size:cover;background-position:center;filter:blur(32px) brightness(.3);z-index:0; }
+#crAP-art { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;z-index:2;padding:1.25rem 1.5rem .5rem;gap:.75rem;min-height:0; }
+#crAP-cover { width:130px;height:130px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;box-shadow:0 16px 48px rgba(0,0,0,.6);flex-shrink:0; }
+#crAP-cover img { width:100%;height:100%;object-fit:cover; }
+#crAP-title { font-size:.86rem;font-weight:700;color:#fff;text-align:center;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+#crAP-sub { font-size:.68rem;color:rgba(255,255,255,.4);letter-spacing:.03em; }
+#crAP-ctrl { position:relative;z-index:2;padding:.7rem 1.25rem 1rem;background:rgba(0,0,0,.35);backdrop-filter:blur(8px); }
+.crAP-seek-wrap { position:relative;height:4px;background:rgba(255,255,255,.15);border-radius:99px;cursor:pointer;margin-bottom:.4rem; }
+.crAP-seek-fill { height:100%;border-radius:99px;background:linear-gradient(90deg,#6366f1,#8b5cf6);pointer-events:none;width:0%; }
+.crAP-seek-wrap input[type=range] { position:absolute;inset:-8px 0;width:100%;height:20px;opacity:0;cursor:pointer;margin:0; }
+.crAP-time-row { display:flex;justify-content:space-between;font-size:.63rem;color:rgba(255,255,255,.38);margin-bottom:.65rem; }
+.crAP-btn-row { display:flex;align-items:center;justify-content:center;gap:.85rem; }
+.crAP-btn { background:none;border:none;color:rgba(255,255,255,.65);cursor:pointer;font-size:1.1rem;padding:.3rem;border-radius:50%;transition:all .15s;display:flex;align-items:center;justify-content:center;line-height:1; }
+.crAP-btn:hover { color:#fff;background:rgba(255,255,255,.1); }
+.crAP-btn.crAP-play { width:50px;height:50px;font-size:1.35rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 4px 16px rgba(99,102,241,.5); }
+.crAP-btn.crAP-play:hover { transform:scale(1.07);box-shadow:0 6px 22px rgba(99,102,241,.65); }
+.crAP-vol-row { display:flex;align-items:center;gap:.4rem;position:absolute;right:1.25rem;bottom:1rem; }
+.crAP-vol-row input[type=range] { width:64px;accent-color:#6366f1;cursor:pointer;height:3px; }
+.crAP-fs-btn { position:absolute;top:.6rem;right:.75rem;z-index:10;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.7);border-radius:8px;padding:.35rem .45rem;cursor:pointer;font-size:.9rem;line-height:1;transition:background .15s; }
+.crAP-fs-btn:hover { background:rgba(255,255,255,.2);color:#fff; }
+/* Fullscreen overrides */
+#crAP:fullscreen,#crAP:-webkit-full-screen { background:#0d0d1a; }
+#crAP:fullscreen #crAP-cover,#crAP:-webkit-full-screen #crAP-cover { width:220px;height:220px; }
+#crAP:fullscreen #crAP-title,#crAP:-webkit-full-screen #crAP-title { font-size:1.1rem;max-width:500px; }
+#crAP:fullscreen #crAP-ctrl,#crAP:-webkit-full-screen #crAP-ctrl { padding:1rem 3rem 1.75rem; }
+#crAP:fullscreen .crAP-btn.crAP-play,#crAP:-webkit-full-screen .crAP-btn.crAP-play { width:66px;height:66px;font-size:1.7rem; }
+#crAP:fullscreen .crAP-btn,#crAP:-webkit-full-screen .crAP-btn { font-size:1.3rem; }
+#crAP:fullscreen .crAP-vol-row input[type=range],#crAP:-webkit-full-screen .crAP-vol-row input[type=range] { width:110px; }
 .cr-no-content { display:flex;flex-direction:column;align-items:center;justify-content:center;
                  color:rgba(255,255,255,.35);gap:.75rem;height:100%; }
 .cr-no-content i { font-size:3rem; }
@@ -651,44 +681,42 @@ function crPlayLesson(lesson) {
   } else if (embed.type === 'pdf') {
     viewerHtml = `<iframe src="${crEsc(embed.src)}" style="width:100%;height:100%;border:0;background:#fff" title="${crEsc(lesson.lesson_title)}"></iframe>`;
   } else if (embed.type === 'audio') {
-    const thumb = embed.thumb ? `uploads/lessons/${embed.thumb.split('/').pop()}` : '';
-    if (thumb) {
-      viewerHtml = `
-        <div style="position:relative;width:100%;height:100%;background:#0a0a0a;overflow:hidden">
-          <img src="${crEsc(thumb)}" alt="Audio cover"
-               style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55"
-               onerror="this.style.display='none'">
-          <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.2) 60%,transparent 100%)"></div>
-          <div style="position:absolute;bottom:0;left:0;right:0;padding:1.25rem 1.5rem">
-            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem">
-              <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <i class="bi bi-music-note-beamed" style="color:#fff;font-size:.9rem"></i>
-              </div>
-              <div style="flex:1;min-width:0">
-                <div style="font-size:.78rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${crEsc(lesson.lesson_title||'')}</div>
-                <div style="font-size:.65rem;color:rgba(255,255,255,.55)">Audio Lesson</div>
-              </div>
+    const thumb = embed.thumb ? `uploads/lessons/${crEsc(embed.thumb.split('/').pop())}` : '';
+    const bgStyle = thumb ? `style="background-image:url(${thumb})"` : '';
+    const coverInner = thumb
+      ? `<img src="${thumb}" alt="" onerror="this.style.display='none'">`
+      : `<i class="bi bi-music-note-beamed" style="font-size:2.5rem;color:rgba(255,255,255,.6)"></i>`;
+    viewerHtml = `
+      <div id="crAP">
+        <div id="crAP-bg" ${bgStyle}></div>
+        <button class="crAP-fs-btn" id="crAP-fsBtn" title="Fullscreen">
+          <i class="bi bi-fullscreen" id="crAP-fsIcon"></i>
+        </button>
+        <div id="crAP-art">
+          <div id="crAP-cover">${coverInner}</div>
+          <div id="crAP-title">${crEsc(lesson.lesson_title||'')}</div>
+          <div id="crAP-sub">Audio Lesson</div>
+        </div>
+        <div id="crAP-ctrl">
+          <div class="crAP-seek-wrap">
+            <div class="crAP-seek-fill" id="crAP-fill"></div>
+            <input type="range" id="crAP-seek" min="0" max="1000" value="0" step="1">
+          </div>
+          <div class="crAP-time-row">
+            <span id="crAP-cur">0:00</span><span id="crAP-dur">0:00</span>
+          </div>
+          <div class="crAP-btn-row" style="position:relative">
+            <button class="crAP-btn" id="crAP-back" title="Back 10s"><i class="bi bi-skip-start-fill"></i></button>
+            <button class="crAP-btn crAP-play" id="crAP-playBtn"><i class="bi bi-play-fill" id="crAP-playIcon"></i></button>
+            <button class="crAP-btn" id="crAP-fwd" title="Forward 10s"><i class="bi bi-skip-end-fill"></i></button>
+            <div class="crAP-vol-row">
+              <button class="crAP-btn" id="crAP-volBtn" style="font-size:.9rem"><i class="bi bi-volume-up-fill" id="crAP-volIcon"></i></button>
+              <input type="range" id="crAP-vol" min="0" max="1" step=".01" value="1">
             </div>
-            <audio controls autoplay src="${crEsc(embed.src)}"
-                   style="width:100%;border-radius:10px;height:40px;accent-color:#4f46e5"
-                   onerror="this.parentElement.insertAdjacentHTML('beforeend','<p style=color:rgba(255,255,255,.5);font-size:.75rem;margin-top:.4rem>Could not load audio</p>')">
-            </audio>
           </div>
-        </div>`;
-    } else {
-      viewerHtml = `
-        <div style="position:relative;width:100%;height:100%;background:linear-gradient(135deg,#1e1b4b,#312e81);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem">
-          <div style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.15)">
-            <i class="bi bi-music-note-beamed" style="font-size:2rem;color:rgba(255,255,255,.7)"></i>
-          </div>
-          <div style="text-align:center">
-            <div style="font-size:.85rem;font-weight:700;color:#fff;margin-bottom:.25rem">${crEsc(lesson.lesson_title||'')}</div>
-            <div style="font-size:.72rem;color:rgba(255,255,255,.5)">Audio Lesson</div>
-          </div>
-          <audio controls autoplay src="${crEsc(embed.src)}"
-                 style="width:min(340px,90%);border-radius:10px;accent-color:#4f46e5">
-          </audio>
-        </div>`;}
+        </div>
+        <audio id="crAP-audio" src="${crEsc(embed.src)}" preload="metadata"></audio>
+      </div>`;
   } else if (embed.type === 'iframe') {
     viewerHtml = `<iframe src="${crEsc(embed.src)}" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture;fullscreen" allowfullscreen style="width:100%;height:100%;border:0"></iframe>`;
   } else if (embed.type === 'video') {
@@ -696,6 +724,7 @@ function crPlayLesson(lesson) {
   }
 
   inner.innerHTML = viewerHtml;
+  if (embed && embed.type === 'audio') crInitAudioPlayer();
 
   // Label bar
   const ctLabel = { pdf:'PDF Document', audio:'Audio', video:'Video' }[ct] || 'Video';
@@ -714,6 +743,81 @@ function crPlayLesson(lesson) {
 
   // Load study notes
   crLoadStudyNotes(lesson.id);
+}
+
+/* ════════════════════════════════════════════════════════════
+   CUSTOM AUDIO PLAYER
+════════════════════════════════════════════════════════════ */
+function crInitAudioPlayer() {
+  const audio    = document.getElementById('crAP-audio');
+  if (!audio) return;
+  const playBtn  = document.getElementById('crAP-playBtn');
+  const playIcon = document.getElementById('crAP-playIcon');
+  const seek     = document.getElementById('crAP-seek');
+  const fill     = document.getElementById('crAP-fill');
+  const curEl    = document.getElementById('crAP-cur');
+  const durEl    = document.getElementById('crAP-dur');
+  const volBar   = document.getElementById('crAP-vol');
+  const volBtn   = document.getElementById('crAP-volBtn');
+  const volIcon  = document.getElementById('crAP-volIcon');
+  const fsBtn    = document.getElementById('crAP-fsBtn');
+  const fsIcon   = document.getElementById('crAP-fsIcon');
+  const container= document.getElementById('crAP');
+
+  function fmtT(s) {
+    s = Math.floor(s || 0);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  playBtn.addEventListener('click', () => { audio.paused ? audio.play() : audio.pause(); });
+  audio.addEventListener('play',  () => { playIcon.className = 'bi bi-pause-fill'; });
+  audio.addEventListener('pause', () => { playIcon.className = 'bi bi-play-fill'; });
+  audio.addEventListener('ended', () => { playIcon.className = 'bi bi-play-fill'; seek.value = 0; fill.style.width = '0%'; });
+
+  audio.addEventListener('loadedmetadata', () => { durEl.textContent = fmtT(audio.duration); });
+  audio.addEventListener('timeupdate', () => {
+    if (!audio.duration) return;
+    const pct = (audio.currentTime / audio.duration) * 100;
+    fill.style.width = pct + '%';
+    seek.value = Math.round(pct * 10);
+    curEl.textContent = fmtT(audio.currentTime);
+  });
+
+  seek.addEventListener('input', () => {
+    if (audio.duration) audio.currentTime = (seek.value / 1000) * audio.duration;
+  });
+
+  document.getElementById('crAP-back').addEventListener('click', () => { audio.currentTime = Math.max(0, audio.currentTime - 10); });
+  document.getElementById('crAP-fwd').addEventListener('click',  () => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10); });
+
+  volBar.addEventListener('input', () => {
+    audio.volume = parseFloat(volBar.value);
+    audio.muted  = audio.volume === 0;
+    volIcon.className = audio.muted ? 'bi bi-volume-mute-fill' : audio.volume < 0.5 ? 'bi bi-volume-down-fill' : 'bi bi-volume-up-fill';
+  });
+  volBtn.addEventListener('click', () => {
+    audio.muted = !audio.muted;
+    volIcon.className = audio.muted ? 'bi bi-volume-mute-fill' : 'bi bi-volume-up-fill';
+  });
+
+  function toggleFS() {
+    const inFS = document.fullscreenElement === container || document.webkitFullscreenElement === container;
+    if (inFS) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      (container.requestFullscreen || container.webkitRequestFullscreen).call(container);
+    }
+  }
+  fsBtn.addEventListener('click', toggleFS);
+
+  function onFSChange() {
+    const inFS = document.fullscreenElement === container || document.webkitFullscreenElement === container;
+    fsIcon.className = inFS ? 'bi bi-fullscreen-exit' : 'bi bi-fullscreen';
+  }
+  document.addEventListener('fullscreenchange', onFSChange);
+  document.addEventListener('webkitfullscreenchange', onFSChange);
+
+  audio.play().catch(() => {});
 }
 
 /* ════════════════════════════════════════════════════════════

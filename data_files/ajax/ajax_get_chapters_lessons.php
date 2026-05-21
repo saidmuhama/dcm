@@ -1,32 +1,27 @@
 <?php
 include('../config/db.php');
+include('../config/cache.php');
 
-$course_id = $_GET['course_id'] ?? '';
+$course_id = intval($_GET['course_id'] ?? 0);
 
-if(empty($course_id)){
-    echo json_encode([]);
-    exit;
-}
+if (!$course_id) { echo json_encode([]); exit; }
 
-$chapters = [];
+$cacheKey = 'chapters_course_' . $course_id;
 
-// GET CHAPTERS
-$sql = mysqli_query($db, "SELECT * FROM tbl_course_chapters WHERE course_id='$course_id' ORDER BY `order` ASC, id ASC");
-
-while($row = mysqli_fetch_assoc($sql)){
-
-    $chapter_id = $row['id'];
-
-    // GET LESSONS PER CHAPTER
-    $lessons_sql = mysqli_query($db, "SELECT * FROM tbl_course_chapter_lessons WHERE chapter_id='$chapter_id' AND status='active' ORDER BY sort_order ASC, id ASC");
-    
-    $lessons = [];
-    while($lesson = mysqli_fetch_assoc($lessons_sql)){
-        $lessons[] = $lesson;
+$chapters = DcmCache::remember($cacheKey, 60, function() use ($db, $course_id) {
+    $chapters = [];
+    $sql = $db->query("SELECT * FROM tbl_course_chapters WHERE course_id='$course_id' ORDER BY `order` ASC, id ASC");
+    while ($row = $sql->fetch_assoc()) {
+        $chapter_id   = $row['id'];
+        $lessons_sql  = $db->query("SELECT * FROM tbl_course_chapter_lessons WHERE chapter_id='$chapter_id' AND status='active' ORDER BY sort_order ASC, id ASC");
+        $lessons      = [];
+        while ($lesson = $lessons_sql->fetch_assoc()) {
+            $lessons[] = $lesson;
+        }
+        $row['lessons'] = $lessons;
+        $chapters[]     = $row;
     }
-
-    $row['lessons'] = $lessons;
-    $chapters[] = $row;
-}
+    return $chapters;
+}, 'ccm');
 
 echo json_encode($chapters);

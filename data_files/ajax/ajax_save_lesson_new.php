@@ -1,6 +1,7 @@
 <?php
 include('../config/db.php');
 include('../config/dump.php');
+include('../config/cache.php');
 session_start();
 
 header('Content-Type: application/json');
@@ -45,6 +46,7 @@ if($content_type != 'video')
 
 
         if ($stmt->execute()) {
+            DcmCache::delete('chapters_course_' . $course_id, 'ccm');
             echo json_encode([
                 "status" => "success",
                 "message" => "Lesson created successfully",
@@ -58,7 +60,7 @@ if($content_type != 'video')
             ]);
         }
 }
-else 
+else
 {
         // ===== CONFIG =====
         $BUNNY_API_KEY   = App::getWhatFromWHere('library_key', 'tbl_courses','id',$course_id);
@@ -126,8 +128,6 @@ else
             exit;
         }
 
-        curl_close($ch);
-
         // decode safely
         $result = json_decode($response, true);
 
@@ -184,6 +184,7 @@ else
 
 
         if ($stmt->execute()) {
+            DcmCache::delete('chapters_course_' . $course_id, 'ccm');
             echo json_encode([
                 "status" => "success",
                 "message" => "Lesson + Video created successfully",

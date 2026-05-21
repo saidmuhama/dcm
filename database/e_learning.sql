@@ -571,7 +571,7 @@ CREATE TABLE `study_notes` (
 
 LOCK TABLES `study_notes` WRITE;
 /*!40000 ALTER TABLE `study_notes` DISABLE KEYS */;
-INSERT INTO `study_notes` VALUES (1,14,33,29,'What is Hajj?','Hajj is islamic ibadah','EN',1,1,'USR1775360573','2026-05-16 13:20:09',NULL),(2,14,33,29,'Is silamic Hajj one of the most important function?','Yes, Because','EN',1,2,'USR1775360573','2026-05-16 13:20:45',NULL),(3,14,33,29,'What are the main objective of Hajji?','The main Objective is......','EN',1,3,'USR1775360573','2026-05-17 18:14:24',NULL);
+INSERT INTO `study_notes` VALUES (1,14,33,29,'What is Hajj?','Hajj is islamic ibadah','EN',1,1,'USR1775360573','2026-05-16 13:20:09',NULL),(2,14,33,29,'Is silamic Hajj one of the most important function?','Yes, Because','EN',1,2,'USR1775360573','2026-05-16 13:20:45',NULL);
 /*!40000 ALTER TABLE `study_notes` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -624,7 +624,7 @@ CREATE TABLE `tbl_all_users` (
   `totp_enabled` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `usr_code` (`usr_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -633,7 +633,7 @@ CREATE TABLE `tbl_all_users` (
 
 LOCK TABLES `tbl_all_users` WRITE;
 /*!40000 ALTER TABLE `tbl_all_users` DISABLE KEYS */;
-INSERT INTO `tbl_all_users` VALUES (2,'USR1774352917','Said','Muhama','saidmuhama@gmail.com','255765131788','5','$2y$10$PQ4ZtozEsVxxSaTApFlNdOep4LaIHS9j8rJE3D/5euN7ayfgsxxtK','2026-03-24 04:48:37','Active','Completed',NULL,NULL,NULL,0),(3,'USR1774423951','Jamal','Juma','jamaljuma.tz@gmail.com','255764078960','1','$2y$10$RtUn5F4pN8qFUXJHqaKcBOAOZ3kcKEvzdaL2UJNWoQuSJBCSO4c22','2026-03-25 00:32:31','Active','Incomplete','edd55d2d9906a10ad43d1b4fb133dc56f8a2ae178968d0faac7c5aecbc8ad8a7355e3f0af3f467fdf9c065b587d616e51762','2026-05-20 05:54:02',NULL,0),(4,'USR1775360573','Hamza','Pazia','muhama.digital@gmail.com','255625490405','3','$2y$10$/PjkNaEYTicWIRGak/KvsuzJvIiODz9XN4xjWv2hcysL.1U9gP2PG','2026-04-05 06:42:53','Active','Completed',NULL,NULL,NULL,0),(6,'USR1777617356','Said','Muhama','james.samwel@gmail.com','255765131788','1','$2y$10$yyYUh8TX3UJZKHadCQhiweQ243jULMjs/DHU6VbwHx8SIXC0T0VFy','2026-05-01 09:35:56','Active','Incomplete',NULL,NULL,NULL,0),(7,'USR1777621416','Jamal','Juma','jamal.juma@gmail.com','255715087593','1','$2y$10$k.rjazll0ByfN0ivfaukmeNDrqdzKLdC8gPNm40y.dAQcvptR/3IS','2026-05-01 10:43:37','Active','Incomplete',NULL,NULL,NULL,0),(8,'USR1777621816','Said','Muhama','super@gmail.com','255765131788','1','$2y$10$GnWK13vr12wk9q7DMgOJneRXprJBVKM8hZWpA6gta/HNaMm.Eqelu','2026-05-01 10:50:16','Active','Incomplete',NULL,NULL,NULL,0),(9,'USR1777623473','Juma','Jabu','juma@gmail.com','255625490405','1','$2y$10$gAI/Tomqdx7bLOVSMQNbTeHhIQdbdvHaO.bQbI0SZWPy0o3Rxexk2','2026-05-01 11:17:53','Active','Incomplete',NULL,NULL,NULL,0),(10,'USR1779245764','Thuwaiba','Muhama','mazdafunction@gmail.com','255755656222','1','$2y$10$S7GkDugyMgVGdJbskA9YMucl4F/D6xeW361ou/oVdd/8ta6v8l6FC','2026-05-20 05:56:04','Active','Completed',NULL,NULL,NULL,0);
+INSERT INTO `tbl_all_users` VALUES (2,'USR1774352917','Said','Muhama','saidmuhama@gmail.com','255765131788','5','$2y$10$PQ4ZtozEsVxxSaTApFlNdOep4LaIHS9j8rJE3D/5euN7ayfgsxxtK','2026-03-24 04:48:37','Active','Completed',NULL,NULL,NULL,0),(3,'USR1774423951','Jamal','Juma','jamaljuma.tz@gmail.com','255764078960','1','$2y$10$RtUn5F4pN8qFUXJHqaKcBOAOZ3kcKEvzdaL2UJNWoQuSJBCSO4c22','2026-03-25 00:32:31','Active','Incomplete','edd55d2d9906a10ad43d1b4fb133dc56f8a2ae178968d0faac7c5aecbc8ad8a7355e3f0af3f467fdf9c065b587d616e51762','2026-05-20 05:54:02',NULL,0),(4,'USR1775360573','Hamza','Pazia','muhama.digital@gmail.com','255625490405','3','$2y$10$/PjkNaEYTicWIRGak/KvsuzJvIiODz9XN4xjWv2hcysL.1U9gP2PG','2026-04-05 06:42:53','Active','Completed',NULL,NULL,NULL,0),(6,'USR1777617356','Said','Muhama','james.samwel@gmail.com','255765131788','1','$2y$10$yyYUh8TX3UJZKHadCQhiweQ243jULMjs/DHU6VbwHx8SIXC0T0VFy','2026-05-01 09:35:56','Active','Incomplete',NULL,NULL,NULL,0),(7,'USR1777621416','Jamal','Juma','jamal.juma@gmail.com','255715087593','1','$2y$10$k.rjazll0ByfN0ivfaukmeNDrqdzKLdC8gPNm40y.dAQcvptR/3IS','2026-05-01 10:43:37','Active','Incomplete',NULL,NULL,NULL,0),(8,'USR1777621816','Said','Muhama','super@gmail.com','255765131788','1','$2y$10$GnWK13vr12wk9q7DMgOJneRXprJBVKM8hZWpA6gta/HNaMm.Eqelu','2026-05-01 10:50:16','Active','Incomplete',NULL,NULL,NULL,0),(9,'USR1777623473','Juma','Jabu','juma@gmail.com','255625490405','1','$2y$10$gAI/Tomqdx7bLOVSMQNbTeHhIQdbdvHaO.bQbI0SZWPy0o3Rxexk2','2026-05-01 11:17:53','Active','Incomplete',NULL,NULL,NULL,0),(10,'USR1779245764','Thuwaiba','Muhama','mazdafunction@gmail.com','255755656222','1','$2y$10$S7GkDugyMgVGdJbskA9YMucl4F/D6xeW361ou/oVdd/8ta6v8l6FC','2026-05-20 05:56:04','Active','Completed',NULL,NULL,NULL,0),(11,'USR1779385780','Amana','Bank','info@amanabank.com','255765666767','4','$2y$10$LteOcV1AHW0PhV5kVzwBg.l/dJ07L/7JAVenKZJMJPFSqDelSUhuC','2026-05-21 20:49:40','Active','Incomplete',NULL,NULL,NULL,0);
 /*!40000 ALTER TABLE `tbl_all_users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -782,7 +782,7 @@ CREATE TABLE `tbl_course_chapter_lessons` (
   `sort_order` int(11) DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `course_chapter_lessons_chapter_id_foreign` (`chapter_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -791,7 +791,7 @@ CREATE TABLE `tbl_course_chapter_lessons` (
 
 LOCK TABLES `tbl_course_chapter_lessons` WRITE;
 /*!40000 ALTER TABLE `tbl_course_chapter_lessons` DISABLE KEYS */;
-INSERT INTO `tbl_course_chapter_lessons` VALUES (1,'What is Agriculture?','Agriculture is the science, art, and practice of cultivating soil, producing crops, and raising livestock to provide food, fiber, and fuel.','USR1775360573',1,1,NULL,NULL,'https://player.mediadelivery.net/play/637820/8ad51273-b113-483a-a1ad-9706fcb37222',NULL,'Video','upload','video',NULL,'active','1','1','0','2026-04-06 17:03:35',NULL,1),(3,'Technologies in Agriculture','Agricultural technology (AgTech) uses innovations like AI, robotics, drones, and IoT sensors to enhance farming efficiency, sustainability, and yield.','USR1775360573',1,1,NULL,NULL,'https://www.youtube.com/embed/Qkpm_Z7Ib88?si=KQuYWWA3mIScF_Kz',NULL,'Video','upload','video',NULL,'active','1','1','0','2026-04-06 17:35:12',NULL,2),(4,'What is soil?','<p>Getting started to soil</p>','USR1775360573',1,3,NULL,NULL,'https://www.youtube.com/embed/Qkpm_Z7Ib88?si=KQuYWWA3mIScF_Kz',NULL,'Video','upload','video',NULL,'active','1','1','0','2026-04-06 18:19:33',NULL,1),(5,'Types of casava','<p><strong>Getting</strong> to know type of cassava</p>','USR1775360573',1,13,NULL,NULL,'https://www.youtube.com/embed/Qkpm_Z7Ib88?si=KQuYWWA3mIScF_Kz',NULL,'Video','upload','video',NULL,'active','0','1','1','2026-04-06 18:41:51',NULL,1),(6,'Where to store crops','<p>Stores and <strong>inbuilt</strong> form stores</p>','USR1775360573',1,15,NULL,NULL,'https://www.youtube.com/embed/Qkpm_Z7Ib88?si=KQuYWWA3mIScF_Kz',NULL,'Video','upload','video',NULL,'active','0','1','0','2026-04-06 18:44:27',NULL,1),(7,'Soil types','<p>soil</p>','USR1775360573',1,3,NULL,NULL,'https://youtube.com/watch?v=gtRffa77L0I',NULL,'Video','upload','video',NULL,'active','0','1','0','2026-04-07 17:57:20',NULL,2),(8,'Machines Used in Agriculture','<p>Testing contents using PDF</p>','USR1775360573',1,1,NULL,NULL,'uploads/lessons/1775718465_DCM_User_Roles_.pdf',NULL,'Video','upload','video',NULL,'active','1','1','0','2026-04-09 07:07:45',NULL,3),(21,'Introduction to Islam','<p>Testing Bunny Storage</p>','USR1775360573',13,32,NULL,NULL,'https://dcmbank.b-cdn.net/DCM/1778312675_HAJIAPPFORM.pdf',NULL,'pdf','upload','video',NULL,'active','0','0','0',NULL,NULL,1),(22,'Islamic FOundations','<p>Tetsing storage</p>','USR1775360573',13,32,NULL,NULL,'https://dcmbank.b-cdn.net/DCM/php9iad5p',NULL,'pdf','upload','video',NULL,'active','0','0','0',NULL,NULL,2),(23,'Islamic Contracts','<p>Testing</p>','USR1775360573',13,32,NULL,NULL,'https://dcmbank.b-cdn.net/DCM/1778389469_HAJIAPPFORM.pdf',NULL,'pdf','upload','video',NULL,'active','0','0','0',NULL,NULL,3),(25,'What is Islam?','The Morden Fishing Technology','USR1775360573',14,33,'da12f383-9488-4b55-9f60-7185f69a94ce','659690','https://iframe.mediadelivery.net/embed/659690/da12f383-9488-4b55-9f60-7185f69a94ce',NULL,'video','upload','video',NULL,'active','1','1','1',NULL,NULL,1),(26,'What is sharia?','Sharia in Islam','USR1775360573',14,33,'aca1003e-ad1b-482c-82c5-1943e4bcf691','659690','https://iframe.mediadelivery.net/embed/659690/aca1003e-ad1b-482c-82c5-1943e4bcf691',NULL,'video','upload','video',NULL,'active','0','1','1',NULL,NULL,2),(27,'What is Murabaha?',NULL,'USR1775360573',14,34,NULL,NULL,NULL,NULL,'pdf','upload','video',NULL,'active',NULL,NULL,NULL,NULL,NULL,1),(28,'What is Musharaka?',NULL,'USR1775360573',14,34,NULL,NULL,NULL,NULL,'pdf','upload','video',NULL,'active',NULL,NULL,NULL,NULL,NULL,2),(29,'What is ibada?','Testing Audio Contents','USR1775360573',14,33,NULL,NULL,'https://dcmbank.b-cdn.net/ISLAMIC CONTRACTS/1779271216_file_example_MP3_700KB.mp3','uploads/lessons/thumb_29_1779271216.png','audio','upload','video',NULL,'active','1','0','0',NULL,NULL,3);
+INSERT INTO `tbl_course_chapter_lessons` VALUES (1,'What is Agriculture?','Agriculture is the science, art, and practice of cultivating soil, producing crops, and raising livestock to provide food, fiber, and fuel.','USR1775360573',1,1,NULL,NULL,'https://player.mediadelivery.net/play/637820/8ad51273-b113-483a-a1ad-9706fcb37222',NULL,'Video','upload','video',NULL,'active','1','1','0','2026-04-06 17:03:35',NULL,1),(3,'Technologies in Agriculture','Agricultural technology (AgTech) uses innovations like AI, robotics, drones, and IoT sensors to enhance farming efficiency, sustainability, and yield.','USR1775360573',1,1,NULL,NULL,'https://www.youtube.com/embed/Qkpm_Z7Ib88?si=KQuYWWA3mIScF_Kz',NULL,'Video','upload','video',NULL,'active','1','1','0','2026-04-06 17:35:12',NULL,2),(4,'What is soil?','<p>Getting started to soil</p>','USR1775360573',1,3,NULL,NULL,'https://www.youtube.com/embed/Qkpm_Z7Ib88?si=KQuYWWA3mIScF_Kz',NULL,'Video','upload','video',NULL,'active','1','1','0','2026-04-06 18:19:33',NULL,1),(5,'Types of casava','<p><strong>Getting</strong> to know type of cassava</p>','USR1775360573',1,13,NULL,NULL,'https://www.youtube.com/embed/Qkpm_Z7Ib88?si=KQuYWWA3mIScF_Kz',NULL,'Video','upload','video',NULL,'active','0','1','1','2026-04-06 18:41:51',NULL,1),(6,'Where to store crops','<p>Stores and <strong>inbuilt</strong> form stores</p>','USR1775360573',1,15,NULL,NULL,'https://www.youtube.com/embed/Qkpm_Z7Ib88?si=KQuYWWA3mIScF_Kz',NULL,'Video','upload','video',NULL,'active','0','1','0','2026-04-06 18:44:27',NULL,1),(7,'Soil types','<p>soil</p>','USR1775360573',1,3,NULL,NULL,'https://youtube.com/watch?v=gtRffa77L0I',NULL,'Video','upload','video',NULL,'active','0','1','0','2026-04-07 17:57:20',NULL,2),(8,'Machines Used in Agriculture','<p>Testing contents using PDF</p>','USR1775360573',1,1,NULL,NULL,'uploads/lessons/1775718465_DCM_User_Roles_.pdf',NULL,'Video','upload','video',NULL,'active','1','1','0','2026-04-09 07:07:45',NULL,3),(21,'Introduction to Islam','<p>Testing Bunny Storage</p>','USR1775360573',13,32,NULL,NULL,'https://dcmbank.b-cdn.net/DCM/1778312675_HAJIAPPFORM.pdf',NULL,'pdf','upload','video',NULL,'active','0','0','0',NULL,NULL,1),(22,'Islamic FOundations','<p>Tetsing storage</p>','USR1775360573',13,32,NULL,NULL,'https://dcmbank.b-cdn.net/DCM/php9iad5p',NULL,'pdf','upload','video',NULL,'active','0','0','0',NULL,NULL,2),(23,'Islamic Contracts','<p>Testing</p>','USR1775360573',13,32,NULL,NULL,'https://dcmbank.b-cdn.net/DCM/1778389469_HAJIAPPFORM.pdf',NULL,'pdf','upload','video',NULL,'active','0','0','0',NULL,NULL,3),(25,'What is Islam?','The Morden Fishing Technology','USR1775360573',14,33,'da12f383-9488-4b55-9f60-7185f69a94ce','659690','https://iframe.mediadelivery.net/embed/659690/da12f383-9488-4b55-9f60-7185f69a94ce',NULL,'video','upload','video',NULL,'active','1','1','1',NULL,NULL,1),(26,'What is sharia?','Sharia in Islam','USR1775360573',14,33,'aca1003e-ad1b-482c-82c5-1943e4bcf691','659690','https://iframe.mediadelivery.net/embed/659690/aca1003e-ad1b-482c-82c5-1943e4bcf691',NULL,'video','upload','video',NULL,'active','0','1','1',NULL,NULL,2),(27,'What is Murabaha?',NULL,'USR1775360573',14,34,NULL,NULL,NULL,NULL,'pdf','upload','video',NULL,'active',NULL,NULL,NULL,NULL,NULL,1),(28,'What is Musharaka?',NULL,'USR1775360573',14,34,NULL,NULL,NULL,NULL,'pdf','upload','video',NULL,'active',NULL,NULL,NULL,NULL,NULL,2),(29,'What is ibada?','Testing Audio Contents','USR1775360573',14,33,NULL,NULL,'https://dcmbank.b-cdn.net/ISLAMIC CONTRACTS/1779271216_file_example_MP3_700KB.mp3','uploads/lessons/thumb_29_1779271216.png','audio','upload','video',NULL,'active','1','0','0',NULL,NULL,3),(30,'What is Financing?','Introduction to Islamic Financing','USR1775360573',15,35,'ae8fdcec-aa8e-4b28-802a-4cc68d5c72f8','666517','https://iframe.mediadelivery.net/embed/666517/ae8fdcec-aa8e-4b28-802a-4cc68d5c72f8',NULL,'video','upload','video',NULL,'active','1','1','1',NULL,NULL,0),(31,'Financing Standards?','Financing Standards description list','USR1775360573',15,35,NULL,NULL,'https://dcmbank.b-cdn.net/FINANCING_IN_ISLAM/1779348580_file_example_MP3_700KB.mp3','uploads/lessons/thumb_31_1779348580.png','audio','upload','video',NULL,'active','1','1','1',NULL,NULL,0);
 /*!40000 ALTER TABLE `tbl_course_chapter_lessons` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -813,7 +813,7 @@ CREATE TABLE `tbl_course_chapters` (
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `course_chapters_course_id_foreign` (`course_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -822,7 +822,7 @@ CREATE TABLE `tbl_course_chapters` (
 
 LOCK TABLES `tbl_course_chapters` WRITE;
 /*!40000 ALTER TABLE `tbl_course_chapters` DISABLE KEYS */;
-INSERT INTO `tbl_course_chapters` VALUES (1,'USR1775360573','Introduction to Agriculture',1,NULL,'active',NULL,NULL),(3,'USR1775360573','Types of Soils',1,NULL,'active',NULL,NULL),(5,'USR1775360573','Soil Erosion',1,NULL,'active',NULL,NULL),(7,'USR1775360573','Types of Products',1,NULL,'active',NULL,NULL),(9,'USR1775360573','Agriculture and Marketing',1,NULL,'active',NULL,NULL),(11,'USR1775360573','Cultivation Procedures',1,NULL,'active',NULL,NULL),(13,'USR1775360573','How to cultivate casava',1,NULL,'active',NULL,NULL),(15,'USR1775360573','How to store crops',1,NULL,'active',NULL,NULL),(23,'USR1775360573','Marketing your Crops',1,NULL,'active',NULL,NULL),(24,'USR1775360573','Sales and Marketing',1,NULL,'active',NULL,NULL),(25,'USR1775360573','Jifunze English',7,NULL,'active',NULL,NULL),(26,'USR1775360573','Testing Topic Name',1,NULL,'active',NULL,NULL),(27,'USR1775360573','Introduction to Islamic Financing',10,NULL,'active',NULL,NULL),(28,'USR1775360573','Financing Contracts',10,NULL,'active',NULL,NULL),(31,'USR1775360573','Introduction to Fishing',12,NULL,'active',NULL,NULL),(32,'USR1775360573','What is Islam',13,NULL,'active',NULL,NULL),(33,'USR1775360573','Islamic Laws',14,NULL,'active',NULL,NULL),(34,'USR1775360573','Islamic Contracts',14,NULL,'active',NULL,NULL);
+INSERT INTO `tbl_course_chapters` VALUES (1,'USR1775360573','Introduction to Agriculture',1,NULL,'active',NULL,NULL),(3,'USR1775360573','Types of Soils',1,NULL,'active',NULL,NULL),(5,'USR1775360573','Soil Erosion',1,NULL,'active',NULL,NULL),(7,'USR1775360573','Types of Products',1,NULL,'active',NULL,NULL),(9,'USR1775360573','Agriculture and Marketing',1,NULL,'active',NULL,NULL),(11,'USR1775360573','Cultivation Procedures',1,NULL,'active',NULL,NULL),(13,'USR1775360573','How to cultivate casava',1,NULL,'active',NULL,NULL),(15,'USR1775360573','How to store crops',1,NULL,'active',NULL,NULL),(23,'USR1775360573','Marketing your Crops',1,NULL,'active',NULL,NULL),(24,'USR1775360573','Sales and Marketing',1,NULL,'active',NULL,NULL),(25,'USR1775360573','Jifunze English',7,NULL,'active',NULL,NULL),(26,'USR1775360573','Testing Topic Name',1,NULL,'active',NULL,NULL),(27,'USR1775360573','Introduction to Islamic Financing',10,NULL,'active',NULL,NULL),(28,'USR1775360573','Financing Contracts',10,NULL,'active',NULL,NULL),(31,'USR1775360573','Introduction to Fishing',12,NULL,'active',NULL,NULL),(32,'USR1775360573','What is Islam',13,NULL,'active',NULL,NULL),(33,'USR1775360573','Islamic Laws',14,NULL,'active',NULL,NULL),(34,'USR1775360573','Islamic Contracts',14,NULL,'active',NULL,NULL),(35,'USR1775360573','Introduction to Financing',15,NULL,'active',NULL,NULL);
 /*!40000 ALTER TABLE `tbl_course_chapters` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1031,6 +1031,40 @@ LOCK TABLES `tbl_course_ratings` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `tbl_course_review_requests`
+--
+
+DROP TABLE IF EXISTS `tbl_course_review_requests`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_course_review_requests` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `course_id` bigint(20) unsigned NOT NULL,
+  `instructor_id` varchar(200) NOT NULL,
+  `status` enum('pending','approved','rejected','revision_needed') NOT NULL DEFAULT 'pending',
+  `instructor_note` text DEFAULT NULL,
+  `admin_comment` text DEFAULT NULL,
+  `submitted_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `reviewed_at` timestamp NULL DEFAULT NULL,
+  `reviewed_by` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_course` (`course_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_instructor` (`instructor_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_course_review_requests`
+--
+
+LOCK TABLES `tbl_course_review_requests` WRITE;
+/*!40000 ALTER TABLE `tbl_course_review_requests` DISABLE KEYS */;
+INSERT INTO `tbl_course_review_requests` VALUES (1,14,'USR1775360573','approved','Dear Admin, kindly review the course and allow to goLive','This is Approved, and published','2026-05-21 06:58:32','2026-05-21 07:23:27','USR1774352917'),(2,13,'USR1775360573','approved','The same this course','Approved and published.','2026-05-21 06:58:43','2026-05-21 07:23:52','USR1774352917');
+/*!40000 ALTER TABLE `tbl_course_review_requests` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `tbl_course_wishlist`
 --
 
@@ -1091,7 +1125,7 @@ CREATE TABLE `tbl_courses` (
   `updated_at` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1100,7 +1134,7 @@ CREATE TABLE `tbl_courses` (
 
 LOCK TABLES `tbl_courses` WRITE;
 /*!40000 ALTER TABLE `tbl_courses` DISABLE KEYS */;
-INSERT INTO `tbl_courses` VALUES (1,'USR1775360573',NULL,'course','Modern Agriculture 2026',NULL,'',NULL,NULL,NULL,NULL,'uploads/1775847683_Copilot_20260404_081549.png','upload',NULL,'<p>Until the end of this course you will be able to:</p><p><strong>1. Moja<br>2. Mbili<br>3. Tatu</strong></p>',130000,5,1,0,0,1,'active','approved',NULL,'2026-04-21 09:23:00',NULL),(13,'USR1775360573',NULL,'course','ISLAMIC FINANCE','656647','5fa6b796-506e-476e-b1383aa7f610-d300-4f6f',NULL,NULL,NULL,NULL,'uploads/course_default.png','upload',NULL,NULL,0,NULL,0,0,0,0,'active','approved','2026-05-09 04:03:02',NULL,NULL),(14,'USR1775360573',NULL,'course','ISLAMIC CONTRACTS','659690','d83e5426-656a-4976-80f5dfbdae22-b064-49bf',NULL,NULL,NULL,NULL,'uploads/course_default.png','upload',NULL,NULL,0,NULL,0,0,0,0,'active','approved','2026-05-13 12:33:03',NULL,NULL);
+INSERT INTO `tbl_courses` VALUES (1,'USR1775360573',NULL,'course','Modern Agriculture 2026',NULL,'',NULL,NULL,NULL,NULL,'uploads/1775847683_Copilot_20260404_081549.png','upload',NULL,'<p>Until the end of this course you will be able to:</p><p><strong>1. Moja<br>2. Mbili<br>3. Tatu</strong></p>',130000,5,1,0,0,1,'active','approved',NULL,'2026-04-21 09:23:00',NULL),(13,'USR1775360573',NULL,'course','ISLAMIC FINANCE','656647','5fa6b796-506e-476e-b1383aa7f610-d300-4f6f',NULL,NULL,NULL,NULL,'uploads/course_default.png','upload',NULL,NULL,0,NULL,0,0,0,0,'active','approved','2026-05-09 04:03:02',NULL,NULL),(14,'USR1775360573',NULL,'course','ISLAMIC CONTRACTS','659690','d83e5426-656a-4976-80f5dfbdae22-b064-49bf',NULL,NULL,NULL,NULL,'uploads/course_default.png','upload',NULL,NULL,0,NULL,0,0,0,0,'active','approved','2026-05-13 12:33:03',NULL,NULL),(15,'USR1775360573',NULL,'course','FINANCING IN ISLAM','666517','20f45153-b8fa-4bfc-bdcf172fd5cd-77af-4063',NULL,NULL,NULL,NULL,'uploads/course_default.png','upload',NULL,NULL,0,NULL,0,0,0,0,'is_draft','pending','2026-05-21 05:17:23',NULL,NULL);
 /*!40000 ALTER TABLE `tbl_courses` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1144,7 +1178,7 @@ CREATE TABLE `tbl_module_permissions` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_mr` (`module_key`,`role_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=165 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=353 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1153,8 +1187,43 @@ CREATE TABLE `tbl_module_permissions` (
 
 LOCK TABLES `tbl_module_permissions` WRITE;
 /*!40000 ALTER TABLE `tbl_module_permissions` DISABLE KEYS */;
-INSERT INTO `tbl_module_permissions` VALUES (1,'course_management',3,1,'2026-05-18 13:46:38'),(2,'qb_taxonomy',3,0,'2026-05-18 17:55:13'),(3,'qb_questions',3,0,'2026-05-18 17:55:14'),(4,'qb_exams',3,0,'2026-05-18 17:55:15'),(5,'qb_curriculum',3,0,'2026-05-18 17:55:16'),(6,'qb_analytics',3,0,'2026-05-18 17:55:17'),(7,'qb_import_export',3,0,'2026-05-18 17:55:20'),(8,'qb_ai_tools',3,0,'2026-05-18 17:55:21'),(9,'qb_settings',3,0,'2026-05-18 17:55:22'),(10,'course_management',4,1,'2026-05-18 13:46:38'),(11,'qb_taxonomy',4,1,'2026-05-18 13:46:38'),(12,'qb_questions',4,1,'2026-05-18 13:46:38'),(13,'qb_exams',4,1,'2026-05-18 13:46:38'),(14,'qb_curriculum',4,1,'2026-05-18 13:46:38'),(15,'qb_analytics',4,1,'2026-05-18 13:46:38'),(16,'qb_import_export',4,1,'2026-05-18 13:46:38'),(17,'qb_ai_tools',4,1,'2026-05-18 13:46:38'),(18,'qb_settings',4,1,'2026-05-18 13:46:38'),(27,'course_management',1,0,'2026-05-19 19:06:55'),(29,'course_management',2,1,'2026-05-19 19:12:59'),(32,'admin_courses',2,1,'2026-05-19 19:12:59'),(33,'admin_courses',3,1,'2026-05-19 19:12:59'),(34,'admin_courses',4,1,'2026-05-19 19:12:59'),(35,'qb_taxonomy',2,1,'2026-05-19 19:12:59'),(38,'qb_questions',2,1,'2026-05-19 19:12:59'),(41,'qb_exams',2,1,'2026-05-19 19:12:59'),(44,'qb_curriculum',2,1,'2026-05-19 19:12:59'),(47,'qb_analytics',2,1,'2026-05-19 19:12:59'),(50,'qb_import_export',2,1,'2026-05-19 19:12:59'),(53,'qb_ai_tools',2,1,'2026-05-19 19:12:59'),(56,'qb_settings',2,1,'2026-05-19 19:12:59'),(59,'student_exams',2,1,'2026-05-19 19:12:59'),(60,'student_exams',3,1,'2026-05-19 19:12:59'),(61,'student_exams',4,1,'2026-05-19 19:12:59'),(62,'student_exams',1,1,'2026-05-19 19:12:59');
+INSERT INTO `tbl_module_permissions` VALUES (1,'course_management',3,1,'2026-05-18 13:46:38'),(2,'qb_taxonomy',3,0,'2026-05-18 17:55:13'),(3,'qb_questions',3,0,'2026-05-18 17:55:14'),(4,'qb_exams',3,0,'2026-05-18 17:55:15'),(5,'qb_curriculum',3,0,'2026-05-18 17:55:16'),(6,'qb_analytics',3,0,'2026-05-18 17:55:17'),(7,'qb_import_export',3,0,'2026-05-18 17:55:20'),(8,'qb_ai_tools',3,0,'2026-05-18 17:55:21'),(9,'qb_settings',3,0,'2026-05-18 17:55:22'),(10,'course_management',4,0,'2026-05-21 18:05:59'),(11,'qb_taxonomy',4,0,'2026-05-21 18:06:01'),(12,'qb_questions',4,0,'2026-05-21 18:06:04'),(13,'qb_exams',4,0,'2026-05-21 18:06:04'),(14,'qb_curriculum',4,0,'2026-05-21 18:06:05'),(15,'qb_analytics',4,0,'2026-05-21 18:06:07'),(16,'qb_import_export',4,0,'2026-05-21 18:06:07'),(17,'qb_ai_tools',4,0,'2026-05-21 18:06:10'),(18,'qb_settings',4,0,'2026-05-21 18:06:11'),(27,'course_management',1,0,'2026-05-19 19:06:55'),(29,'course_management',2,1,'2026-05-19 19:12:59'),(32,'admin_courses',2,1,'2026-05-19 19:12:59'),(33,'admin_courses',3,1,'2026-05-19 19:12:59'),(34,'admin_courses',4,1,'2026-05-19 19:12:59'),(35,'qb_taxonomy',2,1,'2026-05-19 19:12:59'),(38,'qb_questions',2,1,'2026-05-19 19:12:59'),(41,'qb_exams',2,1,'2026-05-19 19:12:59'),(44,'qb_curriculum',2,1,'2026-05-19 19:12:59'),(47,'qb_analytics',2,1,'2026-05-19 19:12:59'),(50,'qb_import_export',2,1,'2026-05-19 19:12:59'),(53,'qb_ai_tools',2,1,'2026-05-19 19:12:59'),(56,'qb_settings',2,1,'2026-05-19 19:12:59'),(59,'student_exams',2,1,'2026-05-19 19:12:59'),(60,'student_exams',3,1,'2026-05-19 19:12:59'),(61,'student_exams',4,0,'2026-05-21 18:06:13'),(62,'student_exams',1,1,'2026-05-19 19:12:59'),(273,'org_management',2,0,'2026-05-21 18:06:18'),(274,'org_management',3,0,'2026-05-21 18:06:20'),(275,'org_management',4,1,'2026-05-21 18:05:42');
 /*!40000 ALTER TABLE `tbl_module_permissions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_notifications`
+--
+
+DROP TABLE IF EXISTS `tbl_notifications`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_notifications` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `user_code` varchar(200) NOT NULL,
+  `type` varchar(100) NOT NULL DEFAULT 'info',
+  `title` varchar(255) NOT NULL,
+  `body` text DEFAULT NULL,
+  `link` varchar(500) DEFAULT NULL,
+  `icon` varchar(100) DEFAULT 'bi-bell',
+  `color` varchar(30) DEFAULT '#6366f1',
+  `is_read` tinyint(1) DEFAULT 0,
+  `ws_sent` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_user_unread` (`user_code`,`is_read`),
+  KEY `idx_ws_pending` (`ws_sent`),
+  KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_notifications`
+--
+
+LOCK TABLES `tbl_notifications` WRITE;
+/*!40000 ALTER TABLE `tbl_notifications` DISABLE KEYS */;
+/*!40000 ALTER TABLE `tbl_notifications` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1261,6 +1330,203 @@ LOCK TABLES `tbl_orders` WRITE;
 /*!40000 ALTER TABLE `tbl_orders` DISABLE KEYS */;
 INSERT INTO `tbl_orders` VALUES (11,'INV-1776947417','USR1775360573','USR1774352917',0,NULL,NULL,NULL,'ONLINE','PAID',98000,98000,NULL,NULL,10,NULL,'2026-04-23 12:30:17',NULL),(12,'INV-1778937744','USR1775360573','USR1774352917',0,NULL,NULL,NULL,'ONLINE','PAID',0,0,NULL,NULL,10,NULL,'2026-05-16 13:22:24',NULL),(13,'FREE-19B6D806F5-1779254771','USR1775360573','USR1779245764',0,NULL,NULL,NULL,'free','paid',0,0,NULL,NULL,NULL,NULL,'2026-05-20 05:26:11',NULL),(14,'FREE-F87BC08E33-1779255673','USR1775360573','USR1779245764',0,NULL,NULL,NULL,'free','paid',0,0,NULL,NULL,NULL,NULL,'2026-05-20 05:41:13',NULL);
 /*!40000 ALTER TABLE `tbl_orders` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_org_activity`
+--
+
+DROP TABLE IF EXISTS `tbl_org_activity`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_org_activity` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `org_code` varchar(50) NOT NULL,
+  `actor_usr_code` varchar(50) DEFAULT NULL,
+  `action` varchar(100) NOT NULL,
+  `target_type` varchar(50) DEFAULT NULL,
+  `target_id` varchar(100) DEFAULT NULL,
+  `details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`details`)),
+  `ip_address` varchar(45) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_org_activity`
+--
+
+LOCK TABLES `tbl_org_activity` WRITE;
+/*!40000 ALTER TABLE `tbl_org_activity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `tbl_org_activity` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_org_course_access`
+--
+
+DROP TABLE IF EXISTS `tbl_org_course_access`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_org_course_access` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `org_code` varchar(50) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `granted_by` varchar(50) DEFAULT NULL,
+  `expires_at` date DEFAULT NULL,
+  `granted_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_org_course` (`org_code`,`course_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_org_course_access`
+--
+
+LOCK TABLES `tbl_org_course_access` WRITE;
+/*!40000 ALTER TABLE `tbl_org_course_access` DISABLE KEYS */;
+/*!40000 ALTER TABLE `tbl_org_course_access` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_org_departments`
+--
+
+DROP TABLE IF EXISTS `tbl_org_departments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_org_departments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `org_code` varchar(50) NOT NULL,
+  `dept_name` varchar(255) NOT NULL,
+  `dept_code` varchar(50) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `head_usr_code` varchar(50) DEFAULT NULL,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_org_departments`
+--
+
+LOCK TABLES `tbl_org_departments` WRITE;
+/*!40000 ALTER TABLE `tbl_org_departments` DISABLE KEYS */;
+/*!40000 ALTER TABLE `tbl_org_departments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_org_members`
+--
+
+DROP TABLE IF EXISTS `tbl_org_members`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_org_members` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `org_code` varchar(50) NOT NULL,
+  `usr_code` varchar(50) NOT NULL,
+  `org_role` enum('admin','coordinator','instructor','student','staff') DEFAULT 'student',
+  `dept_id` int(11) DEFAULT NULL,
+  `employee_id` varchar(100) DEFAULT NULL,
+  `status` enum('active','inactive','suspended') DEFAULT 'active',
+  `invited_by` varchar(50) DEFAULT NULL,
+  `joined_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_org_member` (`org_code`,`usr_code`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_org_members`
+--
+
+LOCK TABLES `tbl_org_members` WRITE;
+/*!40000 ALTER TABLE `tbl_org_members` DISABLE KEYS */;
+INSERT INTO `tbl_org_members` VALUES (1,'ORGB3C94AC3','USR1779385780','admin',NULL,NULL,'active',NULL,'2026-05-21 17:54:55');
+/*!40000 ALTER TABLE `tbl_org_members` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_org_plans`
+--
+
+DROP TABLE IF EXISTS `tbl_org_plans`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_org_plans` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `plan_code` varchar(50) NOT NULL,
+  `plan_name` varchar(100) NOT NULL,
+  `max_users` int(11) DEFAULT 50,
+  `max_storage_gb` int(11) DEFAULT 10,
+  `features` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`features`)),
+  `price_monthly` decimal(10,2) DEFAULT 0.00,
+  `price_yearly` decimal(10,2) DEFAULT 0.00,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `plan_code` (`plan_code`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_org_plans`
+--
+
+LOCK TABLES `tbl_org_plans` WRITE;
+/*!40000 ALTER TABLE `tbl_org_plans` DISABLE KEYS */;
+INSERT INTO `tbl_org_plans` VALUES (1,'free','Free',10,2,NULL,0.00,0.00,1,'2026-05-21 18:06:59'),(2,'starter','Starter',50,10,NULL,29.00,290.00,1,'2026-05-21 18:06:59'),(3,'growth','Growth',200,50,NULL,99.00,990.00,1,'2026-05-21 18:06:59'),(4,'enterprise','Enterprise',-1,200,NULL,299.00,2990.00,1,'2026-05-21 18:06:59');
+/*!40000 ALTER TABLE `tbl_org_plans` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_organizations`
+--
+
+DROP TABLE IF EXISTS `tbl_organizations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_organizations` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `org_code` varchar(50) NOT NULL,
+  `org_name` varchar(255) NOT NULL,
+  `org_type` enum('school','college','company','institution','training_center','ngo','government','other') DEFAULT 'school',
+  `email` varchar(255) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `domain` varchar(255) DEFAULT NULL,
+  `plan_id` int(11) DEFAULT NULL,
+  `admin_usr_code` varchar(50) DEFAULT NULL,
+  `created_by` varchar(50) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `status` enum('active','suspended','expired','pending') DEFAULT 'active',
+  `max_users` int(11) DEFAULT -1,
+  `storage_limit_gb` int(11) DEFAULT 10,
+  `logo` varchar(255) DEFAULT NULL,
+  `license_expires_at` date DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `org_code` (`org_code`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_organizations`
+--
+
+LOCK TABLES `tbl_organizations` WRITE;
+/*!40000 ALTER TABLE `tbl_organizations` DISABLE KEYS */;
+INSERT INTO `tbl_organizations` VALUES (1,'ORGB3C94AC3','Amana Bank&#039;s Organization','school',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'active',-1,10,NULL,NULL,'2026-05-21 17:54:55','2026-05-21 17:54:55',NULL);
+/*!40000 ALTER TABLE `tbl_organizations` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1561,4 +1827,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-05-20 22:15:29
+-- Dump completed on 2026-05-21 22:19:41

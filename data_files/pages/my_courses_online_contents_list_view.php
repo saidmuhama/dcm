@@ -162,7 +162,7 @@ function loadCourses() {
                         <!-- Footer -->
                         <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-2">
                             <span class="small text-muted"><i class="bi bi-calendar3 me-1"></i>${created}</span>
-                            <a href="./?view=course_contents_management&course_id=${c.id}"
+                            <a href="./?view=course_contents_management&course_id=${encodeURIComponent(c.course_token)}"
                                class="btn btn-theme btn-sm px-3">
                                 Manage <i class="bi bi-arrow-right ms-1"></i>
                             </a>

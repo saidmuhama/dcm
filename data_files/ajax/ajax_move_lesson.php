@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('../config/db.php');
+include('../config/cache.php');
 
 header('Content-Type: application/json');
 
@@ -56,6 +57,9 @@ if (mysqli_num_rows($courseCheck) === 0) {
 $result = mysqli_query($db, "UPDATE tbl_course_chapter_lessons SET chapter_id = $chapter_id WHERE id = $lesson_id");
 
 if ($result) {
+    // Invalidate cache for this course
+    $cRow = mysqli_fetch_assoc(mysqli_query($db, "SELECT course_id FROM tbl_course_chapter_lessons WHERE id = $lesson_id LIMIT 1"));
+    if ($cRow) DcmCache::delete('chapters_course_' . $cRow['course_id'], 'ccm');
     echo json_encode(['status' => 'success', 'message' => 'Lesson moved successfully']);
 } else {
     echo json_encode(['status' => 'error', 'message' => mysqli_error($db)]);

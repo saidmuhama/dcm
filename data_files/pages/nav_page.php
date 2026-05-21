@@ -15,10 +15,7 @@
                             id="searchglobal"></div>
                 </div>
                 <div class="ms-auto"><button class="btn btn-link btn-square btn-icon btn-link-header d-lg-none"
-                        type="button" onclick="openSearch()"><i data-feather="search"></i></button> <button
-                        class="btn btn-link btn-square btnsunmoon btn-link-header" id="btn-layout-modes-dark-page"><i
-                            class="sun mx-auto" data-feather="sun"></i> <i class="moon mx-auto"
-                            data-feather="moon"></i></button>
+                        type="button" onclick="openSearch()"><i data-feather="search"></i></button>
                     <div class="dropdown d-none d-sm-inline-block"><button
                             class="btn btn-link btn-square btn-icon btn-link-header dropdown-toggle no-caret"
                             type="button" data-bs-toggle="dropdown" aria-expanded="false"><i

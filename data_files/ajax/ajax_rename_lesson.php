@@ -1,6 +1,7 @@
 <?php
 include('../config/db.php');
 include('../config/dump.php');
+include('../config/cache.php');
 session_start();
 
 header('Content-Type: application/json');
@@ -46,9 +47,10 @@ if ($res['status'] === "success")
             SET lesson_title=? 
             WHERE id=? AND instructor_id=?");
 
-    $stmt->bind_param("sis", $title, $lesson_id, $instructor_id);
+    $stmt->bind_param("sis", $newTitle, $lesson_id, $instructor_id);
     if($stmt->execute())
     {
+        DcmCache::delete('chapters_course_' . $course_id, 'ccm');
         echo json_encode([
             "status"=>"success",
             "message"=>"Lesson title updated"

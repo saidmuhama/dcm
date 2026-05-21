@@ -2,6 +2,7 @@
 
 include('../config/db.php');
 include('../config/dump.php');
+include('../config/cache.php');
 
 session_start();
 
@@ -157,6 +158,7 @@ if(isset($res['status']) && $res['status'] === "success")
 
     if($deleteStmt->execute())
     {
+        DcmCache::delete('chapters_course_' . $course_id, 'ccm');
         echo json_encode([
             "status"  => "success",
             "message" => "Lesson deleted successfully"

@@ -1,11 +1,26 @@
 <?php
 session_start();
 include('../config/db.php');
+include('../config/url_crypt_config.php');
 header('Content-Type: application/json');
 
 $me   = $_SESSION['usr_code']   ?? '';
 $role = $_SESSION['user_role']  ?? 0;
 if (!$me) { echo json_encode(['status'=>'error','message'=>'Unauthorized']); exit; }
+
+/* ── Notification helper ──────────────────────────────────── */
+function pushNotification(mysqli $db, string $userCode, string $type, string $title, ?string $body = null, ?string $link = null, string $icon = 'bi-bell', string $color = '#6366f1'): void {
+    $stmt = $db->prepare("INSERT INTO tbl_notifications (user_code, type, title, body, link, icon, color) VALUES (?,?,?,?,?,?,?)");
+    $stmt->bind_param('sssssss', $userCode, $type, $title, $body, $link, $icon, $color);
+    $stmt->execute();
+}
+
+function notifyAdmins(mysqli $db, string $type, string $title, ?string $body, ?string $link, string $icon, string $color): void {
+    $res = $db->query("SELECT usr_code FROM tbl_all_users WHERE user_role='5' AND user_status='Active'");
+    while ($row = $res->fetch_assoc()) {
+        pushNotification($db, $row['usr_code'], $type, $title, $body, $link, $icon, $color);
+    }
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $body   = [];
@@ -44,6 +59,15 @@ if ($action === 'submit') {
 
     // update course approval status
     $db->query("UPDATE tbl_courses SET is_approved='pending' WHERE id=$course_id");
+
+    // Notify all admins
+    $courseTitle = $db->query("SELECT title FROM tbl_courses WHERE id=$course_id")->fetch_row()[0] ?? 'a course';
+    notifyAdmins($db, 'course_submitted',
+        'New Course Submitted for Review',
+        "\"$courseTitle\" is awaiting your review.",
+        'ajax/ajax_course_review.php?view=admin_course_reviews',
+        'bi-collection-play', '#6366f1'
+    );
 
     echo json_encode(['status'=>'success','message'=>'Course submitted for review']);
     exit;
@@ -130,6 +154,10 @@ if ($action === 'list' && $role == 5) {
     $stmt->bind_param($pTypes, ...$pParams);
     $stmt->execute();
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    foreach ($rows as &$r) {
+        $r['course_token'] = encryptURLId((int)$r['course_id'], ctx: 'course');
+    }
+    unset($r);
 
     // pending count for badge
     $pendingCount = $db->query("SELECT COUNT(*) FROM tbl_course_review_requests WHERE status='pending'")->fetch_row()[0];
@@ -159,6 +187,9 @@ if ($action === 'get' && $role == 5) {
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
+    if ($row) {
+        $row['course_token'] = encryptURLId((int)$row['course_id'], ctx: 'course');
+    }
     echo json_encode(['status'=>'success','data'=>$row]);
     exit;
 }
@@ -189,10 +220,29 @@ if (isset($actionMap[$action]) && $role == 5) {
 
     $course_id = $reqRow['course_id'];
 
+    // Get course + instructor for notifications
+    $courseRow = $db->query("
+        SELECT c.title, c.instructor_id
+        FROM tbl_courses c
+        WHERE c.id = $course_id
+    ")->fetch_assoc();
+    $courseTitle  = $courseRow['title']         ?? 'Course';
+    $instructorId = $courseRow['instructor_id'] ?? '';
+
     if ($new_status === 'comment') {
         $upd = $db->prepare("UPDATE tbl_course_review_requests SET admin_comment=? WHERE id=?");
         $upd->bind_param("si", $comment, $id);
         $upd->execute();
+        // Notify instructor
+        if ($instructorId) {
+            $preview = strlen($comment) > 120 ? substr($comment, 0, 120) . '…' : $comment;
+            pushNotification($db, $instructorId, 'course_comment',
+                'Admin Comment on Your Course',
+                "\"$courseTitle\": $preview",
+                '../data_files/?view=course_contents_management&course_id=' . $course_id,
+                'bi-chat-dots-fill', '#6366f1'
+            );
+        }
         echo json_encode(['status'=>'success','message'=>'Comment sent to instructor']);
         exit;
     }
@@ -214,6 +264,21 @@ if (isset($actionMap[$action]) && $role == 5) {
         $db->query("UPDATE tbl_courses SET is_approved='rejected', status='is_draft' WHERE id=$course_id");
     } elseif ($new_status === 'revision_needed') {
         $db->query("UPDATE tbl_courses SET is_approved='pending', status='is_draft' WHERE id=$course_id");
+    }
+
+    // Notify instructor
+    $notifMap = [
+        'approved'         => ['Course Approved & Published!', "\"$courseTitle\" is now live for students.", 'bi-check-circle-fill', '#16a34a'],
+        'rejected'         => ['Course Rejected', "\"$courseTitle\" was rejected." . ($comment ? " Feedback: " . substr($comment,0,100) : ''), 'bi-x-circle-fill', '#dc2626'],
+        'revision_needed'  => ['Revision Requested', "\"$courseTitle\" needs revision." . ($comment ? " " . substr($comment,0,100) : ''), 'bi-arrow-repeat', '#d97706'],
+    ];
+    if ($instructorId && isset($notifMap[$new_status])) {
+        [$nTitle, $nBody, $nIcon, $nColor] = $notifMap[$new_status];
+        pushNotification($db, $instructorId, 'course_' . $new_status,
+            $nTitle, $nBody,
+            '../data_files/?view=course_contents_management&course_id=' . $course_id,
+            $nIcon, $nColor
+        );
     }
 
     $labels = ['approved'=>'Course approved and published','rejected'=>'Course rejected','revision_needed'=>'Revision requested'];

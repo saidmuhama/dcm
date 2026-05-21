@@ -1,6 +1,7 @@
 <?php
+require_once __DIR__ . '/../config/url_crypt_config.php';
 $lesson_id  = intval($_GET['lesson_id']  ?? 0);
-$course_id  = intval($_GET['course_id']  ?? 0);
+$course_id  = decryptURLId($_GET['course_id'] ?? '', ctx: 'course') ?? 0;
 $chapter_id = intval($_GET['chapter_id'] ?? 0);
 
 if (!$lesson_id || !$course_id) {
@@ -22,7 +23,7 @@ if (!$lesson || $lesson['instructor_id'] != $_SESSION['usr_code']) {
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb small">
             <li class="breadcrumb-item"><a href="?view=3002">Home</a></li>
-            <li class="breadcrumb-item"><a href="?view=course_contents_management&course_id=<?= $course_id ?>">
+            <li class="breadcrumb-item"><a href="?view=course_contents_management&course_id=<?= $course_id ? encryptURLId($course_id, ctx: 'course') : '' ?>">
                 <?= htmlspecialchars($course['title'] ?? 'Course') ?>
             </a></li>
             <li class="breadcrumb-item active">Q&amp;A Notes</li>

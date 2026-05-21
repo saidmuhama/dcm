@@ -2,7 +2,8 @@
 $user_role = $user_role ?? 0;
 if ($user_role != 5) { include('403.php'); return; }
 
-$cid = (int)($_GET['cid'] ?? 0);
+require_once __DIR__ . '/../config/url_crypt_config.php';
+$cid = decryptURLId($_GET['cid'] ?? '', ctx: 'admin_course_detail');
 if (!$cid) { include('404.php'); return; }
 
 $course = $db->query("

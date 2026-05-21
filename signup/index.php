@@ -263,7 +263,7 @@
 
       <div class="auth-brand-body">
         <h1>Learn. Grow.<br><span>Succeed.</span></h1>
-        <p>Join thousands of students, instructors, and schools already transforming the way they learn and teach — all in one powerful platform.</p>
+        <p>Join thousands of students, instructors, schools, and companies already transforming the way they learn and teach — all in one powerful platform.</p>
 
         <ul class="auth-features">
           <li>
@@ -320,9 +320,9 @@
               <small>I want to teach</small>
             </div>
             <div class="role-card" data-role="4">
-              <div class="role-icon"><i class="bi bi-building"></i></div>
-              <p>School</p>
-              <small>Institutional use</small>
+              <div class="role-icon"><i class="bi bi-buildings-fill"></i></div>
+              <p>School / Company</p>
+              <small>Org or business use</small>
             </div>
           </div>
 
@@ -331,7 +331,7 @@
             <option value="1">Student</option>
             <option value="2">Parent / Guardian</option>
             <option value="3" selected>Instructor / Teacher</option>
-            <option value="4">School / Institutional</option>
+            <option value="4">School / Company</option>
           </select>
 
           <!-- Name row -->
@@ -437,12 +437,53 @@
 
   <style>
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Branded SweetAlert2 ── */
+    .dc-swal {
+      font-family: var(--font) !important;
+      border-radius: 20px !important;
+      padding: 1.75rem 2rem !important;
+      box-shadow: 0 24px 64px rgba(0,0,0,.16) !important;
+    }
+    .dc-swal .swal2-title { font-family:'SUSE',sans-serif !important; font-size:1.3rem !important; font-weight:800 !important; color:#0f172a !important; }
+    .dc-swal .swal2-html-container { font-size:.88rem !important; color:#475569 !important; margin-top:.25rem !important; }
+    .dc-swal .swal2-icon { margin-bottom:1rem !important; transform:scale(.88); }
+    .dc-btn-confirm {
+      background: linear-gradient(135deg,#1a4fc4,#6d28d9) !important;
+      color: #fff !important; font-weight: 700 !important; font-size: .88rem !important;
+      border: none !important; border-radius: 10px !important; padding: .6rem 1.5rem !important;
+      box-shadow: 0 4px 14px rgba(26,79,196,.35) !important; cursor: pointer !important;
+      font-family: var(--font) !important;
+    }
+    .dc-btn-confirm:hover { filter: brightness(1.08) !important; }
+    .dc-btn-cancel {
+      background: #f1f5f9 !important; color: #475569 !important;
+      font-weight: 600 !important; font-size: .88rem !important;
+      border: 1px solid #e2e8f0 !important; border-radius: 10px !important;
+      padding: .6rem 1.5rem !important; cursor: pointer !important;
+      font-family: var(--font) !important;
+    }
+    .dc-swal-toast {
+      font-family: var(--font) !important;
+      border-radius: 14px !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,.14) !important;
+    }
   </style>
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="../assets/js/learning/learning-auth.js"></script>
 
   <script>
+    const DC_SWAL = {
+      customClass: { popup:'dc-swal', confirmButton:'dc-btn-confirm', cancelButton:'dc-btn-cancel' },
+      buttonsStyling: false,
+    };
+    const DC_TOAST = (icon, title) => Swal.fire({
+      toast: true, position: 'top-end', icon, title,
+      showConfirmButton: false, timer: 2800, timerProgressBar: true,
+      customClass: { popup:'dc-swal-toast' },
+    });
+
     // Role card selection
     $('.role-card').on('click', function () {
       $('.role-card').removeClass('active');
@@ -490,17 +531,17 @@
           $('#signupBtn').prop('disabled', false);
 
           if (response.trim() === 'success') {
-            Swal.fire({ icon: 'success', title: 'Account Created!', text: 'Welcome to DigitalClass', confirmButtonColor: '#1a4fc4' })
-              .then(() => window.location.href = '../');
+            DC_TOAST('success', 'Account created! Welcome to DigitalClass');
+            setTimeout(() => window.location.href = '../', 1400);
           } else {
-            Swal.fire({ icon: 'error', title: 'Oops…', text: response, confirmButtonColor: '#d33' });
+            Swal.fire({ ...DC_SWAL, icon: 'error', title: 'Sign Up Failed', text: response });
           }
         },
         error: function (xhr, status, error) {
           $('#btnText').show();
           $('#btnLoader').hide();
           $('#signupBtn').prop('disabled', false);
-          Swal.fire({ icon: 'error', title: 'Request Failed', text: xhr.status + ' — ' + error });
+          Swal.fire({ ...DC_SWAL, icon: 'error', title: 'Request Failed', text: xhr.status + ' — ' + error });
         }
       });
     });

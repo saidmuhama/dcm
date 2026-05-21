@@ -545,32 +545,6 @@
                     <div class="col-12 col-md-6">
                         <div class="card adminuiux-card shadow-sm mb-4">
                             <div class="card-header">
-                                <h6>Change layout color mode</h6>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-secondary">Light mode Preferred in well-lit conditions for better
-                                    readability and can be more accessible to users with certain visual impairments.
-                                    Dark mode reduces glare and can help with reducing eye strain in low-light
-                                    conditions.</p>
-                            </div>
-                            <div class="card-footer">
-                                <div class="row align-items-center no-rtl">
-                                    <div class="col-auto">Light</div>
-                                    <div class="col-auto px-0">
-                                        <div class="form-check form-switch sunmoon"><input class="form-check-input"
-                                                type="checkbox" role="switch" id="btn-layout-modes-dark"> <label
-                                                class="form-check-label" for="btn-layout-modes-dark"><i
-                                                    class="bi bi-brightness-low sun"></i> <i
-                                                    class="bi bi-moon-stars moon"></i></label></div>
-                                    </div>
-                                    <div class="col-auto">Dark</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <div class="card adminuiux-card shadow-sm mb-4">
-                            <div class="card-header">
                                 <h6>Change layout text direction mode</h6>
                             </div>
                             <div class="card-body">

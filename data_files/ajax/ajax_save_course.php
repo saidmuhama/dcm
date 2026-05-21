@@ -1,6 +1,7 @@
 <?php
 include('../config/db.php');
 include('../config/dump.php');
+include('../config/url_crypt_config.php');
 session_start();
 
 header('Content-Type: application/json');
@@ -108,10 +109,12 @@ if(!$stmt){
 $stmt->bind_param("ssss", $instructor_id, $title, $library_id, $library_key);
 
 if($stmt->execute()){
+    $newId = $stmt->insert_id;
     echo json_encode([
-        "status"    => "success",
-        "message"   => "Course + Library created successfully",
-        "course_id" => $stmt->insert_id
+        "status"       => "success",
+        "message"      => "Course + Library created successfully",
+        "course_id"    => $newId,
+        "course_token" => encryptURLId((int)$newId, ctx: 'course'),
     ]);
 }else{
     echo json_encode([

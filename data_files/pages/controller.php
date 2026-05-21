@@ -128,6 +128,35 @@ switch ($view) {
         include('pages/admin_course_reviews.php');
         break;
 
+    case 'admin_organizations':
+        include('pages/admin_organizations.php');
+        break;
+
+    case 'admin_org_detail':
+        include('pages/admin_org_detail.php');
+        break;
+
+    // ── ORG ADMIN ─────────────────────────────────────────────
+    case 'org_dashboard':
+        echo "<script>window.location.replace('?view=3002');</script>";
+        break;
+
+    case 'org_members':
+        include('pages/org_members.php');
+        break;
+
+    case 'org_departments':
+        include('pages/org_departments.php');
+        break;
+
+    case 'org_reports':
+        include('pages/org_reports.php');
+        break;
+
+    case 'org_courses':
+        include('pages/org_courses.php');
+        break;
+
     // ── QUESTION BANK ─────────────────────────────────────────
     // Taxonomy
     case 'qb_subjects':

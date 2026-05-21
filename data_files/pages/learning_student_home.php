@@ -439,14 +439,16 @@ function sdLoadEnrolled() {
         const badge = pct === 100 ? '<span style="background:#059669" class="sd-enr-badge"><i class="bi bi-check2"></i> Done</span>'
                     : pct > 0    ? `<span style="background:#f59e0b" class="sd-enr-badge">${pct}%</span>` : '';
         const btnHtml = pct === 100
-          ? `<button class="sd-enr-btn sd-enr-btn-done" onclick="sdView(${c.course_id})"><i class="bi bi-arrow-repeat"></i> Review Course</button>`
-          : `<button class="sd-enr-btn sd-enr-btn-go" onclick="sdStart(${c.course_id})"><i class="bi bi-play-fill"></i> ${pct > 0 ? 'Continue' : 'Start'}</button>`;
+          ? `<button class="sd-enr-btn sd-enr-btn-done" onclick="sdView('${c.course_token}')"><i class="bi bi-arrow-repeat"></i> Review Course</button>`
+          : `<button class="sd-enr-btn sd-enr-btn-go" onclick="sdStart('${c.course_token}')"><i class="bi bi-play-fill"></i> ${pct > 0 ? 'Continue' : 'Start'}</button>`;
+        const orgChip = c.via_org ? `<span style="display:inline-flex;align-items:center;gap:.25rem;font-size:.65rem;font-weight:700;background:linear-gradient(135deg,#e0e7ff,#ede9fe);color:#6366f1;border-radius:2rem;padding:.15rem .55rem;margin-bottom:.3rem"><i class="bi bi-building-fill"></i>Organization</span>` : '';
         return `<div class="sd-enr-card">
           <div class="sd-enr-thumb">
             <img src="${sdEsc(thumb)}" alt="" onerror="this.src='uploads/course_default.png'">
             ${badge}
           </div>
           <div class="sd-enr-body">
+            ${orgChip}
             <div class="sd-enr-title">${sdEsc(c.title||'Untitled')}</div>
             <div class="sd-enr-meta"><i class="bi bi-collection me-1"></i>${c.total_lessons||0} lessons · ${c.total_chapters||0} chapters</div>
             <div class="sd-enr-prog"><div class="sd-enr-prog-bar" style="width:${pct}%;background:${pCol}"></div></div>
@@ -461,8 +463,8 @@ function sdLoadEnrolled() {
     });
 }
 
-function sdStart(id) { window.location.href = '?view=read_course_details_data&course_id=' + id; }
-function sdView(id)  { window.location.href = '?view=view_course_details&course_id=' + id; }
+function sdStart(tok) { window.location.href = '?view=read_course_details_data&course_id=' + encodeURIComponent(tok); }
+function sdView(tok)  { window.location.href = '?view=view_course_details&course_id=' + encodeURIComponent(tok); }
 
 /* ════════════════════════════════════════════════════════════
    BROWSE COURSES
@@ -536,12 +538,12 @@ function sdBrowseCard(c) {
       </div>
       <div class="sd-brow-foot">
         ${enrolled
-          ? `<button class="sd-brow-btn sd-brow-btn-view" onclick="sdStart(${c.id})" style="flex:2"><i class="bi bi-play-fill"></i> Continue Learning</button>`
+          ? `<button class="sd-brow-btn sd-brow-btn-view" onclick="sdStart('${c.course_token}')" style="flex:2"><i class="bi bi-play-fill"></i> Continue Learning</button>`
           : price === 0
             ? `<button class="sd-brow-btn sd-brow-btn-cart" onclick="sdEnrollFree(${c.id},this)" style="background:#dcfce7;color:#166534"><i class="bi bi-gift"></i> Enrol Free</button>
-               <button class="sd-brow-btn sd-brow-btn-view" onclick="sdView(${c.id})"><i class="bi bi-eye"></i> View</button>`
+               <button class="sd-brow-btn sd-brow-btn-view" onclick="sdView('${c.course_token}')"><i class="bi bi-eye"></i> View</button>`
             : `<button class="sd-brow-btn sd-brow-btn-cart" onclick="sdAddCart(${c.id},this)"><i class="bi bi-cart-plus"></i> Enrol</button>
-               <button class="sd-brow-btn sd-brow-btn-view" onclick="sdView(${c.id})"><i class="bi bi-eye"></i> View</button>`
+               <button class="sd-brow-btn sd-brow-btn-view" onclick="sdView('${c.course_token}')"><i class="bi bi-eye"></i> View</button>`
         }
       </div>
     </div>

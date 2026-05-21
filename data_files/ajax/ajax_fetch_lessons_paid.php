@@ -22,10 +22,11 @@ $is_paid = false;
 
 if($user_id){
 
+    // Check direct purchase
     $paid_q = mysqli_query($db,"
-        SELECT o.id 
+        SELECT o.id
         FROM tbl_orders o
-        INNER JOIN tbl_order_items oi 
+        INNER JOIN tbl_order_items oi
             ON oi.order_id = o.id
         WHERE o.user_id = '$user_id'
         AND o.payment_status = 'paid'
@@ -35,6 +36,24 @@ if($user_id){
 
     if(mysqli_num_rows($paid_q) > 0){
         $is_paid = true;
+    }
+
+    // Check org subscription — member of an org that subscribed to this course
+    if (!$is_paid) {
+        $org_q = mysqli_query($db,"
+            SELECT oca.id
+            FROM tbl_org_course_access oca
+            INNER JOIN tbl_org_members m ON m.org_code = oca.org_code
+            WHERE m.usr_code = '$user_id'
+              AND m.status = 'active'
+              AND oca.course_id = '$course_id'
+              AND oca.is_active = 1
+              AND (oca.expires_at IS NULL OR oca.expires_at >= CURDATE())
+            LIMIT 1
+        ");
+        if (mysqli_num_rows($org_q) > 0) {
+            $is_paid = true;
+        }
     }
 }
 

@@ -148,8 +148,8 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(r => r.json())
         .then(res => {
-            if (res.status === 'success' && res.course_id) {
-                window.location.href = '?view=course_contents_management&course_id=' + res.course_id;
+            if (res.status === 'success' && res.course_token) {
+                window.location.href = '?view=course_contents_management&course_id=' + encodeURIComponent(res.course_token);
             } else {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-arrow-right-circle-fill me-1"></i>Save &amp; Proceed';

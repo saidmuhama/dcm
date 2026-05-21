@@ -1,5 +1,6 @@
 <?php
-$course_id = (int)($_GET['course_id'] ?? 0);
+require_once __DIR__ . '/../config/url_crypt_config.php';
+$course_id = decryptURLId($_GET['course_id'] ?? '', ctx: 'course');
 if (!$course_id) { echo '<div class="p-4 text-center text-muted">Invalid course.</div>'; return; }
 
 $usr = $_SESSION['usr_code'] ?? '';
@@ -33,6 +34,7 @@ $stats = $db->query("
 $enrolled = false;
 $inCart   = false;
 if ($usr) {
+    // Direct purchase
     $s = $db->prepare("
         SELECT COUNT(*) AS cnt FROM tbl_orders o
         JOIN tbl_order_items oi ON oi.order_id = o.id
@@ -40,6 +42,21 @@ if ($usr) {
     $s->bind_param('si', $usr, $course_id);
     $s->execute();
     $enrolled = (bool)($s->get_result()->fetch_assoc()['cnt'] ?? 0);
+
+    // Org subscription — member of an org that subscribed this course
+    if (!$enrolled) {
+        $orgChk = $db->prepare("
+            SELECT oca.id
+            FROM tbl_org_course_access oca
+            INNER JOIN tbl_org_members m ON m.org_code = oca.org_code
+            WHERE m.usr_code = ? AND m.status = 'active'
+              AND oca.course_id = ? AND oca.is_active = 1
+              AND (oca.expires_at IS NULL OR oca.expires_at >= CURDATE())
+            LIMIT 1");
+        $orgChk->bind_param('si', $usr, $course_id);
+        $orgChk->execute();
+        $enrolled = (bool)$orgChk->get_result()->num_rows;
+    }
 
     $ic = $db->prepare("SELECT id FROM tbl_course_cart WHERE user_id=? AND course_id=?");
     $ic->bind_param('si', $usr, $course_id);
@@ -306,7 +323,7 @@ $approval_status = $course['is_approved'] ?? 'pending';
             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.9rem">
               <span style="font-size:.82rem;font-weight:800;color:#059669"><i class="bi bi-patch-check-fill me-1"></i>You're enrolled</span>
             </div>
-            <a href="?view=read_course_details_data&course_id=<?= $course_id ?>" class="cv-cta learn">
+            <a href="?view=read_course_details_data&course_id=<?= encryptURLId($course_id, ctx: 'course') ?>" class="cv-cta learn">
               <i class="bi bi-play-circle-fill me-2"></i>Continue Learning
             </a>
 
@@ -315,7 +332,7 @@ $approval_status = $course['is_approved'] ?? 'pending';
             <div class="cv-price-row">
               <span class="cv-price-val">Free</span>
             </div>
-            <button class="cv-cta free" id="cvEnrollBtn" onclick="cvEnrollFree(<?= $course_id ?>, this)">
+            <button class="cv-cta free" id="cvEnrollBtn" onclick="cvEnrollFree(<?= $course_id ?>, '<?= encryptURLId($course_id, ctx: 'course') ?>', this)">
               <i class="bi bi-mortarboard-fill me-2"></i>Enrol for Free
             </button>
 
@@ -532,7 +549,7 @@ async function cvAddToCart(courseId, btn) {
 }
 
 /* ── Enrol free ─────────────────────────────────────────── */
-async function cvEnrollFree(courseId, btn) {
+async function cvEnrollFree(courseId, courseToken, btn) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px"></span> Enrolling…';
   try {
@@ -542,7 +559,7 @@ async function cvEnrollFree(courseId, btn) {
     });
     const d = await r.json();
     if (d.status === 'success' || d.status === 'already') {
-      btn.outerHTML = `<a href="?view=read_course_details_data&course_id=${courseId}" class="cv-cta learn"><i class="bi bi-play-circle-fill me-2"></i>Start Learning</a>`;
+      btn.outerHTML = `<a href="?view=read_course_details_data&course_id=${encodeURIComponent(courseToken)}" class="cv-cta learn"><i class="bi bi-play-circle-fill me-2"></i>Start Learning</a>`;
     } else {
       cvToast(d.message || 'Enrolment failed', false);
       btn.disabled = false;

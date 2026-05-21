@@ -1,5 +1,6 @@
 <?php
 include('../config/db.php');
+include('../config/cache.php');
 
 session_start();
 
@@ -35,6 +36,7 @@ $stmt = $db->prepare("INSERT INTO tbl_course_chapters (instructor_id, chapter_ti
 $stmt->bind_param("sss", $instructor_id, $title, $course_id);
 
 if($stmt->execute()){
+    DcmCache::delete('chapters_course_' . $course_id, 'ccm');
     echo json_encode([
         "status" => "success",
         "message" => "Chapter added successfully"

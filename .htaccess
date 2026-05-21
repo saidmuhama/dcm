@@ -1,0 +1,8 @@
+# Block direct web access to sensitive files
+<Files ".env">
+    Require all denied
+</Files>
+
+<Files ".env.example">
+    Require all denied
+</Files>

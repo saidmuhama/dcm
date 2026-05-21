@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('../config/db.php');
+include('../config/url_crypt_config.php');
 header('Content-Type: application/json');
 
 if (($_SESSION['user_role'] ?? '') != 5) {
@@ -53,6 +54,10 @@ case 'list':
         LIMIT $per OFFSET $offset
     ")->fetch_all(MYSQLI_ASSOC);
 
+    foreach ($rows as &$row) {
+        $row['cid_token'] = encryptURLId((int)$row['id'], ttl: 3600, ctx: 'admin_course_detail');
+    }
+    unset($row);
     echo json_encode(['status'=>'success','data'=>$rows,'total'=>$total,'page'=>$page,'per'=>$per]);
     break;
 

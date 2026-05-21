@@ -7,6 +7,7 @@
 define('APP_MODULES', [
     'course_management' => ['label' => 'Course Management',  'icon' => 'bi-collection-play'],
     'admin_courses'     => ['label' => 'All Courses (Admin)', 'icon' => 'bi-collection-play-fill'],
+    'org_management'    => ['label' => 'Organizations',       'icon' => 'bi-building'],
     'qb_taxonomy'       => ['label' => 'QB: Taxonomy',        'icon' => 'bi-diagram-3'],
     'qb_questions'      => ['label' => 'QB: Questions',       'icon' => 'bi-patch-question'],
     'qb_exams'          => ['label' => 'QB: Exam Builder',    'icon' => 'bi-clipboard-check'],
@@ -24,7 +25,8 @@ define('MODULE_VIEWS', [
         'my_courses_online_contents_list_view','course_contents_management',
         'teacher_study_notes','study_notes_manager',
     ],
-    'admin_courses' => ['admin_courses','admin_course_detail'],
+    'admin_courses'  => ['admin_courses','admin_course_detail'],
+    'org_management' => ['admin_organizations','admin_org_detail'],
     'qb_taxonomy' => [
         'qb_subjects','qb_levels','qb_chapters','qb_subtopics',
         'qb_bloom_levels','qb_difficulty_levels','qb_sections',

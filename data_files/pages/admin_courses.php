@@ -255,7 +255,7 @@ function loadCourses(page) {
             <td>${approvalBadge(c.is_approved)}</td>
             <td class="text-end">
               <div class="d-flex gap-1 justify-content-end">
-                <a href="?view=admin_course_detail&cid=${c.id}" class="btn btn-sm btn-primary" title="Manage">
+                <a href="?view=admin_course_detail&cid=${encodeURIComponent(c.cid_token)}" class="btn btn-sm btn-primary" title="Manage">
                   <i class="bi bi-folder2-open"></i>
                 </a>
                 <button class="btn btn-sm btn-outline-secondary btn-edit" data-id="${c.id}" title="Edit"><i class="bi bi-pencil"></i></button>

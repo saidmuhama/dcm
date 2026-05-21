@@ -1,6 +1,7 @@
 <?php
+require_once __DIR__ . '/../config/url_crypt_config.php';
 $lesson_id = intval($_GET['lesson_id'] ?? 0);
-$course_id = intval($_GET['course_id'] ?? 0);
+$course_id = decryptURLId($_GET['course_id'] ?? '', ctx: 'course') ?? 0;
 
 if (!$lesson_id) {
     echo '<div class="container py-5 text-center text-muted">Invalid lesson.</div>'; exit;
@@ -32,7 +33,7 @@ $course  = $course_id ? $db->query("SELECT title FROM tbl_courses WHERE id=$cour
                 <ol class="breadcrumb small mb-0">
                     <li class="breadcrumb-item"><a href="?view=learning-student-home">Home</a></li>
                     <?php if ($course): ?>
-                    <li class="breadcrumb-item"><a href="?view=view_course_details&course_id=<?= $course_id ?>"><?= htmlspecialchars($course['title']) ?></a></li>
+                    <li class="breadcrumb-item"><a href="?view=view_course_details&course_id=<?= $course_id ? encryptURLId($course_id, ctx: 'course') : '' ?>"><?= htmlspecialchars($course['title']) ?></a></li>
                     <?php endif; ?>
                     <li class="breadcrumb-item active">Study Notes</li>
                 </ol>

@@ -1,5 +1,6 @@
 <?php
 include('../config/db.php');
+include('../config/url_crypt_config.php');
 session_start();
 
 header('Content-Type: application/json');
@@ -39,5 +40,10 @@ $stmt->bind_param("s", $instructor_id);
 $stmt->execute();
 
 $courses = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+foreach ($courses as &$c) {
+    $c['course_token'] = encryptURLId((int)$c['id'], ctx: 'course');
+}
+unset($c);
 
 echo json_encode(['status' => 'success', 'data' => $courses]);

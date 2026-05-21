@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('../config/db.php');
+include('../config/url_crypt_config.php');
 
 $instructor_id = $_SESSION['usr_code'] ?? 0;
 
@@ -20,6 +21,7 @@ $query = mysqli_query($db,"
 $data = [];
 
 while($row = mysqli_fetch_assoc($query)){
+    $row['course_token'] = encryptURLId((int)$row['id'], ctx: 'course');
     $data[] = $row;
 }
 

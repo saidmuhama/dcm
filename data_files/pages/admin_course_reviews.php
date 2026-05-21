@@ -431,7 +431,7 @@ function openDetail(id) {
     document.getElementById('dp_lessons').textContent  = d.lessons;
     document.getElementById('dp_free').textContent     = d.free_lessons;
     document.getElementById('dp_price').textContent    = d.price > 0 ? 'TZS ' + Number(d.price).toLocaleString() : 'Free';
-    document.getElementById('dp_preview').href = `?view=view_course_details&course_id=${d.course_id}`;
+    document.getElementById('dp_preview').href = `?view=view_course_details&course_id=${encodeURIComponent(d.course_token)}`;
 
     const sb = document.getElementById('dp_sbadge');
     sb.className = 'sbadge ' + d.status;
@@ -541,8 +541,8 @@ function swalConfirm({ iconClass, iconColor, title, body, confirmText, confirmCo
       confirmButton: 'dcm-swal-confirm',
       cancelButton:  'dcm-swal-cancel',
     },
-    didRender() {
-      const btn = this.getConfirmButton();
+    didOpen: (popup) => {
+      const btn = popup.querySelector('.swal2-confirm');
       if (btn) { btn.style.background = confirmColor; btn.style.color = '#fff'; }
     }
   });

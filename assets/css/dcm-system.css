@@ -398,3 +398,40 @@
   }
   .modal-dialog.modal-xl { max-width: calc(100vw - 1.5rem); }
 }
+
+/* ── Force light mode — dark-mode class is disabled site-wide ── */
+html.dark-mode,
+html[class="dark-mode"] {
+    color-scheme: light !important;
+}
+html.dark-mode body {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+}
+html.dark-mode .card,
+html.dark-mode .sect-card,
+html.dark-mode .metric-card,
+html.dark-mode .course-card,
+html.dark-mode .profile-card,
+html.dark-mode .adminuiux-card {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+    border-color: rgba(0,0,0,.1) !important;
+}
+html.dark-mode .modal-content,
+html.dark-mode .offcanvas { background-color: #fff !important; color: #212529 !important; }
+html.dark-mode .dropdown-menu { background-color: #fff !important; color: #212529 !important; }
+html.dark-mode .list-group-item { background-color: #fff !important; color: #212529 !important; border-color: rgba(0,0,0,.1) !important; }
+html.dark-mode .form-control,
+html.dark-mode .form-select,
+html.dark-mode .input-group-text { background-color: #fff !important; color: #212529 !important; border-color: #dee2e6 !important; }
+html.dark-mode .table { color: #212529 !important; }
+html.dark-mode .table td,
+html.dark-mode .table th { color: #212529 !important; border-color: #dee2e6 !important; }
+html.dark-mode .nav-link { color: inherit !important; }
+html.dark-mode .text-muted { color: #6c757d !important; }
+html.dark-mode .adminuiux-sidebar { background-color: #fff !important; }
+html.dark-mode .adminuiux-header nav { background-color: var(--adminuiux-header-bg, #fff) !important; }
+/* Hide dark/moon icon in any lingering toggle buttons */
+html.dark-mode .btnsunmoon .moon { display: none !important; }
+html.dark-mode .btnsunmoon .sun  { display: inline !important; }

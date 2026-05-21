@@ -71,31 +71,6 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
     z-index: 10;
 }
 
-/* ── Metric cards ── */
-.metric-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 1.25rem 1.5rem;
-    box-shadow: 0 2px 12px rgba(0,0,0,.07);
-    border: 1px solid rgba(0,0,0,.05);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    transition: transform .2s, box-shadow .2s;
-}
-.metric-card:hover { transform: translateY(-3px); box-shadow: 0 6px 24px rgba(0,0,0,.1); }
-.metric-icon {
-    width: 52px; height: 52px;
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.4rem; flex-shrink: 0;
-}
-.metric-val { font-size: 1.5rem; font-weight: 700; line-height: 1; color: #1e293b; }
-.metric-lbl { font-size: .78rem; color: #64748b; margin-top: .2rem; }
-.metric-trend { font-size: .72rem; font-weight: 600; }
-.metric-trend.up { color: #16a34a; }
-.metric-trend.neutral { color: #64748b; }
-
 /* ── Profile card ── */
 .profile-card {
     background: #fff;
@@ -180,21 +155,24 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
     border: none; cursor: pointer; transition: all .15s;
 }
 
-/* ── My Courses table ── */
-#instCoursesTable thead th {
-    font-size: .72rem; text-transform: uppercase; letter-spacing: .6px;
-    color: #94a3b8; font-weight: 600; border-bottom: 2px solid #f1f5f9;
-    padding: .75rem 1rem; white-space: nowrap;
-}
-#instCoursesTable tbody td { padding: .85rem 1rem; vertical-align: middle; font-size: .84rem; }
-#instCoursesTable tbody tr { border-bottom: 1px solid #f8fafc; transition: background .15s; }
-#instCoursesTable tbody tr:hover { background: #f8f9ff; }
-.cthumbnail { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; }
+/* ── Status chips ── */
 .status-chip { padding: .3rem .7rem; border-radius: 20px; font-size: .72rem; font-weight: 600; display: inline-flex; align-items: center; gap: .3rem; }
 .status-chip.active  { background: #dcfce7; color: #15803d; }
 .status-chip.inactive{ background: #fee2e2; color: #dc2626; }
 .status-chip.draft   { background: #fef9c3; color: #854d0e; }
-.tbl-action-btn { font-size: .75rem; padding: .3rem .65rem; border-radius: 7px; font-weight: 500; }
+
+/* ── Course stat pills ── */
+.cc-stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: .4rem; margin: .75rem 0; }
+.cc-stat-pill {
+    background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 10px;
+    padding: .45rem .4rem; text-align: center;
+}
+.cc-stat-pill .sp-val { font-size: .88rem; font-weight: 700; color: #1e293b; line-height: 1.1; }
+.cc-stat-pill .sp-lbl { font-size: .63rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em; margin-top: .1rem; }
+@media (prefers-color-scheme: dark) {
+    .cc-stat-pill { background: #1e293b; border-color: rgba(255,255,255,.06); }
+    .cc-stat-pill .sp-val { color: #f1f5f9; }
+}
 
 /* ── Education card ── */
 .edu-row {
@@ -261,8 +239,7 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
                     <?php if($city || $country): ?><span><i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars(trim($city.', '.$country, ', ')) ?></span><?php endif; ?>
                     <?php if($emailAddress): ?><span><i class="bi bi-envelope me-1"></i><?= htmlspecialchars($emailAddress) ?></span><?php endif; ?>
                 </div>
-                <!-- hero stat pills -->
-                <div class="d-flex flex-wrap gap-2 mt-1" id="heroStatPills">
+                <div class="d-flex gap-3 flex-wrap">
                     <div class="stat-pill"><div class="val" id="hsCourses">—</div><div class="lbl">Courses</div></div>
                     <div class="stat-pill"><div class="val" id="hsStudents">—</div><div class="lbl">Students</div></div>
                     <div class="stat-pill"><div class="val" id="hsEarnings">—</div><div class="lbl">Earnings</div></div>
@@ -274,9 +251,6 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
             <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
                 <a href="../data_files/?view=teacher_profile_completion" class="btn btn-light qa-btn">
                     <i class="bi bi-pencil me-1"></i> Edit Profile
-                </a>
-                <a href="../data_files/?view=my_courses_online_contents_list_view" class="btn btn-outline-light qa-btn">
-                    <i class="bi bi-collection-play me-1"></i> My Courses
                 </a>
                 <a data-bs-toggle="modal" data-bs-target="#addCourseModal"
                    href="../data_files/?view=create_new_course"
@@ -290,32 +264,6 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
 
 <!-- ═══════════════════════════════ CANVAS ════════════════════════════ -->
 <div class="inst-canvas">
-
-    <!-- ── Metric cards row ── -->
-    <div class="row g-3 mb-4" id="metricCards">
-        <?php
-        $metrics = [
-            ['id'=>'mc0','icon'=>'bi-collection-play','color'=>'#6366f1','bg'=>'#eef2ff','label'=>'Total Courses','val'=>'—','trend'=>''],
-            ['id'=>'mc1','icon'=>'bi-people','color'=>'#0ea5e9','bg'=>'#e0f2fe','label'=>'Total Students','val'=>'—','trend'=>''],
-            ['id'=>'mc2','icon'=>'bi-currency-exchange','color'=>'#16a34a','bg'=>'#dcfce7','label'=>'Net Earnings (TZS)','val'=>'—','trend'=>''],
-            ['id'=>'mc3','icon'=>'bi-cart-check','color'=>'#f59e0b','bg'=>'#fef3c7','label'=>'Total Sales','val'=>'—','trend'=>''],
-        ];
-        foreach($metrics as $m): ?>
-        <div class="col-6 col-lg-3">
-            <div class="metric-card">
-                <div class="metric-icon" style="background:<?= $m['bg'] ?>;color:<?= $m['color'] ?>">
-                    <i class="bi <?= $m['icon'] ?>"></i>
-                </div>
-                <div>
-                    <div class="metric-val" id="<?= $m['id'] ?>">
-                        <span class="skel d-inline-block" style="width:60px;height:22px"></span>
-                    </div>
-                    <div class="metric-lbl"><?= $m['label'] ?></div>
-                </div>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
 
     <!-- ── Main two-column ── -->
     <div class="row g-4">
@@ -453,40 +401,6 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
                 </div>
             </div>
 
-            <!-- My Courses table -->
-            <div class="sect-card">
-                <div class="sect-header justify-content-between">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="sect-icon" style="background:#fef3c7;color:#d97706"><i class="bi bi-list-ul"></i></div>
-                        <div>
-                            <div class="sect-title">All My Courses</div>
-                            <div class="sect-sub">Manage status, view details</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="sect-body" style="padding:0">
-                    <div class="table-responsive">
-                        <table class="table mb-0" id="instCoursesTable">
-                            <thead>
-                                <tr>
-                                    <th>Course</th>
-                                    <th>Chapters</th>
-                                    <th>Students</th>
-                                    <th>Earnings</th>
-                                    <th>Status</th>
-                                    <th class="text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="instCoursesTbody">
-                                <tr><td colspan="6" class="text-center text-muted py-4">
-                                    <div class="skel mx-auto" style="height:14px;width:40%"></div>
-                                </td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
         </div><!-- /RIGHT -->
     </div><!-- /row -->
 </div><!-- /canvas -->
@@ -524,20 +438,12 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
             document.getElementById('hsEarnings').textContent  = 'TZS '+fmtShort(totalEarnings);
             document.getElementById('hsSales').textContent     = fmt(totalSales);
 
-            /* Metric cards */
-            document.getElementById('mc0').textContent = totalCourses;
-            document.getElementById('mc1').textContent = fmt(totalStudents);
-            document.getElementById('mc2').textContent = 'TZS '+fmtShort(totalEarnings);
-            document.getElementById('mc3').textContent = fmt(totalSales);
-
             /* Course cards */
-            let maxSales = Math.max(...res.data.map(c=>parseInt(c.total_sales||0)), 1);
             let html = '';
             res.data.forEach(c=>{
-                let thumb  = c.thumbnail || 'assets/img/default-course.png';
+                let thumb    = c.thumbnail || 'assets/img/default-course.png';
                 let isLive   = c.status === 'active';
                 let approval = c.is_approved || '';
-                let pct      = Math.round((parseInt(c.total_sales||0)/maxSales)*100);
 
                 let statusChip;
                 if (isLive && approval === 'approved')
@@ -568,12 +474,35 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
                     </div>
                     <div class="cc-body">
                       <div class="cc-title">${c.title}</div>
-                      <div class="cc-meta">${fmt(c.students)} students &middot; ${fmt(c.total_sales)} sales</div>
-                      <div class="cc-earn">TZS ${fmt(c.net_earnings)}</div>
-                      <div class="cc-bar"><div class="cc-bar-fill" style="width:${pct}%"></div></div>
+                      <div class="cc-stat-grid">
+                        <div class="cc-stat-pill">
+                          <div class="sp-val">${c.total_chapters||0}</div>
+                          <div class="sp-lbl">Chapters</div>
+                        </div>
+                        <div class="cc-stat-pill">
+                          <div class="sp-val">${c.total_lessons||0}</div>
+                          <div class="sp-lbl">Lessons</div>
+                        </div>
+                        <div class="cc-stat-pill">
+                          <div class="sp-val">${fmt(c.total_enrollments||0)}</div>
+                          <div class="sp-lbl">Enrolled</div>
+                        </div>
+                        <div class="cc-stat-pill">
+                          <div class="sp-val">${fmt(c.students||0)}</div>
+                          <div class="sp-lbl">Buyers</div>
+                        </div>
+                        <div class="cc-stat-pill">
+                          <div class="sp-val">${fmt(c.total_sales||0)}</div>
+                          <div class="sp-lbl">Sales</div>
+                        </div>
+                        <div class="cc-stat-pill">
+                          <div class="sp-val" style="color:#16a34a;font-size:.78rem">${fmtShort(c.net_earnings||0)}</div>
+                          <div class="sp-lbl">TZS Earned</div>
+                        </div>
+                      </div>
                       <div class="cc-actions">
                         ${toggleBtn}
-                        <a href="../data_files/?view=course_contents_management&course_id=${c.id}"
+                        <a href="../data_files/?view=course_contents_management&course_id=${encodeURIComponent(c.course_token)}"
                            class="cc-btn" style="background:#eef2ff;color:#6366f1;text-decoration:none">
                            Manage
                         </a>
@@ -584,97 +513,6 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
             });
 
             document.getElementById('courseAnalytics').innerHTML = html || '<div class="col-12 text-center text-muted py-3">No courses yet</div>';
-        }).catch(console.error);
-    }
-
-    /* ── Courses table ── */
-    function loadCoursesTable(){
-        fetch("ajax/ajax_fetch_instructor_courses.php")
-        .then(r=>r.json()).then(res=>{
-
-            if($.fn.DataTable.isDataTable('#instCoursesTable')) $('#instCoursesTable').DataTable().destroy();
-
-            if(res.status !== 'success' || !res.data.length){
-                document.getElementById('instCoursesTbody').innerHTML =
-                    '<tr><td colspan="6" class="text-center text-muted py-4">No courses found</td></tr>';
-                return;
-            }
-
-            /* We need per-course student/earnings — we'll get that from analytics cache
-               stored in window.analyticsData, or fallback zeros */
-            let html = '';
-            res.data.forEach(c=>{
-                let thumb = c.thumbnail || 'assets/img/default-course.png';
-                let aData = (window._analyticsMap||{})[c.id] || {};
-
-                let approval2 = c.is_approved || '';
-                let chip = '';
-                if (c.status==='active' && approval2==='approved')
-                    chip = `<span class="status-chip active"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Live</span>`;
-                else if (approval2==='pending')
-                    chip = `<span class="status-chip" style="background:#fef9c3;color:#92400e;padding:.3rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.3rem"><i class="bi bi-hourglass-split" style="font-size:.65rem"></i> Under Review</span>`;
-                else if (approval2==='rejected')
-                    chip = `<span class="status-chip" style="background:#fee2e2;color:#b91c1c;padding:.3rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.3rem"><i class="bi bi-x-circle-fill" style="font-size:.65rem"></i> Rejected</span>`;
-                else if (c.status==='inactive')
-                    chip = `<span class="status-chip inactive"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Inactive</span>`;
-                else
-                    chip = `<span class="status-chip draft"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Draft</span>`;
-
-                let toggleBtn = '';
-                if (c.status==='active' && approval2==='approved')
-                    toggleBtn = `<button onclick="toggleStatus(${c.id},'inactive')" class="btn btn-sm tbl-action-btn btn-outline-danger">Unpublish</button>`;
-                else if (approval2==='pending')
-                    toggleBtn = `<button class="btn btn-sm tbl-action-btn" style="background:#fef9c3;color:#92400e;border:1px solid #fde68a" disabled><i class="bi bi-hourglass-split me-1"></i>Pending</button>`;
-                else if (approval2==='rejected')
-                    toggleBtn = `<button onclick="submitForReview(${c.id},'${(c.title||'').replace(/'/g,'')}')" class="btn btn-sm tbl-action-btn btn-outline-warning">Resubmit</button>`;
-                else
-                    toggleBtn = `<button onclick="submitForReview(${c.id},'${(c.title||'').replace(/'/g,'')}')" class="btn btn-sm tbl-action-btn btn-outline-primary"><i class="bi bi-send me-1"></i>Submit</button>`;
-
-                html += `
-                <tr>
-                  <td>
-                    <div class="d-flex align-items-center gap-2">
-                      <img src="${thumb}" class="cthumbnail">
-                      <div>
-                        <div class="fw-semibold" style="font-size:.84rem">${c.title}</div>
-                        <div class="text-muted" style="font-size:.72rem">${c.type||'Course'}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>${c.total_chapters||0}</td>
-                  <td>${fmt(aData.students||0)}</td>
-                  <td class="fw-semibold text-success" style="font-size:.82rem">TZS ${fmt(aData.net_earnings||0)}</td>
-                  <td>${chip}</td>
-                  <td class="text-center">
-                    <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
-                      ${toggleBtn}
-                      <div class="dropdown">
-                        <button class="btn btn-sm btn-light border tbl-action-btn" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size:.82rem;border-radius:12px">
-                          <li><a class="dropdown-item" href="../data_files/?view=course_contents_management&course_id=${c.id}"><i class="bi bi-eye me-2"></i>View Details</a></li>
-                          <li><a class="dropdown-item" href="../data_files/?view=edit_course&course_id=${c.id}"><i class="bi bi-pencil me-2"></i>Edit Course</a></li>
-                          <li><a class="dropdown-item" href="../data_files/?view=view_course_details&course_id=${c.id}"><i class="bi bi-box-arrow-up-right me-2"></i>Preview Page</a></li>
-                        </ul>
-                      </div>
-                    </div>
-                  </td>
-                </tr>`;
-            });
-
-            document.getElementById('instCoursesTbody').innerHTML = html;
-
-            $('#instCoursesTable').DataTable({
-                destroy:true, responsive:true, autoWidth:false,
-                pageLength:10, lengthMenu:[5,10,25,50],
-                order:[[0,'asc']],
-                language:{
-                    search:'_INPUT_', searchPlaceholder:'Search courses…',
-                    lengthMenu:'Show _MENU_ courses',
-                    info:'Showing _START_–_END_ of _TOTAL_ courses',
-                    paginate:{previous:'‹',next:'›'}
-                }
-            });
-
         }).catch(console.error);
     }
 
@@ -697,7 +535,7 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
             }).then(r=>r.json()).then(r=>{
                 if(r.status==='success'){
                     Swal.fire({icon:'success',title:'Unpublished',timer:1200,showConfirmButton:false});
-                    setTimeout(()=>{ loadAnalytics(); loadCoursesTable(); }, 1300);
+                    setTimeout(()=>{ loadAnalytics(); }, 1300);
                 } else {
                     Swal.fire('Error', r.message, 'error');
                 }
@@ -738,7 +576,7 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
                         text:'Your course is now in the admin review queue. You\'ll be notified once a decision is made.',
                         confirmButtonColor:'#6366f1'
                     });
-                    setTimeout(()=>{ loadAnalytics(); loadCoursesTable(); }, 400);
+                    setTimeout(()=>{ loadAnalytics(); }, 400);
                 } else {
                     Swal.fire('Error', r.message, 'error');
                 }
@@ -748,16 +586,7 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
 
     /* ── Bootstrap on DOMContentLoaded ── */
     function boot(){
-        /* First load analytics so we have the map ready */
-        fetch("ajax/ajax_fetch_instructor_courses_analytics.php")
-        .then(r=>r.json()).then(res=>{
-            if(res.status==='success'){
-                window._analyticsMap = {};
-                res.data.forEach(c=>{ window._analyticsMap[c.id] = c; });
-            }
-            loadAnalytics();
-            loadCoursesTable();
-        }).catch(()=>{ loadAnalytics(); loadCoursesTable(); });
+        loadAnalytics();
     }
 
     if(document.readyState === 'loading'){

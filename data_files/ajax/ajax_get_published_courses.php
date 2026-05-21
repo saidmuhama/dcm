@@ -2,6 +2,7 @@
 ini_set('display_errors', 0);
 ob_start();
 include('../config/db.php');
+include('../config/url_crypt_config.php');
 session_start();
 header('Content-Type: application/json');
 
@@ -100,6 +101,11 @@ if ($countParams) {
 }
 $cStmt->execute();
 $total = (int)($cStmt->get_result()->fetch_assoc()['total'] ?? 0);
+
+foreach ($courses as &$c) {
+    $c['course_token'] = encryptURLId((int)$c['id'], ctx: 'course');
+}
+unset($c);
 
 ob_clean();
 echo json_encode([

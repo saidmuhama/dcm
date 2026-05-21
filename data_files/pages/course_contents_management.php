@@ -1,5 +1,6 @@
 <?php
-$course_id   = (int)($_GET['course_id'] ?? 0);
+require_once __DIR__ . '/../config/url_crypt_config.php';
+$course_id = decryptURLId($_GET['course_id'] ?? '', ctx: 'course');
 if (!$course_id) { echo '<p class="text-center p-4">Invalid course.</p>'; return; }
 
 $courseTitle = App::getWhatFromWHere('title',         'tbl_courses', 'id', $course_id);
@@ -181,7 +182,7 @@ if ($courseOwner != ($_SESSION['usr_code'] ?? '')) { ?>
                 </div>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <a href="../data_files/?view=view_course_details&course_id=<?= $course_id ?>" target="_blank"
+                <a href="../data_files/?view=view_course_details&course_id=<?= encryptURLId($course_id, ctx: 'course') ?>" target="_blank"
                    class="btn btn-sm btn-outline-light" style="border-radius:9px;font-size:.8rem">
                     <i class="bi bi-eye me-1"></i>Preview
                 </a>
@@ -276,7 +277,8 @@ if ($courseOwner != ($_SESSION['usr_code'] ?? '')) { ?>
 /* ════════════════════════════════════════════════════════════
    GLOBALS
 ═══════════════════════════════════════════════════════════════ */
-const COURSE_ID = <?= (int)$course_id ?>;
+const COURSE_ID    = <?= (int)$course_id ?>;
+const COURSE_TOKEN = '<?= encryptURLId($course_id, ctx: 'course') ?>';
 let _activeLessonId = null;
 let _lessonDragging = false;
 
@@ -754,6 +756,15 @@ window.showLessonContents = function(lessonId){
             const path  = l.file_path || '';
             const mime  = path.toLowerCase().endsWith('.mp4') ? 'audio/mp4' : 'audio/mpeg';
             const thumb = l.lesson_thumbnail || '';
+            const thumbBlock = `
+                <div class="mb-3 p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
+                    <label class="form-label-sm"><i class="bi bi-image me-1 text-primary"></i>Audio Cover Image <span class="text-muted fw-normal">(optional)</span></label>
+                    <input type="file" id="audio_thumbnail_input" class="form-control form-control-sm mt-1" accept="image/*" onchange="previewAudioThumb(this)" style="border-radius:8px">
+                    <div id="audioThumbPreview" class="mt-2 ${thumb?'':'d-none'}">
+                        <img id="audioThumbImg" src="${escHtml(thumb)}" class="rounded" style="max-height:90px;max-width:180px;object-fit:cover">
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeAudioThumb()"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>`;
             if(path){
                 mediaBlock = `
                 <div class="ld-section-title">Preview</div>
@@ -763,20 +774,14 @@ window.showLessonContents = function(lessonId){
                         <source src="${escHtml(path)}" type="${mime}">
                     </audio>
                 </div>
-                <div class="mb-3 p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
-                    <label class="form-label-sm"><i class="bi bi-image me-1 text-primary"></i>Audio Cover Image <span class="text-muted fw-normal">(optional)</span></label>
-                    <input type="file" id="audio_thumbnail_input" class="form-control form-control-sm mt-1" accept="image/*" onchange="previewAudioThumb(this)" style="border-radius:8px">
-                    <div id="audioThumbPreview" class="mt-2 ${thumb?'':'d-none'}">
-                        <img id="audioThumbImg" src="${escHtml(thumb)}" class="rounded" style="max-height:90px;max-width:180px;object-fit:cover">
-                        <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeAudioThumb()"><i class="bi bi-trash"></i></button>
-                    </div>
-                </div>`;
+                ${thumbBlock}`;
             } else {
                 mediaBlock = `<div class="ld-section-title">Preview</div>
                 <div class="mb-3 p-3 rounded text-center text-muted" style="background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px">
                     <i class="bi bi-music-note-beamed d-block mb-1" style="font-size:1.5rem;opacity:.4"></i>
                     <small>No audio uploaded yet. Upload a file below.</small>
-                </div>`;
+                </div>
+                ${thumbBlock}`;
             }
         } else if(ct === 'pdf' || ct === 'presentation'){
             const path = l.file_path || '';
@@ -884,7 +889,7 @@ window.showLessonContents = function(lessonId){
                 <button id="deleteLessonBtn" class="btn btn-sm btn-outline-danger" style="border-radius:9px;font-size:.82rem">
                     <i class="bi bi-trash me-1"></i>Delete
                 </button>
-                <a href="../data_files/?view=study_notes_manager&lesson_id=${l.id}&course_id=${l.course_id}&chapter_id=${l.chapter_id}"
+                <a href="../data_files/?view=study_notes_manager&lesson_id=${l.id}&course_id=${encodeURIComponent(COURSE_TOKEN)}&chapter_id=${l.chapter_id}"
                    class="btn btn-sm btn-outline-secondary ms-auto" style="border-radius:9px;font-size:.82rem">
                     <i class="bi bi-journal-bookmark me-1"></i>Q&amp;A Notes
                 </a>

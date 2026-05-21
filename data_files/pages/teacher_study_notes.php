@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../config/url_crypt_config.php';
 $me = $_SESSION['usr_code'];
 
 // Fetch all instructor courses with chapters, lessons, and notes counts in one query
@@ -189,7 +190,7 @@ $typeIcon = [
                 </div>
 
                 <!-- Manage course link -->
-                <a href="../data_files/?view=course_contents_management&course_id=<?= $course['id'] ?>"
+                <a href="../data_files/?view=course_contents_management&course_id=<?= encryptURLId((int)$course['id'], ctx: 'course') ?>"
                    class="btn btn-sm btn-outline-secondary flex-shrink-0"
                    onclick="event.stopPropagation()"
                    title="Manage course content">
@@ -254,7 +255,7 @@ $typeIcon = [
 
                     <!-- Action button -->
                     <div class="flex-shrink-0">
-                        <a href="../data_files/?view=study_notes_manager&lesson_id=<?= $lesson['id'] ?>&course_id=<?= $course['id'] ?>&chapter_id=<?= $chapter['id'] ?>"
+                        <a href="../data_files/?view=study_notes_manager&lesson_id=<?= $lesson['id'] ?>&course_id=<?= encryptURLId((int)$course['id'], ctx: 'course') ?>&chapter_id=<?= $chapter['id'] ?>"
                            class="btn btn-sm <?= $hasNotes ? 'btn-primary' : 'btn-outline-primary' ?>">
                             <?php if ($hasNotes): ?>
                                 <i class="bi bi-pencil me-1"></i>Edit Notes

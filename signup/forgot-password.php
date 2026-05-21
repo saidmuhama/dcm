@@ -285,11 +285,35 @@
 
   <style>
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Branded SweetAlert2 ── */
+    .dc-swal {
+      font-family: var(--font) !important;
+      border-radius: 20px !important;
+      padding: 1.75rem 2rem !important;
+      box-shadow: 0 24px 64px rgba(0,0,0,.16) !important;
+    }
+    .dc-swal .swal2-title { font-family:'SUSE',sans-serif !important; font-size:1.3rem !important; font-weight:800 !important; color:#0f172a !important; }
+    .dc-swal .swal2-html-container { font-size:.88rem !important; color:#475569 !important; margin-top:.25rem !important; }
+    .dc-swal .swal2-icon { margin-bottom:1rem !important; transform:scale(.88); }
+    .dc-btn-confirm {
+      background: linear-gradient(135deg,#1a4fc4,#6d28d9) !important;
+      color: #fff !important; font-weight: 700 !important; font-size: .88rem !important;
+      border: none !important; border-radius: 10px !important; padding: .6rem 1.5rem !important;
+      box-shadow: 0 4px 14px rgba(26,79,196,.35) !important; cursor: pointer !important;
+      font-family: var(--font) !important;
+    }
+    .dc-btn-confirm:hover { filter: brightness(1.08) !important; }
   </style>
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
   <script>
+    const DC_SWAL = {
+      customClass: { popup:'dc-swal', confirmButton:'dc-btn-confirm' },
+      buttonsStyling: false,
+    };
+
     $('#resetPassword').on('submit', function (e) {
       e.preventDefault();
 
@@ -308,14 +332,21 @@
 
           if (response.trim() === 'success') {
             Swal.fire({
+              ...DC_SWAL,
               icon: 'success',
-              title: 'Email Sent!',
-              text: 'Check your inbox for the password reset link.',
-              confirmButtonColor: '#1a4fc4'
+              title: 'Reset Link Sent!',
+              html: 'Check your inbox (and spam folder) for the password reset link.<br><span style="font-size:.8rem;color:#94a3b8">Link expires in 1 hour.</span>',
+              confirmButtonText: 'Got it',
             });
           } else {
-            Swal.fire({ icon: 'error', title: 'Error', text: response });
+            Swal.fire({ ...DC_SWAL, icon: 'error', title: 'Request Failed', text: response });
           }
+        },
+        error: function (xhr) {
+          $('#resetText').show();
+          $('#resetLoader').hide();
+          $('#resetBtn').prop('disabled', false);
+          Swal.fire({ ...DC_SWAL, icon: 'error', title: 'Network Error', text: xhr.status + ' — Could not reach the server.' });
         }
       });
     });
