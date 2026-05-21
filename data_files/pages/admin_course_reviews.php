@@ -101,6 +101,27 @@
 
 /* ── Empty / decided states ── */
 .acr-empty{text-align:center;padding:4rem 2rem;color:#94a3b8}
+
+/* ══ Custom SweetAlert2 theme ══ */
+.dcm-swal-popup{border-radius:20px!important;padding:2rem 1.75rem 1.75rem!important;box-shadow:0 24px 60px rgba(0,0,0,.18)!important;border:1px solid rgba(0,0,0,.06)!important;max-width:420px!important;font-family:inherit!important}
+.dcm-swal-icon-wrap{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.55rem;margin:0 auto 1rem}
+.dcm-swal-icon-wrap.success{background:#dcfce7;color:#16a34a}
+.dcm-swal-icon-wrap.error{background:#fee2e2;color:#dc2626}
+.dcm-swal-icon-wrap.warn{background:#fef9c3;color:#d97706}
+.dcm-swal-ttl{font-size:1.05rem;font-weight:800;color:#0f172a;margin-bottom:.4rem;line-height:1.3}
+.dcm-swal-txt{font-size:.84rem;color:#64748b;line-height:1.6;margin-top:.35rem}
+.dcm-swal-quote{background:#f8fafc;border:1.5px solid #e2e8f0;border-left:4px solid #6366f1;border-radius:0 10px 10px 0;padding:.65rem .9rem;font-size:.8rem;color:#475569;text-align:left;margin-top:.75rem;white-space:pre-wrap;line-height:1.6;font-style:italic}
+.dcm-swal-actions{gap:.6rem!important;margin-top:1.4rem!important;justify-content:flex-end!important;flex-direction:row-reverse!important}
+.dcm-swal-confirm{border:none!important;border-radius:11px!important;padding:.55rem 1.3rem!important;font-size:.83rem!important;font-weight:700!important;cursor:pointer!important;display:inline-flex!important;align-items:center!important;gap:.35rem!important;transition:filter .15s,transform .1s!important}
+.dcm-swal-confirm:hover{filter:brightness(1.08)!important}
+.dcm-swal-confirm:active{transform:scale(.96)!important}
+.dcm-swal-cancel{border:1.5px solid #e2e8f0!important;background:#f8fafc!important;color:#64748b!important;border-radius:11px!important;padding:.55rem 1.2rem!important;font-size:.83rem!important;font-weight:600!important;cursor:pointer!important;transition:background .15s!important}
+.dcm-swal-cancel:hover{background:#e2e8f0!important;color:#334155!important}
+.swal2-timer-progress-bar{background:rgba(255,255,255,.35)!important;border-radius:0!important}
+@keyframes dcm-swal-in{from{opacity:0;transform:scale(.88) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes dcm-swal-out{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.92)}}
+.dcm-swal-in{animation:dcm-swal-in .22s cubic-bezier(.34,1.56,.64,1) both}
+.dcm-swal-out{animation:dcm-swal-out .16s ease-in both}
 .decided-banner{border-radius:12px;padding:.85rem 1.1rem;font-size:.83rem;font-weight:600;display:flex;align-items:center;gap:.5rem}
 .decided-banner.approved{background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0}
 .decided-banner.rejected{background:#fff1f2;color:#b91c1c;border:1.5px solid #fecaca}
@@ -459,51 +480,122 @@ function openDetail(id) {
   });
 }
 
+/* ══ Swal theme helpers ══ */
+const swalBase = {
+  customClass: {
+    popup:          'dcm-swal-popup',
+    title:          'dcm-swal-title',
+    htmlContainer:  'dcm-swal-body',
+    confirmButton:  'dcm-swal-confirm',
+    cancelButton:   'dcm-swal-cancel',
+    actions:        'dcm-swal-actions',
+  },
+  buttonsStyling: false,
+  showClass: { popup:'dcm-swal-in' },
+  hideClass: { popup:'dcm-swal-out' },
+};
+
+function swalSuccess(title, text) {
+  return Swal.fire({ ...swalBase,
+    html: `
+      <div class="dcm-swal-icon-wrap success"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="dcm-swal-ttl">${title}</div>
+      ${text ? `<div class="dcm-swal-txt">${text}</div>` : ''}`,
+    timer: 2200, timerProgressBar: true, showConfirmButton: false,
+  });
+}
+
+function swalError(title, text) {
+  return Swal.fire({ ...swalBase,
+    html: `
+      <div class="dcm-swal-icon-wrap error"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="dcm-swal-ttl">${title}</div>
+      ${text ? `<div class="dcm-swal-txt">${text}</div>` : ''}`,
+    showConfirmButton: true,
+    confirmButtonText: 'OK',
+  });
+}
+
+function swalWarn(title, text) {
+  return Swal.fire({ ...swalBase,
+    html: `
+      <div class="dcm-swal-icon-wrap warn"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <div class="dcm-swal-ttl">${title}</div>
+      ${text ? `<div class="dcm-swal-txt">${text}</div>` : ''}`,
+    showConfirmButton: true,
+    confirmButtonText: 'OK',
+  });
+}
+
+function swalConfirm({ iconClass, iconColor, title, body, confirmText, confirmColor, cancelText }) {
+  return Swal.fire({ ...swalBase,
+    html: `
+      <div class="dcm-swal-icon-wrap" style="background:${iconColor}20;color:${iconColor}"><i class="bi ${iconClass}"></i></div>
+      <div class="dcm-swal-ttl">${title}</div>
+      ${body ? `<div class="dcm-swal-txt">${body}</div>` : ''}`,
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText || 'Cancel',
+    reverseButtons: true,
+    customClass: { ...swalBase.customClass,
+      confirmButton: 'dcm-swal-confirm',
+      cancelButton:  'dcm-swal-cancel',
+    },
+    didRender() {
+      const btn = this.getConfirmButton();
+      if (btn) { btn.style.background = confirmColor; btn.style.color = '#fff'; }
+    }
+  });
+}
+
 /* ══ Decide ══ */
 function decide(action) {
   const comment = document.getElementById('dp_comment').value.trim();
+
   if ((action === 'reject' || action === 'revision_needed') && !comment) {
-    Swal.fire({icon:'warning',title:'Comment Required',text:'Please provide feedback to the instructor.',confirmButtonColor:'#6366f1'}); return;
+    swalWarn('Comment Required', 'Please provide feedback to the instructor before ' + (action === 'reject' ? 'rejecting' : 'requesting revision') + '.');
+    document.getElementById('dp_comment').focus();
+    return;
   }
 
-  const cfg = {
-    approve:          { title:'Approve & Publish?', icon:'success', btnColor:'#16a34a', btnText:'<i class="bi bi-check-circle-fill me-1"></i>Approve & Publish' },
-    reject:           { title:'Reject this course?', icon:'error',  btnColor:'#dc2626', btnText:'<i class="bi bi-x-circle-fill me-1"></i>Reject' },
-    revision_needed:  { title:'Request Revision?', icon:'warning',  btnColor:'#d97706', btnText:'<i class="bi bi-arrow-repeat me-1"></i>Request Revision' },
-    comment:          { title:'Send Comment?', icon:'info',          btnColor:'#6366f1', btnText:'<i class="bi bi-chat-dots-fill me-1"></i>Send' },
-  }[action];
+  const cfgMap = {
+    approve:         { iconClass:'bi-check-circle-fill', iconColor:'#16a34a', title:'Approve &amp; Publish?',    confirmText:'<i class="bi bi-check-circle-fill me-1"></i>Approve &amp; Publish', confirmColor:'linear-gradient(135deg,#16a34a,#15803d)' },
+    reject:          { iconClass:'bi-x-circle-fill',     iconColor:'#dc2626', title:'Reject this course?',       confirmText:'<i class="bi bi-x-circle-fill me-1"></i>Reject',                   confirmColor:'linear-gradient(135deg,#dc2626,#9f1239)' },
+    revision_needed: { iconClass:'bi-arrow-repeat',      iconColor:'#d97706', title:'Request Revision?',         confirmText:'<i class="bi bi-arrow-repeat me-1"></i>Request Revision',           confirmColor:'linear-gradient(135deg,#d97706,#b45309)' },
+    comment:         { iconClass:'bi-chat-dots-fill',    iconColor:'#6366f1', title:'Send comment to instructor?',confirmText:'<i class="bi bi-send me-1"></i>Send Comment',                      confirmColor:'linear-gradient(135deg,#6366f1,#4f46e5)' },
+  };
+  const cfg = cfgMap[action];
 
-  Swal.fire({
-    title: cfg.title,
-    html: comment ? `<p class="text-muted small mb-0 text-start" style="white-space:pre-wrap">"${esc(comment.substring(0,120))}${comment.length>120?'…':''}"</p>` : '',
-    icon: cfg.icon,
-    showCancelButton: true,
-    confirmButtonText: cfg.btnText,
-    confirmButtonColor: cfg.btnColor,
-    cancelButtonText: 'Cancel',
-    reverseButtons: true
-  }).then(res => {
+  const bodyHtml = comment
+    ? `<div class="dcm-swal-quote">"${esc(comment.substring(0,140))}${comment.length>140?'…':''}"</div>`
+    : '';
+
+  swalConfirm({ ...cfg, body: bodyHtml, cancelText: 'Cancel' }).then(res => {
     if (!res.isConfirmed) return;
 
-    ['btnApprove','btnRevision','btnReject','btnSendComment'].forEach(b => {
-      const el = document.getElementById(b); if (el) el.disabled = true;
-    });
+    const btnIds = ['btnApprove','btnRevision','btnReject','btnSendComment'];
+    btnIds.forEach(b => { const el = document.getElementById(b); if (el) el.disabled = true; });
 
     fetch(AJAX, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({action, id: activeId, comment})
-    }).then(r=>r.json()).then(r => {
-      ['btnApprove','btnRevision','btnReject','btnSendComment'].forEach(b => {
-        const el = document.getElementById(b); if (el) el.disabled = false;
-      });
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, id: activeId, comment })
+    })
+    .then(r => r.json())
+    .then(r => {
+      btnIds.forEach(b => { const el = document.getElementById(b); if (el) el.disabled = false; });
       if (r.status === 'success') {
-        Swal.fire({icon:'success',title:'Done!',text:r.message,timer:1800,showConfirmButton:false});
+        swalSuccess('Done!', r.message);
         loadStats();
         loadList(curPage);
-        if (action !== 'comment') setTimeout(() => openDetail(activeId), 400);
+        if (action !== 'comment') setTimeout(() => openDetail(activeId), 500);
       } else {
-        Swal.fire('Error', r.message, 'error');
+        swalError('Action Failed', r.message);
       }
+    })
+    .catch(() => {
+      btnIds.forEach(b => { const el = document.getElementById(b); if (el) el.disabled = false; });
+      swalError('Network Error', 'Could not reach the server. Please try again.');
     });
   });
 }

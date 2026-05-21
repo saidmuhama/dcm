@@ -166,9 +166,18 @@ if ($action === 'get' && $role == 5) {
 /* ══════════════════════════════════════════════════════
    ADMIN: approve / reject / revision / comment
 ══════════════════════════════════════════════════════ */
-if (in_array($action, ['approve','reject','revision_needed','comment']) && $role == 5) {
-    $id      = intval($body['id'] ?? 0);
-    $comment = trim($body['comment'] ?? '');
+// Map short JS action names → valid DB ENUM values
+$actionMap = [
+    'approve'          => 'approved',
+    'reject'           => 'rejected',
+    'revision_needed'  => 'revision_needed',
+    'comment'          => 'comment',
+];
+
+if (isset($actionMap[$action]) && $role == 5) {
+    $id         = intval($body['id'] ?? 0);
+    $comment    = trim($body['comment'] ?? '');
+    $new_status = $actionMap[$action];
 
     if (!$id) { echo json_encode(['status'=>'error','message'=>'Missing id']); exit; }
 
@@ -180,34 +189,35 @@ if (in_array($action, ['approve','reject','revision_needed','comment']) && $role
 
     $course_id = $reqRow['course_id'];
 
-    if ($action === 'comment') {
-        // Just save the comment, don't change status
+    if ($new_status === 'comment') {
         $upd = $db->prepare("UPDATE tbl_course_review_requests SET admin_comment=? WHERE id=?");
         $upd->bind_param("si", $comment, $id);
         $upd->execute();
-        echo json_encode(['status'=>'success','message'=>'Comment saved']);
+        echo json_encode(['status'=>'success','message'=>'Comment sent to instructor']);
         exit;
     }
 
-    $new_status = $action; // 'approved','rejected','revision_needed'
     $upd = $db->prepare("
         UPDATE tbl_course_review_requests
         SET status=?, admin_comment=?, reviewed_at=NOW(), reviewed_by=?
         WHERE id=?
     ");
     $upd->bind_param("sssi", $new_status, $comment, $me, $id);
-    $upd->execute();
+    if (!$upd->execute()) {
+        echo json_encode(['status'=>'error','message'=>'DB update failed: '.$upd->error]); exit;
+    }
 
-    // Update course accordingly
-    if ($action === 'approved') {
+    // Sync tbl_courses
+    if ($new_status === 'approved') {
         $db->query("UPDATE tbl_courses SET is_approved='approved', status='active' WHERE id=$course_id");
-    } elseif ($action === 'rejected') {
+    } elseif ($new_status === 'rejected') {
         $db->query("UPDATE tbl_courses SET is_approved='rejected', status='is_draft' WHERE id=$course_id");
-    } elseif ($action === 'revision_needed') {
+    } elseif ($new_status === 'revision_needed') {
         $db->query("UPDATE tbl_courses SET is_approved='pending', status='is_draft' WHERE id=$course_id");
     }
 
-    echo json_encode(['status'=>'success','message'=>ucfirst(str_replace('_',' ',$action)).' successfully']);
+    $labels = ['approved'=>'Course approved and published','rejected'=>'Course rejected','revision_needed'=>'Revision requested'];
+    echo json_encode(['status'=>'success','message'=>$labels[$new_status] ?? 'Done']);
     exit;
 }
 
