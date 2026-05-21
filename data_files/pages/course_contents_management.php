@@ -594,7 +594,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         e.preventDefault();
         if(submitting) return; submitting=true;
         if(!form.checkValidity()){ form.classList.add('was-validated'); submitting=false; return; }
-        const title = document.getElementById('validationTooltip02').value;
+        const title = (document.getElementById('newChapterTitle') || document.getElementById('validationTooltip02'))?.value?.trim();
         Swal.fire({title:'Saving…',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
         fetch('ajax/ajax_save_chapter.php',{
             method:'POST', headers:{'Content-Type':'application/json'},
