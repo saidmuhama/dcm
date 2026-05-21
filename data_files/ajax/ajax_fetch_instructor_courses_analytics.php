@@ -10,13 +10,14 @@ if(!$user_id){
 }
 
 $query = mysqli_query($db,"
-    SELECT 
+    SELECT
         c.id,
         c.title,
         c.thumbnail,
         c.price,
         c.discount,
         c.status,
+        c.is_approved,
         c.created_at,
 
         COUNT(DISTINCT oi.id) as total_sales,

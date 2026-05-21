@@ -9,10 +9,11 @@ $status    = $data['status'];
 
 $user_id = $_SESSION['usr_code'];
 
-$allowed = ['active','inactive','is_draft'];
+// Instructors cannot set status=active directly — must go through review workflow
+$allowed = ['inactive','is_draft'];
 
 if(!in_array($status, $allowed)){
-    echo json_encode(["status"=>"error","message"=>"Invalid status"]);
+    echo json_encode(["status"=>"error","message"=>"Courses must be submitted for admin review before going live."]);
     exit;
 }
 

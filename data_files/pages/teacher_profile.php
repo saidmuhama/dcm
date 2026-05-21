@@ -535,16 +535,29 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
             let html = '';
             res.data.forEach(c=>{
                 let thumb  = c.thumbnail || 'assets/img/default-course.png';
-                let isLive = c.status === 'active';
-                let pct    = Math.round((parseInt(c.total_sales||0)/maxSales)*100);
+                let isLive   = c.status === 'active';
+                let approval = c.is_approved || '';
+                let pct      = Math.round((parseInt(c.total_sales||0)/maxSales)*100);
 
-                let statusChip = isLive
-                    ? `<span class="status-chip active"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> Live</span>`
-                    : `<span class="status-chip draft"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> Draft</span>`;
+                let statusChip;
+                if (isLive && approval === 'approved')
+                    statusChip = `<span class="status-chip active"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> Live</span>`;
+                else if (approval === 'pending')
+                    statusChip = `<span class="status-chip" style="background:#fef9c3;color:#92400e"><i class="bi bi-hourglass-split" style="font-size:.65rem"></i> Under Review</span>`;
+                else if (approval === 'rejected')
+                    statusChip = `<span class="status-chip" style="background:#fee2e2;color:#b91c1c"><i class="bi bi-x-circle-fill" style="font-size:.65rem"></i> Rejected</span>`;
+                else
+                    statusChip = `<span class="status-chip draft"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> Draft</span>`;
 
-                let toggleBtn = isLive
-                    ? `<button onclick="toggleStatus(${c.id},'inactive')" class="cc-btn" style="background:#fee2e2;color:#dc2626">Unpublish</button>`
-                    : `<button onclick="toggleStatus(${c.id},'active')"   class="cc-btn" style="background:#dcfce7;color:#15803d">Go Live</button>`;
+                let toggleBtn;
+                if (isLive && approval === 'approved')
+                    toggleBtn = `<button onclick="toggleStatus(${c.id},'inactive')" class="cc-btn" style="background:#fee2e2;color:#dc2626">Unpublish</button>`;
+                else if (approval === 'pending')
+                    toggleBtn = `<button class="cc-btn" style="background:#fef9c3;color:#92400e;cursor:default" disabled><i class="bi bi-hourglass-split me-1"></i>Pending Review</button>`;
+                else if (approval === 'rejected')
+                    toggleBtn = `<button onclick="submitForReview(${c.id},'${(c.title||'').replace(/'/g,'')}')" class="cc-btn" style="background:#fce7f3;color:#9d174d"><i class="bi bi-arrow-repeat me-1"></i>Resubmit</button>`;
+                else
+                    toggleBtn = `<button onclick="submitForReview(${c.id},'${(c.title||'').replace(/'/g,'')}')" class="cc-btn" style="background:#eef2ff;color:#6366f1"><i class="bi bi-send me-1"></i>Submit for Review</button>`;
 
                 html += `
                 <div class="col-12 col-md-6 col-xl-4">
@@ -594,16 +607,28 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
                 let thumb = c.thumbnail || 'assets/img/default-course.png';
                 let aData = (window._analyticsMap||{})[c.id] || {};
 
+                let approval2 = c.is_approved || '';
                 let chip = '';
-                if(c.status==='active')   chip = `<span class="status-chip active"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Active</span>`;
-                else if(c.status==='inactive') chip = `<span class="status-chip inactive"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Inactive</span>`;
-                else                      chip = `<span class="status-chip draft"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Draft</span>`;
+                if (c.status==='active' && approval2==='approved')
+                    chip = `<span class="status-chip active"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Live</span>`;
+                else if (approval2==='pending')
+                    chip = `<span class="status-chip" style="background:#fef9c3;color:#92400e;padding:.3rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.3rem"><i class="bi bi-hourglass-split" style="font-size:.65rem"></i> Under Review</span>`;
+                else if (approval2==='rejected')
+                    chip = `<span class="status-chip" style="background:#fee2e2;color:#b91c1c;padding:.3rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.3rem"><i class="bi bi-x-circle-fill" style="font-size:.65rem"></i> Rejected</span>`;
+                else if (c.status==='inactive')
+                    chip = `<span class="status-chip inactive"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Inactive</span>`;
+                else
+                    chip = `<span class="status-chip draft"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> Draft</span>`;
 
                 let toggleBtn = '';
-                if(c.status==='active')
+                if (c.status==='active' && approval2==='approved')
                     toggleBtn = `<button onclick="toggleStatus(${c.id},'inactive')" class="btn btn-sm tbl-action-btn btn-outline-danger">Unpublish</button>`;
+                else if (approval2==='pending')
+                    toggleBtn = `<button class="btn btn-sm tbl-action-btn" style="background:#fef9c3;color:#92400e;border:1px solid #fde68a" disabled><i class="bi bi-hourglass-split me-1"></i>Pending</button>`;
+                else if (approval2==='rejected')
+                    toggleBtn = `<button onclick="submitForReview(${c.id},'${(c.title||'').replace(/'/g,'')}')" class="btn btn-sm tbl-action-btn btn-outline-warning">Resubmit</button>`;
                 else
-                    toggleBtn = `<button onclick="toggleStatus(${c.id},'active')" class="btn btn-sm tbl-action-btn btn-outline-success">Publish</button>`;
+                    toggleBtn = `<button onclick="submitForReview(${c.id},'${(c.title||'').replace(/'/g,'')}')" class="btn btn-sm tbl-action-btn btn-outline-primary"><i class="bi bi-send me-1"></i>Submit</button>`;
 
                 html += `
                 <tr>
@@ -653,25 +678,67 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
         }).catch(console.error);
     }
 
-    /* ── Toggle status ── */
+    /* ── Toggle status (unpublish only — publish goes through review) ── */
     window.toggleStatus = function(course_id, status){
         Swal.fire({
-            title: status==='active' ? 'Publish Course?' : 'Unpublish Course?',
-            text: 'You can change this anytime.',
-            icon: 'question',
+            title: 'Unpublish this course?',
+            text: 'Students will no longer see it. You can resubmit for review anytime.',
+            icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Yes, proceed',
-            confirmButtonColor: status==='active' ? '#16a34a' : '#dc2626'
+            confirmButtonText: 'Unpublish',
+            confirmButtonColor: '#dc2626',
+            reverseButtons: true
         }).then(r=>{
             if(!r.isConfirmed) return;
             fetch('ajax/ajax_toggle_course_status.php',{
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({course_id, status})
+                body:JSON.stringify({course_id, status:'inactive'})
             }).then(r=>r.json()).then(r=>{
                 if(r.status==='success'){
-                    Swal.fire({icon:'success',title:'Updated!',timer:1200,showConfirmButton:false});
+                    Swal.fire({icon:'success',title:'Unpublished',timer:1200,showConfirmButton:false});
                     setTimeout(()=>{ loadAnalytics(); loadCoursesTable(); }, 1300);
+                } else {
+                    Swal.fire('Error', r.message, 'error');
+                }
+            });
+        });
+    };
+
+    /* ── Submit course for admin review ── */
+    window.submitForReview = function(course_id, courseTitle){
+        Swal.fire({
+            title: '<i class="bi bi-send me-2" style="color:#6366f1"></i>Submit for Review',
+            html: `
+                <p class="text-muted small mb-3">Course: <strong>${courseTitle}</strong></p>
+                <div class="text-start">
+                    <label class="form-label small fw-semibold">Message to Admin <span class="text-muted fw-normal">(optional)</span></label>
+                    <textarea id="srNoteInput" class="form-control form-control-sm" rows="3"
+                        placeholder="Describe what this course covers or any notes for the reviewer…"
+                        style="border-radius:10px;resize:none"></textarea>
+                </div>`,
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-send me-1"></i>Submit for Review',
+            confirmButtonColor: '#6366f1',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true,
+            didOpen: () => { document.getElementById('srNoteInput').focus(); }
+        }).then(res=>{
+            if(!res.isConfirmed) return;
+            const note = document.getElementById('srNoteInput')?.value?.trim() || '';
+            fetch('ajax/ajax_course_review.php',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({action:'submit', course_id, note})
+            }).then(r=>r.json()).then(r=>{
+                if(r.status==='success'){
+                    Swal.fire({
+                        icon:'success',
+                        title:'Submitted!',
+                        text:'Your course is now in the admin review queue. You\'ll be notified once a decision is made.',
+                        confirmButtonColor:'#6366f1'
+                    });
+                    setTimeout(()=>{ loadAnalytics(); loadCoursesTable(); }, 400);
                 } else {
                     Swal.fire('Error', r.message, 'error');
                 }
