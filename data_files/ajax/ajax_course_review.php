@@ -3,8 +3,8 @@ session_start();
 include('../config/db.php');
 header('Content-Type: application/json');
 
-$me   = $_SESSION['usr_code'] ?? '';
-$role = $_SESSION['usr_role']  ?? 0;
+$me   = $_SESSION['usr_code']   ?? '';
+$role = $_SESSION['user_role']  ?? 0;
 if (!$me) { echo json_encode(['status'=>'error','message'=>'Unauthorized']); exit; }
 
 $method = $_SERVER['REQUEST_METHOD'];

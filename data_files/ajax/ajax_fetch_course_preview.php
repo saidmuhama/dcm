@@ -25,10 +25,10 @@ if ($usr) {
 
 /* ── Chapters ────────────────────────────────────────────── */
 $chapters = $db->query("
-    SELECT id, chapter_title, sort_order
+    SELECT id, chapter_title, `order`
     FROM tbl_course_chapters
     WHERE course_id = {$course_id}
-    ORDER BY sort_order ASC, id ASC
+    ORDER BY `order` ASC, id ASC
 ")->fetch_all(MYSQLI_ASSOC);
 
 $data = [];
