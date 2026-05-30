@@ -13,8 +13,12 @@ $BUNNY_API_KEY = App::getBunnyNetApiKey();
 $data = json_decode(file_get_contents("php://input"), true);
 
 // ====== GET VALUES ======
-$title = $data['title'] ?? '';
+$title         = $data['title'] ?? '';
 $instructor_id = $_SESSION['usr_code'] ?? '';
+/* Support both legacy single category_id and new category_ids array */
+$category_ids_raw = $data['category_ids'] ?? (isset($data['category_id']) ? [$data['category_id']] : []);
+$category_ids     = array_values(array_unique(array_filter(array_map('intval', (array)$category_ids_raw))));
+$primary_cat      = $category_ids[0] ?? null; // first selected = primary (kept in tbl_courses for backwards compat)
 
 // ====== VALIDATION ======
 if(empty($title)){
@@ -93,33 +97,37 @@ $create = App::createBunnyStorageFolder(
 // ======================================================
 
 // ======================================================
-// ✅ STEP 2: INSERT INTO DATABASE
+// ✅ STEP 2: INSERT COURSE INTO DATABASE
 // ======================================================
-$stmt = $db->prepare("INSERT INTO tbl_courses (instructor_id, title, library_id, library_key) VALUES (?, ?, ?, ?)");
+$stmt = $db->prepare("INSERT INTO tbl_courses (instructor_id, title, library_id, library_key, category_id) VALUES (?, ?, ?, ?, ?)");
+if (!$stmt) {
+    echo json_encode(["status"=>"error","message"=>"Prepare failed","error"=>$db->error]);
+    exit;
+}
+$stmt->bind_param("ssssi", $instructor_id, $title, $library_id, $library_key, $primary_cat);
 
-if(!$stmt){
-    echo json_encode([
-        "status" => "error",
-        "message" => "Prepare failed",
-        "error" => $db->error
-    ]);
+if (!$stmt->execute()) {
+    echo json_encode(["status"=>"error","message"=>"Execute failed","error"=>$stmt->error]);
     exit;
 }
 
-$stmt->bind_param("ssss", $instructor_id, $title, $library_id, $library_key);
+$newId = $stmt->insert_id;
 
-if($stmt->execute()){
-    $newId = $stmt->insert_id;
-    echo json_encode([
-        "status"       => "success",
-        "message"      => "Course + Library created successfully",
-        "course_id"    => $newId,
-        "course_token" => encryptURLId((int)$newId, ctx: 'course'),
-    ]);
-}else{
-    echo json_encode([
-        "status" => "error",
-        "message" => "Execute failed",
-        "error" => $stmt->error
-    ]);
+// ======================================================
+// ✅ STEP 3: SAVE CATEGORY MAP (many-to-many)
+// ======================================================
+if (!empty($category_ids)) {
+    $mapStmt = $db->prepare("INSERT IGNORE INTO tbl_course_category_map (course_id, category_id) VALUES (?, ?)");
+    foreach ($category_ids as $cid) {
+        $mapStmt->bind_param("ii", $newId, $cid);
+        $mapStmt->execute();
+    }
 }
+
+echo json_encode([
+    "status"        => "success",
+    "message"       => "Course created successfully",
+    "course_id"     => $newId,
+    "course_token"  => encryptURLId((int)$newId, ctx: 'course'),
+    "category_ids"  => $category_ids,
+]);

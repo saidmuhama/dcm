@@ -291,7 +291,7 @@ $approval_status = $course['is_approved'] ?? 'pending';
         <div id="cvAbout" class="cv-card-body" style="padding-top:.75rem">
           <?php if ($course['description']): ?>
           <div style="font-size:.85rem;color:#475569;line-height:1.7">
-            <?= nl2br(htmlspecialchars($course['description'])) ?>
+            <?= preg_replace(['/<script\b[^>]*>.*?<\/script>/is','/\son\w+\s*=/i','/javascript\s*:/i'],['','','void:'], $course['description'] ?? '') ?>
           </div>
           <?php else: ?>
           <div style="font-size:.84rem;color:#94a3b8;text-align:center;padding:1.5rem 0">No description provided.</div>

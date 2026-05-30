@@ -22,7 +22,7 @@
         <input type="hidden" id="chapter_id" value="<?php echo $_GET['chapter_id']; ?>">
         <h6 class="mb-3">Lesson Description (Optional)</h6>
         <div class="mb-4">
-            <textarea id="lesson_description" class="FroalaEditor"></textarea>
+            <textarea id="lesson_description"></textarea>
         </div>
         
 

@@ -435,3 +435,5 @@ html.dark-mode .adminuiux-header nav { background-color: var(--adminuiux-header-
 /* Hide dark/moon icon in any lingering toggle buttons */
 html.dark-mode .btnsunmoon .moon { display: none !important; }
 html.dark-mode .btnsunmoon .sun  { display: inline !important; }
+
+

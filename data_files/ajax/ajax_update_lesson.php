@@ -1,4 +1,7 @@
 <?php
+@set_time_limit(0);
+@ini_set('memory_limit', '-1');
+
 include('../config/db.php');
 include('../config/dump.php');
 session_start();
@@ -42,12 +45,26 @@ if (!empty($_FILES['lesson_thumbnail']['tmp_name'])) {
 }
 
 // ── Was a media file uploaded? ──────────────────────────────
-$hasFile = !empty($_FILES['file']['tmp_name']) && is_uploaded_file($_FILES['file']['tmp_name']);
+$fileErr = $_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE;
+$hasFile = $fileErr === UPLOAD_ERR_OK && is_uploaded_file($_FILES['file']['tmp_name'] ?? '');
+
+if ($fileErr !== UPLOAD_ERR_OK && $fileErr !== UPLOAD_ERR_NO_FILE) {
+    $phpErrMap = [
+        UPLOAD_ERR_INI_SIZE   => 'File exceeds the server upload size limit (upload_max_filesize).',
+        UPLOAD_ERR_FORM_SIZE  => 'File exceeds the form upload size limit.',
+        UPLOAD_ERR_PARTIAL    => 'File was only partially uploaded.',
+        UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder on server.',
+        UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
+        UPLOAD_ERR_EXTENSION  => 'Upload blocked by a server extension.',
+    ];
+    echo json_encode(["status" => "error", "message" => $phpErrMap[$fileErr] ?? "File upload error (code $fileErr)"]);
+    exit;
+}
 
 // ────────────────────────────────────────────────────────────
 // VIDEO
 // ────────────────────────────────────────────────────────────
-if ($content_type === 'video') {
+if (strtolower($content_type) === 'video') {
     $stmt = $db->prepare("
         SELECT l.video_id, c.library_id, c.library_key
         FROM tbl_course_chapter_lessons l
@@ -69,17 +86,41 @@ if ($content_type === 'video') {
         $library_id  = $row['library_id'];
         $library_key = $row['library_key'];
 
+        if (empty($video_id) || empty($library_id)) {
+            echo json_encode(["status" => "error", "message" => "Lesson has no Bunny video slot. Delete and recreate the lesson."]);
+            exit;
+        }
+
+        /* Stream file directly to Bunny — avoids loading into PHP memory */
+        $fh   = fopen($_FILES['file']['tmp_name'], 'r');
+        $size = (int)$_FILES['file']['size'];
+
         $ch = curl_init("https://video.bunnycdn.com/library/$library_id/videos/$video_id");
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "AccessKey: $library_key",
-            "Content-Type: application/octet-stream"
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_UPLOAD         => true,
+            CURLOPT_INFILE         => $fh,
+            CURLOPT_INFILESIZE     => $size,
+            CURLOPT_HTTPHEADER     => [
+                "AccessKey: $library_key",
+                "Content-Type: application/octet-stream",
+            ],
+            CURLOPT_TIMEOUT        => 3600,
         ]);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents($_FILES['file']['tmp_name']));
         $response = curl_exec($ch);
-        if (curl_errno($ch)) {
-            echo json_encode(["status" => "error", "message" => "Upload error: " . curl_error($ch)]);
+        $errno    = curl_errno($ch);
+        $errStr   = $errno ? curl_error($ch) : '';
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        fclose($fh);
+
+        if ($errno) {
+            echo json_encode(["status" => "error", "message" => "Upload failed: $errStr"]);
+            exit;
+        }
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $bunnyMsg = json_decode($response, true)['message'] ?? "HTTP $httpCode";
+            echo json_encode(["status" => "error", "message" => "Bunny rejected the upload: $bunnyMsg"]);
             exit;
         }
         $video_url = "https://iframe.mediadelivery.net/embed/$library_id/$video_id";

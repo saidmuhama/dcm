@@ -59,4 +59,7 @@ if ($role_requires_2fa) {
 $_SESSION['usr_code']  = $user['usr_code'];
 $_SESSION['name']      = $user['first_name'] . ' ' . $user['last_name'];
 $_SESSION['user_role'] = $user['user_role'];
+if (!empty($user['force_pw_change'])) {
+    $_SESSION['force_pw_change'] = true;
+}
 echo json_encode(['status' => 'success']);

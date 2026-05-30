@@ -12,18 +12,26 @@ function send_json(array $data): never {
     exit;
 }
 
-/* ── Ensure extra columns exist (idempotent) ─────────────────── */
-$_cols = [
-    ['qb_exam_sessions', 'question_order', 'TEXT NULL'],
-    ['qb_exam_sessions', 'option_orders',  'TEXT NULL'],
-    ['qb_exam_sessions', 'flagged',        'TEXT NULL'],
-];
-foreach ($_cols as [$tbl, $col, $def]) {
-    $chk = $db->query("SELECT COUNT(*) AS c FROM information_schema.COLUMNS
-                        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '$tbl' AND COLUMN_NAME = '$col'");
-    if ($chk && !$chk->fetch_assoc()['c']) {
-        $db->query("ALTER TABLE `$tbl` ADD COLUMN `$col` $def");
+/* ── Ensure extra columns exist — checked once per session ─────── */
+if (empty($_SESSION['_exam_cols_ok'])) {
+    $cols_needed = [
+        'question_order' => 'TEXT NULL',
+        'option_orders'  => 'TEXT NULL',
+        'flagged'        => 'TEXT NULL',
+    ];
+    // Single fast query: fetch all existing column names at once
+    $existing_cols = [];
+    $chk = $db->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'qb_exam_sessions'");
+    if ($chk) {
+        while ($r = $chk->fetch_row()) $existing_cols[] = $r[0];
     }
+    foreach ($cols_needed as $col => $def) {
+        if (!in_array($col, $existing_cols)) {
+            $db->query("ALTER TABLE `qb_exam_sessions` ADD COLUMN `$col` $def");
+        }
+    }
+    $_SESSION['_exam_cols_ok'] = 1;
 }
 
 /* ── Routing ─────────────────────────────────────────────────── */
@@ -173,12 +181,25 @@ if ($action === 'questions') {
     $opt_orders = $session['option_orders'] ? json_decode($session['option_orders'], true) : [];
     $opts_changed = false;
 
+    // Load ALL options in one query (eliminates N+1)
+    $all_opts = [];
+    if (!empty($questions)) {
+        $qids    = array_map(fn($q) => (int)$q['question_id'], $questions);
+        $ph      = implode(',', $qids);
+        $optRows = $db->query("SELECT question_id, option_label, option_text
+                                FROM qb_question_options
+                                WHERE question_id IN ($ph)
+                                ORDER BY sort_order ASC, option_label ASC");
+        if ($optRows) {
+            while ($r = $optRows->fetch_assoc()) {
+                $all_opts[(int)$r['question_id']][] = $r;
+            }
+        }
+    }
+
     foreach ($questions as &$q) {
-        $qid = (int)$q['question_id'];
-        $ostmt = $db->prepare("SELECT option_label, option_text FROM qb_question_options WHERE question_id = ? ORDER BY sort_order, option_label");
-        $ostmt->bind_param('i', $qid);
-        $ostmt->execute();
-        $opts = $ostmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $qid  = (int)$q['question_id'];
+        $opts = $all_opts[$qid] ?? [];
 
         if ($session['shuffle_options'] && !isset($opt_orders[$qid]) && count($opts) > 1) {
             $labels = array_column($opts, 'option_label');

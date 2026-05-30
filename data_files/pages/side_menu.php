@@ -1,5 +1,52 @@
 <?php
+/**
+ * @var int    $user_role        Injected by controller
+ * @var array  $user_perms       Injected by controller
+ * @var string $userProfileImage Injected by controller
+ * @var string $fullname         Injected by controller
+ * @var string $roleTitle        Injected by controller
+ */
 $cv = $_GET['view'] ?? '';
+
+/* ── Exam module level gate ────────────────────────────────────
+   Exams are only for Pre-School / Primary / Secondary / High School
+   and their sub-levels (Form 1-6, Standard 7, etc.).
+   Undergraduate and Courses / Professional students are excluded.
+─────────────────────────────────────────────────────────────── */
+$_examAllowedForLevel = true; // default: allow (also covers teachers, admins)
+if ((int)($user_role ?? 0) === 1 && isset($db)) {
+    $__usr  = $_SESSION['usr_code'] ?? '';
+    $__lvlQ = $db->query("
+        SELECT mal.level_title
+        FROM tbl_students s
+        JOIN tbl_main_academic_levels mal ON mal.id = s.main_academic_level
+        WHERE s.usr_code = '" . $db->real_escape_string($__usr) . "'
+        LIMIT 1
+    ");
+    if ($__lvlQ && $__lvlRow = $__lvlQ->fetch_assoc()) {
+        $__lvl = strtolower(trim($__lvlRow['level_title']));
+        // Exclude university/undergraduate and professional/courses levels
+        $_examAllowedForLevel = !(
+            str_contains($__lvl, 'undergraduate') ||
+            str_contains($__lvl, 'university')    ||
+            str_contains($__lvl, 'degree')         ||
+            $__lvl === 'courses'
+        );
+    }
+    // Also check tbl_student_profiles.education_level (onboarding wizard)
+    if ($_examAllowedForLevel) {
+        $__profQ = $db->query("
+            SELECT education_level FROM tbl_student_profiles
+            WHERE student_id = '" . $db->real_escape_string($__usr) . "' LIMIT 1
+        ");
+        if ($__profQ && $__pRow = $__profQ->fetch_assoc()) {
+            $__el = $__pRow['education_level'] ?? '';
+            if (in_array($__el, ['university','professional'])) {
+                $_examAllowedForLevel = false;
+            }
+        }
+    }
+}
 
 $groups = [
     'menuAdmin'      => ['admin_dashboard','admin_users','admin_roles','admin_permissions','admin_courses','admin_course_detail','admin_payment_settings','admin_course_reviews','admin_organizations','admin_org_detail'],
@@ -30,6 +77,14 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
         <a href="../data_files/?view=3002" class="nav-link<?= in_array($cv, ['3002','study_notes_viewer','read_course_details_data','learning-student-home']) ? ' active' : '' ?>">
             <i class="menu-icon bi bi-columns-gap"></i>
             <span class="menu-name">Dashboard</span>
+        </a>
+    </li>
+
+    <!-- Messages (all roles) -->
+    <li class="nav-item">
+        <a href="../data_files/?view=learning-chat-call" class="nav-link<?= $cv === 'learning-chat-call' ? ' active' : '' ?>">
+            <i class="menu-icon bi bi-chat-dots-fill"></i>
+            <span class="menu-name">Messages</span>
         </a>
     </li>
 
@@ -85,6 +140,16 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
                         <i class="bi bi-building"></i><span>Organizations</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="../data_files/?view=admin_categories" class="<?= $lc('admin_categories') ?>">
+                        <i class="bi bi-grid-3x3-gap-fill"></i><span>Categories</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="../data_files/?view=admin_combinations" class="<?= $lc('admin_combinations') ?>">
+                        <i class="bi bi-diagram-3-fill"></i><span>Combinations</span>
+                    </a>
+                </li>
             </ul>
         </div>
     </li>
@@ -126,13 +191,18 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
     <?php endif; ?>
     <script>
     (function(){
-        fetch('../data_files/ajax/ajax_course_review.php?action=stats')
-        .then(r=>r.json()).then(r=>{
-            if(r.status==='success' && r.pending > 0){
+        Promise.all([
+            fetch('../data_files/ajax/ajax_course_review.php?action=stats').then(r=>r.json()).catch(()=>null),
+            fetch('../data_files/ajax/ajax_delete_chapter.php?action=list_del&filter=pending').then(r=>r.json()).catch(()=>null)
+        ]).then(([r1, r2]) => {
+            let total = 0;
+            if (r1 && r1.status === 'success') total += (r1.pending || 0);
+            if (r2 && r2.status === 'success') total += (r2.pending || 0);
+            if (total > 0) {
                 const b = document.getElementById('sideReviewBadge');
-                if(b){ b.textContent = r.pending; b.style.display='inline'; }
+                if (b) { b.textContent = total; b.style.display = 'inline'; }
             }
-        }).catch(()=>{});
+        });
     })();
     </script>
 
@@ -299,9 +369,17 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
     </li>
     <?php endif; ?>
 
-    <!-- Student Exam Centre -->
-    <?php if (canAccessModule($user_perms, 'student_exams')): ?>
+    <!-- Student Exam Centre — only for Pre-School / Primary / Secondary / High School students -->
+    <?php if (canAccessModule($user_perms, 'student_exams') && $_examAllowedForLevel): ?>
     <div class="dcm-nav-group">Student Centre</div>
+    <?php if (($user_role ?? 0) == 1): ?>
+    <li class="nav-item">
+        <a href="../data_files/?view=student_interests" class="<?= $lc('student_interests') ?>">
+            <i class="menu-icon bi bi-stars"></i>
+            <span class="menu-name">My Interests</span>
+        </a>
+    </li>
+    <?php endif; ?>
     <li class="nav-item">
         <a href="#menuStudentExam" class="<?= $pc('menuStudentExam') ?>" data-bs-toggle="collapse" aria-expanded="<?= $ae('menuStudentExam') ?>">
             <i class="menu-icon bi bi-mortarboard-fill"></i>

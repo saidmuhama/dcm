@@ -276,8 +276,25 @@ $maxUsers = $orgRow['max_users'] == -1 ? '∞' : number_format($orgRow['max_user
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-semibold">Custom Password <span class="text-muted fw-normal">(optional)</span></label>
-              <input type="password" class="form-control" id="amPassword" placeholder="Leave blank for default">
+              <div class="input-group">
+                <input type="password" class="form-control" id="amPassword" placeholder="Leave blank for default">
+                <button class="btn btn-outline-secondary" type="button" onclick="omTogglePw()" tabindex="-1"><i class="bi bi-eye" id="amPwEyeIcon"></i></button>
+              </div>
             </div>
+          </div>
+          <!-- Course access preview -->
+          <div id="amCoursesPreview" class="mt-3 p-3 rounded-3" style="background:#f0fdf4;border:1px solid #bbf7d0;display:none">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-collection-fill text-success" style="font-size:.9rem"></i>
+              <strong class="small text-success-emphasis">This member will have access to:</strong>
+            </div>
+            <div id="amCoursesList" class="d-flex flex-wrap gap-1"></div>
+          </div>
+          <div id="amCoursesNone" class="mt-3 p-2 rounded-2 text-center" style="background:#fef9c3;border:1px solid #fde68a;display:none">
+            <small style="color:#92400e"><i class="bi bi-exclamation-triangle me-1"></i>No courses subscribed to your organization yet. Go to <strong>Courses</strong> to subscribe.</small>
+          </div>
+          <div id="amCoursesLoading" class="mt-3 text-center" style="display:none">
+            <span class="spinner-border spinner-border-sm text-secondary me-1"></span><small class="text-muted">Loading course access…</small>
           </div>
         </div>
       </div>
@@ -379,9 +396,63 @@ $maxUsers = $orgRow['max_users'] == -1 ? '∞' : number_format($orgRow['max_user
   </div>
 </div>
 
+<!-- ── Credentials Modal ── -->
+<div class="modal fade" id="credentialsModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0" style="background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);color:#fff;border-radius:calc(.5rem - 1px) calc(.5rem - 1px) 0 0">
+        <h6 class="modal-title fw-bold"><i class="bi bi-person-check-fill me-2" style="color:#a5f3fc"></i>Account Created — Login Credentials</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Member info row -->
+        <div id="credMemberInfo" class="d-flex align-items-center gap-3 mb-4 p-3 rounded-3" style="background:#f8fafc;border:1px solid #f1f5f9"></div>
+
+        <!-- Email -->
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-uppercase text-muted" style="letter-spacing:.05em">Login Email</label>
+          <div class="input-group input-group-sm">
+            <input type="text" id="credEmail" class="form-control font-monospace" readonly>
+            <button class="btn btn-outline-secondary" onclick="omCopyField('credEmail')" title="Copy email"><i class="bi bi-clipboard"></i></button>
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="mb-4">
+          <label class="form-label small fw-semibold text-uppercase text-muted" style="letter-spacing:.05em">Password</label>
+          <div class="input-group input-group-sm">
+            <input type="text" id="credPassword" class="form-control font-monospace" readonly>
+            <button class="btn btn-outline-secondary" onclick="omCopyField('credPassword')" title="Copy password"><i class="bi bi-clipboard"></i></button>
+          </div>
+        </div>
+
+        <!-- Course access -->
+        <div id="credCoursesSection" style="display:none">
+          <div class="small fw-bold text-uppercase text-muted mb-2" style="letter-spacing:.05em"><i class="bi bi-collection-fill me-1 text-success"></i>Has Access To</div>
+          <div id="credCoursesList" class="d-flex flex-wrap gap-1 mb-3"></div>
+        </div>
+
+        <!-- Phone note -->
+        <div id="credPhoneNote" class="small text-muted" style="display:none"></div>
+      </div>
+      <div class="modal-footer border-0 bg-light gap-2">
+        <button class="btn btn-sm btn-outline-success me-auto" id="credSmsBtn" onclick="omSendCredentialsSMS()" style="display:none">
+          <i class="bi bi-chat-dots-fill me-1"></i>Send via SMS
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="omCopyAll()">
+          <i class="bi bi-clipboard-fill me-1"></i>Copy All
+        </button>
+        <button class="btn btn-primary px-4" data-bs-dismiss="modal">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const OM_AJAX = '../data_files/ajax/ajax_org_admin.php';
-let omView = 'grid', omDepts = [], omSearchTimer;
+let omView = 'grid', omDepts = [], omSearchTimer, memberList = [];
+let omOrgCourses = null; // null = not loaded yet
+let omLastCreds  = null; // credentials from last create
 
 const roleColors = {admin:'#ef4444',coordinator:'#f59e0b',instructor:'#06b6d4',student:'#6366f1',staff:'#64748b'};
 const roleBg     = {admin:'#fee2e2',coordinator:'#fef3c7',instructor:'#cffafe',student:'#eef2ff',staff:'#f1f5f9'};
@@ -427,10 +498,11 @@ async function omLoadMembers() {
 }
 
 function renderGrid(members) {
+    memberList = members;
     document.getElementById('omGridWrap').classList.remove('d-none');
     document.getElementById('omListWrap').classList.add('d-none');
     if (!members.length) { document.getElementById('omGridView').innerHTML = ''; return; }
-    document.getElementById('omGridView').innerHTML = members.map(m => {
+    document.getElementById('omGridView').innerHTML = members.map((m, idx) => {
         const initials = ((m.first_name||'')[0]+(m.last_name||'')[0]).toUpperCase();
         const col = roleColors[m.org_role] || '#94a3b8';
         const bg  = roleBg[m.org_role]    || '#f1f5f9';
@@ -456,9 +528,10 @@ function renderGrid(members) {
               ${m.employee_id ? `<div style="font-size:.7rem;color:#94a3b8;margin-top:.2rem"><i class="bi bi-tag me-1"></i>${esc(m.employee_id)}</div>` : ''}
             </div>
             <div class="d-flex border-top" style="border-color:#f1f5f9!important">
-              <button class="om-act-btn flex-fill justify-content-center" style="background:none;border-right:1px solid #f1f5f9;border-radius:0;color:#6366f1" onclick='omOpenEdit(${JSON.stringify(m)})' title="Edit"><i class="bi bi-pencil-fill"></i></button>
-              <button class="om-act-btn flex-fill justify-content-center" style="background:none;border-right:1px solid #f1f5f9;border-radius:0;color:#d97706" onclick="omResetPasswordFor('${esc(m.usr_code)}')" title="Reset Password"><i class="bi bi-key-fill"></i></button>
-              <button class="om-act-btn flex-fill justify-content-center" style="background:none;border-radius:0;color:#dc2626" onclick="omRemove('${esc(m.usr_code)}','${esc(m.first_name+' '+m.last_name)}')" title="Remove"><i class="bi bi-person-dash-fill"></i></button>
+              <button class="om-act-btn flex-fill justify-content-center" style="background:none;border-right:1px solid #f1f5f9;border-radius:0;color:#6366f1" onclick="omOpenEdit(${idx})" title="Edit"><i class="bi bi-pencil-fill"></i></button>
+              <button class="om-act-btn flex-fill justify-content-center" style="background:none;border-right:1px solid #f1f5f9;border-radius:0;color:#0891b2" onclick="omSendCredsToMember(${idx})" title="Send Credentials via SMS"><i class="bi bi-phone-fill"></i></button>
+              <button class="om-act-btn flex-fill justify-content-center" style="background:none;border-right:1px solid #f1f5f9;border-radius:0;color:#d97706" onclick="omResetPasswordFor('${m.usr_code}')" title="Reset Password"><i class="bi bi-key-fill"></i></button>
+              <button class="om-act-btn flex-fill justify-content-center" style="background:none;border-radius:0;color:#dc2626" onclick="omRemove(${idx})" title="Remove"><i class="bi bi-person-dash-fill"></i></button>
             </div>
           </div>
         </div>`;
@@ -466,10 +539,11 @@ function renderGrid(members) {
 }
 
 function renderList(members) {
+    memberList = members;
     document.getElementById('omGridWrap').classList.add('d-none');
     document.getElementById('omListWrap').classList.remove('d-none');
     if (!members.length) { document.getElementById('omListTbody').innerHTML = ''; return; }
-    document.getElementById('omListTbody').innerHTML = members.map(m => {
+    document.getElementById('omListTbody').innerHTML = members.map((m, idx) => {
         const initials = ((m.first_name||'')[0]+(m.last_name||'')[0]).toUpperCase();
         const col = roleColors[m.org_role] || '#94a3b8';
         const bg  = roleBg[m.org_role]    || '#f1f5f9';
@@ -492,16 +566,17 @@ function renderList(members) {
           <td style="color:#94a3b8;font-size:.78rem">${fmtDate(m.joined_at)}</td>
           <td class="text-end pe-4">
             <div class="d-flex gap-1 justify-content-end">
-              <button class="om-act-btn" style="background:#eef2ff;color:#6366f1" onclick='omOpenEdit(${JSON.stringify(m)})' title="Edit"><i class="bi bi-pencil-fill"></i></button>
-              <button class="om-act-btn" style="background:#fef3c7;color:#d97706" onclick="omResetPasswordFor('${esc(m.usr_code)}')" title="Reset Password"><i class="bi bi-key-fill"></i></button>
-              <button class="om-act-btn" style="background:#fee2e2;color:#dc2626" onclick="omRemove('${esc(m.usr_code)}','${esc(m.first_name+' '+m.last_name)}')" title="Remove"><i class="bi bi-person-dash-fill"></i></button>
+              <button class="om-act-btn" style="background:#eef2ff;color:#6366f1" onclick="omOpenEdit(${idx})" title="Edit"><i class="bi bi-pencil-fill"></i></button>
+              <button class="om-act-btn" style="background:#e0f2fe;color:#0891b2" onclick="omSendCredsToMember(${idx})" title="Send Credentials via SMS"><i class="bi bi-phone-fill"></i></button>
+              <button class="om-act-btn" style="background:#fef3c7;color:#d97706" onclick="omResetPasswordFor('${m.usr_code}')" title="Reset Password"><i class="bi bi-key-fill"></i></button>
+              <button class="om-act-btn" style="background:#fee2e2;color:#dc2626" onclick="omRemove(${idx})" title="Remove"><i class="bi bi-person-dash-fill"></i></button>
             </div>
           </td>
         </tr>`;
     }).join('');
 }
 
-function setView(v) {
+window.setView = function(v) {
     omView = v;
     document.getElementById('viewGrid').classList.toggle('active', v==='grid');
     document.getElementById('viewList').classList.toggle('active', v==='list');
@@ -510,7 +585,7 @@ function setView(v) {
 
 // ── Tab switching in Add modal ──
 let omAddTab = 'existing';
-function omSwitchTab(tab) {
+window.omSwitchTab = function(tab) {
     omAddTab = tab;
     document.getElementById('tabExisting').classList.toggle('d-none', tab!=='existing');
     document.getElementById('tabCreate').classList.toggle('d-none',   tab!=='create');
@@ -519,16 +594,77 @@ function omSwitchTab(tab) {
     document.getElementById('amSubmitBtn').innerHTML = tab==='existing'
         ? '<i class="bi bi-check2 me-1"></i>Add Member'
         : '<i class="bi bi-person-plus-fill me-1"></i>Create & Add';
+    if (tab === 'create' && omOrgCourses === null) omLoadOrgCourses();
 }
 
-function omOpenAdd() {
+async function omLoadOrgCourses() {
+    ['amCoursesPreview','amCoursesNone'].forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById('amCoursesLoading').style.display = '';
+    const r = await fetch(`${OM_AJAX}?action=org_course_list`).then(x=>x.json()).catch(()=>({}));
+    omOrgCourses = r.courses ?? [];
+    document.getElementById('amCoursesLoading').style.display = 'none';
+    if (omOrgCourses.length) {
+        document.getElementById('amCoursesList').innerHTML = omOrgCourses.map(c =>
+            `<span style="background:#dcfce7;color:#166534;border-radius:100px;padding:.2rem .7rem;font-size:.72rem;font-weight:700;border:1px solid #bbf7d0">${esc(c.title)}</span>`
+        ).join('');
+        document.getElementById('amCoursesPreview').style.display = '';
+    } else {
+        document.getElementById('amCoursesNone').style.display = '';
+    }
+}
+
+window.omOpenAdd = function() {
+    /* reset all fields */
+    ['amEmail','amEmpId','amFirstName','amLastName','amNewEmail','amPhone','amPassword'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+    ['amRole','amRoleCreate'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = 'student';
+    });
+    ['amDept','amDeptCreate'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+    /* hide any previous inline alert */
+    const alertEl = document.getElementById('amInlineAlert');
+    if (alertEl) alertEl.style.display = 'none';
+
     omSwitchTab('existing');
-    new bootstrap.Modal(document.getElementById('addMemberModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('addMemberModal')).show();
 }
 
-async function omSubmitAdd() {
+function omShowAddAlert(msg, type='danger') {
+    let alertEl = document.getElementById('amInlineAlert');
+    if (!alertEl) {
+        alertEl = document.createElement('div');
+        alertEl.id = 'amInlineAlert';
+        alertEl.className = 'alert alert-' + type + ' py-2 small mb-0 mt-3';
+        /* insert before modal footer */
+        document.querySelector('#addMemberModal .modal-footer')?.before(alertEl);
+    }
+    alertEl.className = 'alert alert-' + type + ' py-2 small mb-0 mt-3';
+    alertEl.innerHTML = `<i class="bi bi-exclamation-circle me-1"></i>${esc(msg)}`;
+    alertEl.style.display = '';
+}
+
+window.omSubmitAdd = async function() {
     const btn = document.getElementById('amSubmitBtn');
-    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+    const alertEl = document.getElementById('amInlineAlert');
+    if (alertEl) alertEl.style.display = 'none';
+
+    /* Front-end validation */
+    if (omAddTab === 'existing') {
+        const email = v('amEmail').trim();
+        if (!email) { omShowAddAlert('Email address is required.'); return; }
+    } else {
+        const fname = v('amFirstName').trim();
+        const email = v('amNewEmail').trim();
+        if (!fname) { omShowAddAlert('First name is required.'); return; }
+        if (!email) { omShowAddAlert('Email address is required.'); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { omShowAddAlert('Please enter a valid email address.'); return; }
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
     let r;
     if (omAddTab === 'existing') {
         r = await post({ action:'add_member', email:v('amEmail'), org_role:v('amRole'), dept_id:v('amDept'), employee_id:v('amEmpId') });
@@ -539,17 +675,23 @@ async function omSubmitAdd() {
     }
     btn.disabled = false;
     btn.innerHTML = omAddTab==='existing' ? '<i class="bi bi-check2 me-1"></i>Add Member' : '<i class="bi bi-person-plus-fill me-1"></i>Create & Add';
-    if (r.status==='success') {
-        bootstrap.Modal.getInstance(document.getElementById('addMemberModal'))?.hide();
-        omToast(r.message || 'Member added successfully');
+
+    if (r.status === 'success') {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('addMemberModal')).hide();
         omLoadMembers();
+        if (omAddTab === 'create' && r.credentials) {
+            setTimeout(() => omShowCredentials(r.credentials, r.sms_sent), 400);
+        } else {
+            omToast(r.message || 'Member added successfully');
+        }
     } else {
-        omToast(r.message || 'Failed to add member', 'danger');
+        omShowAddAlert(r.message || 'Failed. Please try again.');
     }
 }
 
 // ── Edit ──
-function omOpenEdit(m) {
+window.omOpenEdit = function(idx) {
+    const m = memberList[idx];
     document.getElementById('emUsrCode').value = m.usr_code;
     document.getElementById('emRole').value   = m.org_role;
     document.getElementById('emEmpId').value  = m.employee_id || '';
@@ -563,10 +705,10 @@ function omOpenEdit(m) {
           <div class="fw-semibold">${esc(m.first_name)} ${esc(m.last_name)}</div>
           <div style="font-size:.75rem;color:#64748b">${esc(m.email)}</div>
         </div>`;
-    new bootstrap.Modal(document.getElementById('editMemberModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('editMemberModal')).show();
 }
 
-async function omSubmitEdit() {
+window.omSubmitEdit = async function() {
     const r = await post({ action:'update_member', usr_code:v('emUsrCode'), org_role:v('emRole'), dept_id:v('emDept'), employee_id:v('emEmpId'), status:v('emStatus') });
     if (r.status==='success') {
         bootstrap.Modal.getInstance(document.getElementById('editMemberModal'))?.hide();
@@ -576,7 +718,9 @@ async function omSubmitEdit() {
 }
 
 // ── Remove ──
-async function omRemove(usrCode, name) {
+window.omRemove = async function(idx) {
+    const m = memberList[idx];
+    const usrCode = m.usr_code, name = `${m.first_name} ${m.last_name}`;
     const res = await Swal.fire({ title:`Remove ${name}?`, text:'They will lose access to the organization.',
         icon:'warning', showCancelButton:true, confirmButtonText:'Remove', confirmButtonColor:'#dc2626', reverseButtons:true });
     if (!res.isConfirmed) return;
@@ -586,8 +730,8 @@ async function omRemove(usrCode, name) {
 }
 
 // ── Reset password ──
-async function omResetPassword() { omResetPasswordFor(v('emUsrCode')); }
-async function omResetPasswordFor(usrCode) {
+window.omResetPassword = async function() { omResetPasswordFor(v('emUsrCode')); }
+window.omResetPasswordFor = async function(usrCode) {
     const res = await Swal.fire({ title:'Reset Password?', text:'Password will be reset to DigitalClass@123',
         icon:'question', showCancelButton:true, confirmButtonText:'Reset', confirmButtonColor:'#d97706', reverseButtons:true });
     if (!res.isConfirmed) return;
@@ -597,11 +741,11 @@ async function omResetPasswordFor(usrCode) {
 }
 
 // ── CSV Import ──
-function omOpenImport() {
+window.omOpenImport = function() {
     document.getElementById('csvFile').value = '';
     document.getElementById('importPreview').innerHTML = '';
     document.getElementById('btnImport').disabled = true;
-    new bootstrap.Modal(document.getElementById('importModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('importModal')).show();
 }
 document.getElementById('csvFile').addEventListener('change', function() {
     if (!this.files[0]) return;
@@ -617,7 +761,7 @@ document.getElementById('csvFile').addEventListener('change', function() {
     };
     reader.readAsText(this.files[0]);
 });
-async function omSubmitImport() {
+window.omSubmitImport = async function() {
     const file = document.getElementById('csvFile').files[0];
     if (!file) return;
     const fd = new FormData(); fd.append('action','import_members'); fd.append('csv_file', file);
@@ -631,11 +775,120 @@ async function omSubmitImport() {
         omLoadMembers();
     } else omToast(r.message||'Import failed', 'danger');
 }
-function omDownloadTemplate(e) {
+window.omDownloadTemplate = function(e) {
     e.preventDefault();
     const csv = 'first_name,last_name,email,org_role,dept_code,employee_id\nJohn,Doe,john@example.com,student,,STU001\nJane,Smith,jane@example.com,instructor,,INS001';
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
     a.download = 'member_import_template.csv'; a.click();
+}
+
+// ── Credentials modal ──
+function omShowCredentials(cred, smsSent) {
+    omLastCreds = cred;
+    document.getElementById('credEmail').value    = cred.email;
+    document.getElementById('credPassword').value = cred.password;
+
+    const initials = ((cred.name || ' ')[0]).toUpperCase();
+    document.getElementById('credMemberInfo').innerHTML = `
+        <div style="width:46px;height:46px;border-radius:50%;background:#6366f1;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:1.1rem;flex-shrink:0">${esc(initials)}</div>
+        <div>
+          <div class="fw-semibold">${esc(cred.name)}</div>
+          <div style="font-size:.75rem;color:#64748b">Account ready — share credentials below</div>
+        </div>
+        <i class="bi bi-check-circle-fill text-success ms-auto" style="font-size:1.5rem"></i>`;
+
+    const cs = document.getElementById('credCoursesSection');
+    if (omOrgCourses && omOrgCourses.length) {
+        cs.style.display = '';
+        document.getElementById('credCoursesList').innerHTML = omOrgCourses.map(c =>
+            `<span style="background:#dcfce7;color:#166534;border-radius:100px;padding:.2rem .7rem;font-size:.72rem;font-weight:700;border:1px solid #bbf7d0">${esc(c.title)}</span>`
+        ).join('');
+    } else { cs.style.display = 'none'; }
+
+    const smsBtn    = document.getElementById('credSmsBtn');
+    const phoneNote = document.getElementById('credPhoneNote');
+    if (cred.phone) {
+        phoneNote.style.display = '';
+        if (smsSent) {
+            smsBtn.style.display = 'none';
+            phoneNote.innerHTML  = `<i class="bi bi-check-circle-fill text-success me-1"></i>Credentials sent via SMS to <strong>${esc(cred.phone)}</strong>`;
+        } else {
+            smsBtn.style.display = '';
+            phoneNote.innerHTML  = `<i class="bi bi-phone me-1"></i>SMS will be sent to <strong>${esc(cred.phone)}</strong>`;
+        }
+    } else {
+        smsBtn.style.display    = 'none';
+        phoneNote.style.display = 'none';
+    }
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('credentialsModal')).show();
+}
+
+window.omSendCredentialsSMS = async function() {
+    if (!omLastCreds) return;
+    const btn = document.getElementById('credSmsBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Sending…';
+    const r = await post({ action:'send_credentials', usr_code:omLastCreds.usr_code });
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-chat-dots-fill me-1"></i>Send via SMS';
+    if (r.status === 'success' && r.temp_password) {
+        omLastCreds.password = r.temp_password;
+        const pw = document.getElementById('credPassword');
+        if (pw) pw.value = r.temp_password;
+    }
+    omToast(r.message || (r.status==='success' ? 'SMS sent' : 'Failed'), r.status==='success' ? 'success' : 'danger');
+}
+
+window.omSendCredsToMember = async function(idx) {
+    const m = memberList[idx];
+    const usrCode = m.usr_code, name = `${m.first_name} ${m.last_name}`;
+    const confirmed = await Swal.fire({
+        title: 'Send Credentials?',
+        html: `A new temporary password will be generated and sent via SMS to <strong>${esc(name)}</strong>.<br><br>They will be required to change it on first login.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Send SMS',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#0891b2',
+    });
+    if (!confirmed.isConfirmed) return;
+
+    Swal.fire({ title: 'Sending…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    const r = await post({ action: 'send_credentials', usr_code: usrCode });
+    Swal.close();
+
+    if (r.status === 'success') {
+        Swal.fire({
+            icon: 'success',
+            title: 'Credentials Sent',
+            html: `SMS sent successfully.<br><small class="text-muted">Temporary password: <strong>${esc(r.temp_password||'')}</strong></small>`,
+            confirmButtonColor: '#0891b2',
+        });
+    } else {
+        Swal.fire('Failed', r.message || 'Could not send SMS', 'error');
+    }
+}
+
+window.omCopyField = function(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    navigator.clipboard?.writeText(el.value).then(() => omToast('Copied!')).catch(() => {
+        el.select(); document.execCommand('copy'); omToast('Copied!');
+    });
+}
+
+window.omCopyAll = function() {
+    if (!omLastCreds) return;
+    const text = `Name: ${omLastCreds.name}\nEmail: ${omLastCreds.email}\nPassword: ${omLastCreds.password}`;
+    navigator.clipboard?.writeText(text).then(() => omToast('Credentials copied!')).catch(() => omToast('Copy failed','danger'));
+}
+
+window.omTogglePw = function() {
+    const inp = document.getElementById('amPassword');
+    const ico = document.getElementById('amPwEyeIcon');
+    if (!inp) return;
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    ico.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
 }
 
 // ── Helpers ──

@@ -311,8 +311,8 @@ require_once __DIR__ . '/../config/url_crypt_config.php';
 </div>
 
 <script>
-const AJAX = '../data_files/ajax/ajax_organizations.php';
-let currentPage = 1, plans = [], searchTimer;
+const AJAX = 'ajax/ajax_organizations.php';
+let currentPage = 1, plans = [], searchTimer, orgList = [];
 
 // ── Load plans for dropdowns ────────────────────────────────────
 (function loadPlans(){
@@ -350,9 +350,10 @@ function loadOrgs(page = 1) {
     plan:   $('#planFilter').val(),
   }, function(r) {
     if(r.status !== 'success'){ $('#orgBody').html('<tr><td colspan="9" class="text-center text-danger py-4">Failed to load</td></tr>'); return; }
+    orgList = r.data;
     let html = '';
     if(!r.data.length){ html = '<tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-building opacity-30" style="font-size:2rem"></i><div class="mt-2">No organizations found</div></td></tr>'; }
-    r.data.forEach(o => {
+    r.data.forEach((o, idx) => {
       const typeColors = {school:'#6366f1',college:'#8b5cf6',company:'#3b82f6',institution:'#0891b2',training_center:'#059669'};
       const tc = typeColors[o.org_type] || '#64748b';
       const typeLabel = {school:'School',college:'College',company:'Company',institution:'Institution',training_center:'Training Ctr'}[o.org_type] || o.org_type;
@@ -382,11 +383,12 @@ function loadOrgs(page = 1) {
         <td class="text-end pe-3">
           <div class="d-flex gap-1 justify-content-end">
             <a href="?view=admin_org_detail&oid=${encodeURIComponent(o.oid_token)}" class="btn btn-sm btn-primary" title="Manage"><i class="bi bi-folder2-open"></i></a>
-            <button class="btn btn-sm btn-outline-secondary" onclick='openEdit(${JSON.stringify(o)})' title="Edit"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm btn-outline-${o.status==='active'?'warning':'success'}" onclick="toggleStatus('${o.oid_token}','${o.status==='active'?'suspended':'active'}','${o.org_name}')" title="${o.status==='active'?'Suspend':'Activate'}">
+            <button class="btn btn-sm btn-outline-secondary" onclick="openEdit(${idx})" title="Edit"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-info" onclick="resetAdminPass(${idx})" title="Reset Admin Password"><i class="bi bi-key-fill"></i></button>
+            <button class="btn btn-sm btn-outline-${o.status==='active'?'warning':'success'}" onclick="toggleStatus(${idx})" title="${o.status==='active'?'Suspend':'Activate'}">
               <i class="bi bi-${o.status==='active'?'pause-circle':'play-circle'}"></i>
             </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteOrg('${o.oid_token}','${o.org_name}')" title="Delete"><i class="bi bi-trash"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteOrg(${idx})" title="Delete"><i class="bi bi-trash"></i></button>
           </div>
         </td>
       </tr>`;
@@ -407,9 +409,9 @@ $('#searchInput').on('input',function(){ clearTimeout(searchTimer); searchTimer=
 $('#typeFilter,#statusFilter,#planFilter').on('change',()=>loadOrgs(1));
 
 // ── Create ──────────────────────────────────────────────────────
-function openCreate(){ new bootstrap.Modal('#createOrgModal').show(); }
+window.openCreate = function(){ bootstrap.Modal.getOrCreateInstance(document.getElementById('createOrgModal')).show(); };
 
-function submitCreate(){
+window.submitCreate = function(){
   const pass = $('#c_ad_pass').val(), pass2 = $('#c_ad_pass2').val();
   if(pass !== pass2){ Swal.fire('Error','Passwords do not match','error'); return; }
   const btn = $('#createBtn').prop('disabled',true).text('Creating…');
@@ -428,7 +430,7 @@ function submitCreate(){
     success(r){
       btn.prop('disabled',false).html('<i class="bi bi-check2 me-1"></i>Create Organization');
       if(r.status==='success'){
-        bootstrap.Modal.getInstance('#createOrgModal').hide();
+        bootstrap.Modal.getInstance(document.getElementById('createOrgModal'))?.hide();
         Swal.fire({icon:'success',title:'Organization Created',text:`Code: ${r.org_code}`,timer:3000,showConfirmButton:false});
         loadOrgs(1); loadStats();
       } else {
@@ -438,8 +440,52 @@ function submitCreate(){
   });
 }
 
+// ── Reset Admin Password ─────────────────────────────────────────
+window.resetAdminPass = async function(idx) {
+  const o = orgList[idx];
+  const oidToken = o.oid_token, adminName = o.admin_name || 'Admin';
+  const confirmed = await Swal.fire({
+    title: 'Reset Admin Password?',
+    html: `A new temporary password will be generated for <strong>${adminName}</strong>.<br><br>They will be required to change it on first login. If a phone number is on file, it will be sent via SMS.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Reset Password',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: '#0891b2',
+  });
+  if (!confirmed.isConfirmed) return;
+
+  Swal.fire({ title: 'Resetting…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  $.ajax({ url: AJAX, method: 'POST', contentType: 'application/json',
+    data: JSON.stringify({ action: 'reset_admin_password', oid: oidToken }),
+    dataType: 'json',
+    success(r) {
+      Swal.close();
+      if (r.status !== 'success') { Swal.fire('Error', r.message || 'Failed', 'error'); return; }
+      const smsLine = r.sms_sent
+        ? `<div class="alert alert-success border-0 py-2 small mt-2"><i class="bi bi-check-circle-fill me-1"></i>Credentials sent via SMS to <strong>${r.phone}</strong></div>`
+        : (r.phone ? `<div class="alert alert-warning border-0 py-2 small mt-2"><i class="bi bi-exclamation-circle me-1"></i>SMS failed — share manually</div>` : '');
+      Swal.fire({
+        icon: 'success',
+        title: 'Password Reset',
+        html: `
+          <p class="mb-2">Temporary password for <strong>${r.admin_name}</strong>:</p>
+          <div class="input-group input-group-sm mb-2">
+            <input type="text" class="form-control font-monospace fw-bold text-center" id="resetPwField" value="${r.temp_password}" readonly>
+            <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText('${r.temp_password}')"><i class="bi bi-clipboard"></i></button>
+          </div>
+          <small class="text-muted d-block mb-1">Login email: <strong>${r.email}</strong></small>
+          ${smsLine}`,
+        confirmButtonText: 'Done',
+        confirmButtonColor: '#6366f1',
+      });
+    }
+  });
+}
+
 // ── Edit ────────────────────────────────────────────────────────
-function openEdit(o){
+window.openEdit = function(idx){
+  const o = orgList[idx];
   $('#e_oid').val(o.oid_token);
   $('#e_name').val(o.org_name); $('#e_type').val(o.org_type);
   $('#e_email').val(o.email||''); $('#e_phone').val(o.phone||'');
@@ -447,10 +493,10 @@ function openEdit(o){
   $('#e_domain').val(o.domain||''); $('#e_status').val(o.status);
   $('#e_plan').val(o.plan_id||''); $('#e_license').val(o.license_expires_at||'');
   $('#e_max_users').val(o.max_users||50); $('#e_notes').val(o.notes||'');
-  new bootstrap.Modal('#editOrgModal').show();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('editOrgModal')).show();
 }
 
-function submitEdit(){
+window.submitEdit = function(){
   $.ajax({url:AJAX, method:'POST', contentType:'application/json',
     data: JSON.stringify({
       action:'update', oid: $('#e_oid').val(),
@@ -463,7 +509,7 @@ function submitEdit(){
     }),
     success(r){
       if(r.status==='success'){
-        bootstrap.Modal.getInstance('#editOrgModal').hide();
+        bootstrap.Modal.getInstance(document.getElementById('editOrgModal'))?.hide();
         Swal.fire({icon:'success',title:'Updated',timer:1800,showConfirmButton:false});
         loadOrgs(currentPage);
       } else { Swal.fire('Error',r.message||'Failed','error'); }
@@ -472,7 +518,11 @@ function submitEdit(){
 }
 
 // ── Toggle status ───────────────────────────────────────────────
-function toggleStatus(oidToken, newStatus, name){
+window.toggleStatus = function(idx){
+  const o = orgList[idx];
+  const oidToken = o.oid_token;
+  const newStatus = o.status === 'active' ? 'suspended' : 'active';
+  const name = o.org_name;
   const label = newStatus === 'suspended' ? 'Suspend' : 'Activate';
   Swal.fire({
     title:`${label} "${name}"?`,
@@ -491,7 +541,9 @@ function toggleStatus(oidToken, newStatus, name){
 }
 
 // ── Delete ──────────────────────────────────────────────────────
-function deleteOrg(oidToken, name){
+window.deleteOrg = function(idx){
+  const o = orgList[idx];
+  const oidToken = o.oid_token, name = o.org_name;
   Swal.fire({
     title:`Delete "${name}"?`,
     text:'All org data will be archived. Members retain their accounts.',

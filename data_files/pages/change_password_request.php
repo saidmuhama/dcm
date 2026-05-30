@@ -1,3 +1,4 @@
+<?php $forcePwChange = !empty($_SESSION['force_pw_change']); ?>
 <div class="container-fluid">
     <div class="auth-wrapper">
         <div class="row justify-content-center minheight-dynamic" style="--mih-dynamic: calc(100vh - 120px)">
@@ -5,6 +6,15 @@
                 <div class="h-100 py-4 px-3">
                     <div class="row h-100 align-items-center justify-content-center mt-md-3">
                         <div class="col-11 col-sm-8 col-md-11 col-xl-11 col-xxl-10 login-box">
+                            <?php if ($forcePwChange): ?>
+                            <div class="alert border-0 mb-3 d-flex align-items-start gap-2" style="background:#fef3c7;border-left:4px solid #f59e0b!important;border-radius:12px" role="alert">
+                                <i class="bi bi-shield-lock-fill mt-1" style="color:#d97706;flex-shrink:0"></i>
+                                <div>
+                                    <div class="fw-semibold" style="color:#92400e;font-size:.88rem">Password change required</div>
+                                    <div class="small" style="color:#78350f">Your account was set up by your organization. Please set a personal password before you can continue.</div>
+                                </div>
+                            </div>
+                            <?php endif; ?>
                             <h1 class="mb-0">Update Password</h1>
                             <h4 class="mb-3">Almost done!</h4>
                             <p class="text-secondary">
@@ -67,6 +77,7 @@
 </div>
 
 <script>
+const _forcePasswordChange = <?= $forcePwChange ? 'true' : 'false' ?>;
 document.addEventListener("DOMContentLoaded", function(){
 
     // ================= TOGGLE PASSWORD =================
@@ -135,7 +146,7 @@ document.addEventListener("DOMContentLoaded", function(){
             didOpen: () => Swal.showLoading()
         });
 
-        fetch("ajax/change_password.php",{
+        fetch("ajax/ajax_change_password.php",{
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body: JSON.stringify({
@@ -148,7 +159,12 @@ document.addEventListener("DOMContentLoaded", function(){
             Swal.close();
 
             if(res.status === "success"){
-                Swal.fire("Success", res.message, "success");
+                if(_forcePasswordChange){
+                    Swal.fire({icon:'success',title:'Password Updated',text:'Your password has been set. Welcome!',allowOutsideClick:false})
+                        .then(()=>{ window.location.href = window.location.pathname + '?view=3002'; });
+                } else {
+                    Swal.fire("Success", res.message, "success");
+                }
             }else{
                 Swal.fire("Error", res.message, "error");
             }

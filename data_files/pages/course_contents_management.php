@@ -72,6 +72,18 @@ if ($courseOwner != ($_SESSION['usr_code'] ?? '')) { ?>
     font-size: .68rem; padding: .18rem .5rem; font-weight: 600; flex-shrink: 0; }
 .ch-drag-handle { color: #cbd5e1; cursor: grab; font-size: .85rem; flex-shrink: 0; }
 
+/* ── Chapter header row (toggle + delete btn) ── */
+.ch-header { display: flex; align-items: center; }
+.ch-header .ch-toggle { flex: 1; min-width: 0; border-bottom: none; }
+.ch-del-btn {
+    width: 30px; height: 30px; border-radius: 7px; margin: 0 6px; flex-shrink: 0;
+    background: none; border: 1px solid transparent; color: #d1d5db;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: .8rem; transition: all .15s;
+}
+.ch-del-btn:hover { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+.ch-del-btn.pending { color: #f59e0b; border-color: #fde68a; background: #fef9c3; }
+
 .lesson-list { padding: .25rem .5rem .5rem 2rem; margin: 0; list-style: none; }
 .lesson-item {
     display: flex; align-items: center; gap: .5rem;
@@ -146,6 +158,12 @@ if ($courseOwner != ($_SESSION['usr_code'] ?? '')) { ?>
 .lesson-list.gu-over { background:rgba(99,102,241,.05); border-radius:8px;
     outline:2px dashed #6366f1; outline-offset:-2px; }
 .gu-transit { opacity:.3; }
+
+/* ── Chapter drag ── */
+.gu-mirror .ch-collapse { display:none !important; }
+.gu-mirror .ch-toggle { border-radius:8px; }
+#chapterAccordion.gu-over .ch-item { outline:2px dashed rgba(99,102,241,.35); outline-offset:-2px; border-radius:6px; }
+.ch-item.gu-transit { opacity:.3; }
 
 /* dark mode */
 @media(prefers-color-scheme:dark){
@@ -311,13 +329,18 @@ window.loadChapters = function(cid){
             totalLessons += lessonCount;
             html += `
             <div class="ch-item" data-chapter-id="${ch.id}">
-                <button class="ch-toggle" data-target="${colId}" onclick="toggleChapter(this,'${colId}')">
-                    <i class="bi bi-grip-vertical ch-drag-handle"></i>
-                    <i class="bi bi-folder2-open" style="color:#6366f1;font-size:.85rem"></i>
-                    <span style="flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(ch.chapter_title)}</span>
-                    <span class="ch-badge">${lessonCount}</span>
-                    <i class="bi bi-chevron-down ch-arrow"></i>
-                </button>
+                <div class="ch-header">
+                    <button class="ch-toggle" data-target="${colId}" onclick="toggleChapter(this,'${colId}')">
+                        <i class="bi bi-grip-vertical ch-drag-handle"></i>
+                        <i class="bi bi-folder2-open" style="color:#6366f1;font-size:.85rem"></i>
+                        <span style="flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(ch.chapter_title)}</span>
+                        <span class="ch-badge">${lessonCount}</span>
+                        <i class="bi bi-chevron-down ch-arrow"></i>
+                    </button>
+                    <button class="ch-del-btn" id="chDel_${ch.id}" title="Delete chapter" onclick="deleteChapter(${ch.id})">
+                        <i class="bi bi-trash3"></i>
+                    </button>
+                </div>
                 <div id="${colId}" class="ch-collapse">
                     <ul class="lesson-list lesson-sortable-list" id="lessonList-${ch.id}" data-chapter-id="${ch.id}">`;
             if(lessonCount){
@@ -353,6 +376,7 @@ window.loadChapters = function(cid){
             if(li) li.classList.add('active');
         }
         initLessonDragDrop();
+        initChapterDragDrop();
     })
     .catch(console.error);
 };
@@ -426,6 +450,125 @@ function initLessonDragDrop(){
             target.closest('.ch-item')?.querySelector('.ch-badge')
                 && (target.closest('.ch-item').querySelector('.ch-badge').textContent = target.querySelectorAll('.lesson-item').length);
         }).catch(()=>{ Swal.fire('Error','Could not move lesson','error'); drake.cancel(true); });
+    });
+}
+
+function initChapterDragDrop(){
+    const container = document.getElementById('chapterAccordion');
+    if(!container || typeof dragula === 'undefined') return;
+
+    // Destroy previous instance if any
+    if(window._chapterDrake){ try{ window._chapterDrake.destroy(); }catch(e){} }
+
+    window._chapterDrake = dragula([container],{
+        moves: (el, src, handle) => {
+            return handle.classList.contains('ch-drag-handle') ||
+                   handle.closest('.ch-drag-handle') !== null;
+        },
+        accepts: (el, target) => target === container,
+        direction: 'vertical'
+    });
+
+    window._chapterDrake.on('drop', ()=>{
+        const ids = Array.from(container.querySelectorAll('.ch-item[data-chapter-id]'))
+                        .map(el => el.dataset.chapterId);
+        fetch('ajax/ajax_reorder_chapters.php',{
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({course_id: COURSE_ID, chapter_ids: ids})
+        }).then(r=>r.json()).then(r=>{
+            if(r.status !== 'success') Swal.fire('Error', r.message || 'Could not save order', 'error');
+        }).catch(()=>{ Swal.fire('Error','Could not save chapter order','error'); });
+    });
+}
+
+/* ════════════════════════════════════════════════════════════
+   DELETE CHAPTER
+═══════════════════════════════════════════════════════════════ */
+async function deleteChapter(chapterId) {
+    const chItem     = document.querySelector(`.ch-item[data-chapter-id="${chapterId}"]`);
+    const titleEl    = chItem?.querySelector('.ch-toggle span');
+    const badgeEl    = chItem?.querySelector('.ch-badge');
+    const title      = titleEl?.textContent?.trim() || 'this chapter';
+    const lessonCount = parseInt(badgeEl?.textContent) || 0;
+
+    let note = '';
+
+    if (lessonCount === 0) {
+        /* empty chapter — confirm direct delete */
+        const res = await Swal.fire({
+            title: 'Delete chapter?',
+            html: `<p class="text-muted small mb-0">Chapter <strong>${esc(title)}</strong> is empty and will be permanently removed.</p>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-trash3 me-1"></i>Delete',
+            confirmButtonColor: '#dc2626',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true,
+        });
+        if (!res.isConfirmed) return;
+    } else {
+        /* non-empty / public / enrolled — request admin approval */
+        const res = await Swal.fire({
+            title: 'Request chapter deletion',
+            html: `
+                <p class="text-start text-muted small mb-3">
+                    Chapter <strong>${esc(title)}</strong> has <strong>${lessonCount}</strong> lesson(s).
+                    Deletion requires admin approval. All lesson content will be permanently removed when approved.
+                </p>
+                <textarea id="chDelNote" class="form-control form-control-sm" rows="3"
+                    placeholder="Reason for deletion (optional)…"
+                    style="border-radius:10px;resize:none;font-size:.83rem"></textarea>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-send me-1"></i>Submit for Approval',
+            confirmButtonColor: '#d97706',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true,
+            didOpen: () => { document.getElementById('chDelNote')?.focus(); }
+        });
+        if (!res.isConfirmed) return;
+        note = document.getElementById('chDelNote')?.value?.trim() || '';
+    }
+
+    /* disable the delete button while processing */
+    const delBtn = document.getElementById('chDel_' + chapterId);
+    if (delBtn) { delBtn.disabled = true; delBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>'; }
+
+    fetch('ajax/ajax_delete_chapter.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request', chapter_id: chapterId, note })
+    })
+    .then(r => r.json())
+    .then(r => {
+        if (r.status === 'success' && r.deleted) {
+            Swal.fire({ icon: 'success', title: 'Chapter deleted!', timer: 1400, showConfirmButton: false });
+            loadChapters();
+        } else if (r.status === 'approval_requested') {
+            Swal.fire({
+                icon: 'success', title: 'Request submitted!',
+                text: r.message,
+                confirmButtonColor: '#6366f1'
+            });
+            /* mark the button as pending */
+            if (delBtn) {
+                delBtn.disabled = false;
+                delBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+                delBtn.classList.add('pending');
+                delBtn.title = 'Deletion pending admin approval';
+            }
+        } else if (r.status === 'pending') {
+            Swal.fire({ icon: 'info', title: 'Already pending', text: r.message, confirmButtonColor: '#6366f1' });
+            if (delBtn) { delBtn.disabled = false; delBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>'; delBtn.classList.add('pending'); }
+        } else {
+            Swal.fire('Error', r.message || 'Could not process request', 'error');
+            if (delBtn) { delBtn.disabled = false; delBtn.innerHTML = '<i class="bi bi-trash3"></i>'; }
+        }
+    })
+    .catch(() => {
+        Swal.fire('Error', 'Network error. Please try again.', 'error');
+        if (delBtn) { delBtn.disabled = false; delBtn.innerHTML = '<i class="bi bi-trash3"></i>'; }
     });
 }
 
@@ -571,17 +714,75 @@ function handlePublishClick(){
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 /* ════════════════════════════════════════════════════════════
+   JODIT EDITOR  (lazy CDN load — replaces Froala globally)
+═══════════════════════════════════════════════════════════════ */
+window._dcmEditors = {};
+window._joditReady = false;
+window._joditQueue = [];
+
+function _joditLoad(cb){
+    if(window._joditReady){ cb(); return; }
+    window._joditQueue.push(cb);
+    if(document.getElementById('jodit-js')) return;
+    const link = document.createElement('link');
+    link.id = 'jodit-css'; link.rel = 'stylesheet';
+    link.href = 'https://cdn.jsdelivr.net/npm/jodit@4/es2021/jodit.min.css';
+    document.head.appendChild(link);
+    const s = document.createElement('script');
+    s.id = 'jodit-js';
+    s.src = 'https://cdn.jsdelivr.net/npm/jodit@4/es2021/jodit.min.js';
+    s.onload = ()=>{ window._joditReady=true; window._joditQueue.forEach(f=>f()); window._joditQueue=[]; };
+    document.head.appendChild(s);
+}
+
+window.dcmInitEditor = function(selector, opts){
+    opts = opts || {};
+    _joditLoad(()=>{
+        const el = document.querySelector(selector);
+        if(!el) return;
+        const prev = window._dcmEditors[selector];
+        if(prev && typeof prev.destruct === 'function'){ try{ prev.destruct(); }catch(e){} }
+        const editor = Jodit.make(el, {
+            height: opts.height || 280,
+            language: 'en',
+            buttons: [
+                'undo','redo','|',
+                'bold','italic','underline','strikethrough','|',
+                'superscript','subscript','|',
+                'fontsize','brush','paragraph','|',
+                'align','|',
+                'ul','ol','indent','outdent','|',
+                'link','image','video','table','hr','|',
+                'blockquote','code','|',
+                'source','fullsize'
+            ],
+            uploader: { insertImageAsBase64URI: true },
+            cleanHTML: {
+                removeEmptyElements: false,
+                denyTags: { script: true, iframe: true, object: true, embed: true }
+            }
+        });
+        window._dcmEditors[selector] = editor;
+    });
+};
+
+/* ════════════════════════════════════════════════════════════
    COURSE SETTINGS
 ═══════════════════════════════════════════════════════════════ */
 function showCourseSettings(){
-    document.getElementById('chapterContents').innerHTML=`
-        <div class="text-center p-4"><div class="spinner-border text-primary spinner-border-sm"></div><p class="small text-muted mt-2">Loading settings…</p></div>`;
+    const wrap = document.getElementById('chapterContents');
+    wrap.innerHTML=`<div class="text-center p-4"><div class="spinner-border text-primary spinner-border-sm"></div><p class="small text-muted mt-2">Loading settings…</p></div>`;
     fetch('pages/course_settings.php?course_id='+COURSE_ID)
     .then(r=>r.text()).then(html=>{
-        document.getElementById('chapterContents').innerHTML=html;
-        setTimeout(()=>{
-            if(typeof FroalaEditor!=='undefined') new FroalaEditor('#course_description',{height:160});
-        },200);
+        wrap.innerHTML = html;
+        /* innerHTML does NOT execute <script> tags — clone each into a live script node */
+        wrap.querySelectorAll('script').forEach(dead => {
+            const live = document.createElement('script');
+            [...dead.attributes].forEach(a => live.setAttribute(a.name, a.value));
+            live.textContent = dead.textContent;
+            dead.parentNode.replaceChild(live, dead);
+        });
+        setTimeout(()=>{ dcmInitEditor('#course_description', {height:220}); }, 150);
     }).catch(console.error);
 }
 
@@ -657,9 +858,7 @@ window.showLessonInputForm = function(chapterId){
     fetch('pages/lesson_input_form_new.php?chapter_id='+chapterId)
     .then(r=>r.text()).then(html=>{
         document.getElementById('chapterContents').innerHTML=html;
-        setTimeout(()=>{
-            if(typeof FroalaEditor!=='undefined') new FroalaEditor('#lesson_description',{height:160});
-        },200);
+        setTimeout(()=>{ dcmInitEditor('#lesson_description', {height:200}); }, 150);
     }).catch(console.error);
 };
 
@@ -898,6 +1097,7 @@ window.showLessonContents = function(lessonId){
 
         setTimeout(()=>{
             if(l.content_type==='audio'&&l.file_path) initAudioPlayer();
+            dcmInitEditor('#lesson_description', {height:160});
         },200);
 
     }).catch(err=>{
@@ -1014,34 +1214,50 @@ document.addEventListener('click',e=>{
    COURSE SETTINGS — SAVE & DELETE
 ═══════════════════════════════════════════════════════════════ */
 document.addEventListener('click',e=>{
-    if(!e.target||e.target.id!=='saveCourseSettingsBtn') return;
+    if(!e.target?.closest('#saveCourseSettingsBtn')) return;
     const title     = document.getElementById('course_name')?.value.trim();
     const price     = document.getElementById('course_price')?.value.trim();
     const discount  = document.getElementById('course_discount')?.value.trim();
-    const desc      = document.getElementById('course_description')?.value;
+    /* get description from Jodit if active, fallback to raw textarea value */
+    const _cdEditor = window._dcmEditors?.['#course_description'];
+    const desc      = _cdEditor ? _cdEditor.getEditorValue() : (document.getElementById('course_description')?.value ?? '');
     const cid       = document.getElementById('course_id')?.value;
     const lid       = document.getElementById('library_id')?.value;
     const lkey      = document.getElementById('library_key')?.value;
     const oldName   = document.getElementById('old_course_name')?.value;
-    const cert      = document.getElementById('isCertificateOffered')?.checked ? 1 : 0;
-    const qna       = document.getElementById('isQandAEnabled')?.checked ? 1 : 0;
+    /* Support both legacy checkboxes and the redesigned hidden-input toggles */
+    const certEl = document.getElementById('isCertificateOffered');
+    const qnaEl  = document.getElementById('isQandAEnabled');
+    const cert   = certEl ? (certEl.type==='checkbox' ? (certEl.checked?1:0) : parseInt(certEl.value||0)) : 0;
+    const qna    = qnaEl  ? (qnaEl.type==='checkbox'  ? (qnaEl.checked?1:0)  : parseInt(qnaEl.value||0))  : 0;
     const fileInput = document.getElementById('course_thumbnail');
     const file      = fileInput?.files?.[0];
-    if(!title||!price){ Swal.fire('Error','Course name and price are required','error'); return; }
+    if(!title){ Swal.fire({icon:'warning',title:'Required',text:'Course name is required'}); return; }
+    const safePrice = (price===undefined||price===null||price==='')?'0':price;
     const fd=new FormData();
-    fd.append('course_name',title); fd.append('course_price',price);
+    fd.append('course_name',title); fd.append('course_price',safePrice);
     fd.append('course_discount',discount||0); fd.append('course_description',desc||'');
     fd.append('course_id',cid); fd.append('isCertificateOffered',cert);
     fd.append('isQandAEnabled',qna); fd.append('old_course_name',oldName);
     fd.append('library_id',lid); fd.append('library_key',lkey);
+    fd.append('course_category_ids', JSON.stringify([...(window._csCatSelected || new Set())]));
     if(file) fd.append('thumbnail',file);
     Swal.fire({title:'Updating…',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
     fetch('ajax/ajax_update_course_settings.php',{method:'POST',body:fd})
-    .then(r=>r.json()).then(r=>{
+    .then(r=>{
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.text();
+    })
+    .then(txt=>{
         Swal.close();
-        r.status==='success' ? Swal.fire({icon:'success',title:'Saved!',timer:1200,showConfirmButton:false})
-                             : Swal.fire('Error',r.message,'error');
-    }).catch(()=>Swal.fire('Error','Something went wrong','error'));
+        let r;
+        try { r = JSON.parse(txt); }
+        catch(e){ console.error('Non-JSON response:', txt); throw new Error('Server returned non-JSON: '+txt.substring(0,120)); }
+        r.status==='success'
+            ? Swal.fire({icon:'success',title:'Saved!',timer:1400,showConfirmButton:false})
+            : Swal.fire({icon:'error',title:'Error',text:r.message});
+    })
+    .catch(err=>{ console.error('Save failed:', err); Swal.close(); Swal.fire({icon:'error',title:'Save Failed',text:err.message||'Something went wrong'}); });
 });
 
 document.addEventListener('click',e=>{

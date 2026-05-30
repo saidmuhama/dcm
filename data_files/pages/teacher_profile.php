@@ -1,4 +1,5 @@
 <?php
+/** @var string $usr_code  Injected by controller.php before this include */
 $emailAddress = @App::getWhatFromWHere('email_address','tbl_all_users', 'usr_code',$usr_code);
 $phoneNumber  = @App::getWhatFromWHere('phone_number','tbl_all_users', 'usr_code',$usr_code);
 $user_status  = @App::getWhatFromWHere('user_status','tbl_all_users', 'usr_code',$usr_code);
@@ -127,13 +128,14 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
     border-radius: 14px;
     border: 1px solid rgba(0,0,0,.07);
     box-shadow: 0 2px 10px rgba(0,0,0,.05);
-    overflow: hidden;
     transition: transform .2s, box-shadow .2s;
     height: 100%;
+    position: relative;
 }
 .course-card:hover { transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,.1); }
 .course-card .cc-thumb {
     height: 160px; overflow: hidden; position: relative;
+    border-radius: 14px 14px 0 0;
 }
 .course-card .cc-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
 .course-card:hover .cc-thumb img { transform: scale(1.05); }
@@ -143,17 +145,54 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
 }
 .course-card .cc-body { padding: 1rem; }
 .course-card .cc-title { font-size: .88rem; font-weight: 600; color: #1e293b; line-height: 1.35;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .course-card .cc-meta { font-size: .75rem; color: #64748b; margin-top: .35rem; }
 .course-card .cc-earn { font-size: 1.1rem; font-weight: 700; color: #16a34a; }
 .course-card .cc-bar { height: 5px; border-radius: 99px; background: #f1f5f9; margin: .75rem 0 .85rem; overflow: hidden; }
 .course-card .cc-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg,#6366f1,#8b5cf6); }
-.course-card .cc-actions { display: flex; gap: .5rem; }
+.course-card .cc-actions { display: flex; gap: .5rem; position: relative; }
 .course-card .cc-btn {
     flex: 1; font-size: .75rem; font-weight: 600;
     padding: .4rem .5rem; border-radius: 8px; text-align: center;
     border: none; cursor: pointer; transition: all .15s;
 }
+
+/* ── Actions dropdown ── */
+.cc-action-dropdown { position: static; flex: 1; }
+.cc-action-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: .3rem;
+    background: #eef2ff; color: #6366f1;
+}
+.cc-action-btn:hover { background: #e0e7ff; }
+.cc-chevron { font-size: .6rem !important; transition: transform .2s; margin-left: .15rem; }
+.cc-chevron.rotated { transform: rotate(180deg); }
+.cc-dropdown-menu {
+    position: absolute; bottom: calc(100% + 5px); right: 0;
+    min-width: 172px; background: #fff;
+    border: 1px solid rgba(0,0,0,.1); border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.06);
+    padding: .3rem; z-index: 300;
+    opacity: 0; visibility: hidden;
+    transform: translateY(8px) scale(.97);
+    transform-origin: bottom right;
+    transition: opacity .18s, transform .18s, visibility 0s .18s;
+}
+.cc-dropdown-menu.open {
+    opacity: 1; visibility: visible; transform: translateY(0) scale(1);
+    transition: opacity .18s, transform .18s, visibility 0s;
+}
+.cc-dropdown-item {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .55rem .75rem; border-radius: 8px;
+    font-size: .8rem; font-weight: 500; color: #334155;
+    text-decoration: none; cursor: pointer;
+    transition: background .12s, color .12s;
+    white-space: nowrap;
+}
+.cc-dropdown-item:hover { background: #f1f5f9; color: #6366f1; }
+.cc-dropdown-item i { font-size: .85rem; width: 16px; flex-shrink: 0; color: #64748b; }
+.cc-dropdown-item:hover i { color: #6366f1; }
+.cc-dropdown-divider { height: 1px; background: #f1f5f9; margin: .25rem 0; }
 
 /* ── Status chips ── */
 .status-chip { padding: .3rem .7rem; border-radius: 20px; font-size: .72rem; font-weight: 600; display: inline-flex; align-items: center; gap: .3rem; }
@@ -420,13 +459,17 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
     }
 
     /* ── Analytics + Metrics ── */
+    window._courseMap = {};
+
     function loadAnalytics(){
         fetch("ajax/ajax_fetch_instructor_courses_analytics.php")
         .then(r=>r.json()).then(res=>{
             if(res.status !== 'success') return;
 
+            window._courseMap = {};
             let totalCourses=res.data.length, totalStudents=0, totalEarnings=0, totalSales=0;
             res.data.forEach(c=>{
+                window._courseMap[c.id] = { id: c.id, token: c.course_token, title: c.title || '' };
                 totalStudents += parseInt(c.students||0);
                 totalEarnings += parseFloat(c.net_earnings||0);
                 totalSales    += parseInt(c.total_sales||0);
@@ -502,10 +545,22 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
                       </div>
                       <div class="cc-actions">
                         ${toggleBtn}
-                        <a href="../data_files/?view=course_contents_management&course_id=${encodeURIComponent(c.course_token)}"
-                           class="cc-btn" style="background:#eef2ff;color:#6366f1;text-decoration:none">
-                           Manage
-                        </a>
+                        <div class="cc-action-dropdown">
+                          <button class="cc-btn cc-action-btn" onclick="toggleCourseDropdown(this)">
+                            <i class="bi bi-sliders2" style="font-size:.8rem"></i>Actions
+                            <i class="bi bi-chevron-down cc-chevron"></i>
+                          </button>
+                          <div class="cc-dropdown-menu">
+                            <a href="../data_files/?view=course_contents_management&course_id=${encodeURIComponent(c.course_token)}"
+                               class="cc-dropdown-item">
+                              <i class="bi bi-eye"></i><span>View Course</span>
+                            </a>
+                            <div class="cc-dropdown-divider"></div>
+                            <div class="cc-dropdown-item" onclick="openRenameModal(${c.id})">
+                              <i class="bi bi-pencil"></i><span>Rename Course</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -515,6 +570,112 @@ $start_year   = @App::getWhatFromWHere('start_year','tbl_tutors','usr_code',$usr
             document.getElementById('courseAnalytics').innerHTML = html || '<div class="col-12 text-center text-muted py-3">No courses yet</div>';
         }).catch(console.error);
     }
+
+    /* ── Dropdown toggle ── */
+    window.toggleCourseDropdown = function(btn){
+        const wrap = btn.closest('.cc-action-dropdown');
+        const menu = wrap.querySelector('.cc-dropdown-menu');
+        const isOpen = menu.classList.contains('open');
+        // close all open dropdowns first
+        document.querySelectorAll('.cc-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
+        document.querySelectorAll('.cc-chevron.rotated').forEach(ch=>ch.classList.remove('rotated'));
+        if(!isOpen){
+            menu.classList.add('open');
+            btn.querySelector('.cc-chevron').classList.add('rotated');
+        }
+    };
+
+    document.addEventListener('click', e=>{
+        if(!e.target.closest('.cc-action-dropdown')){
+            document.querySelectorAll('.cc-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
+            document.querySelectorAll('.cc-chevron.rotated').forEach(ch=>ch.classList.remove('rotated'));
+        }
+    });
+
+    /* ── Rename course ── */
+    window.openRenameModal = function(courseId){
+        const c = window._courseMap[courseId];
+        if(!c){ Swal.fire('Error','Course data not found','error'); return; }
+
+        // Close any open dropdown first
+        document.querySelectorAll('.cc-dropdown-menu.open').forEach(m=>m.classList.remove('open'));
+        document.querySelectorAll('.cc-chevron.rotated').forEach(ch=>ch.classList.remove('rotated'));
+
+        Swal.fire({
+            title: '<i class="bi bi-pencil-square me-2" style="color:#6366f1"></i>Rename Course',
+            html: `
+                <p class="text-muted small mb-3">Current title:<br><strong>${c.title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</strong></p>
+                <div class="text-start">
+                    <label class="form-label small fw-semibold">New Course Title</label>
+                    <input id="swalNewTitle" class="form-control" maxlength="120"
+                        placeholder="Enter new course title" style="border-radius:10px">
+                    <p class="small text-muted mt-2 mb-0">
+                        <i class="bi bi-cloud me-1" style="color:#6366f1"></i>
+                        Also syncs to Bunny.net video storage.
+                    </p>
+                </div>`,
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-check-lg me-1"></i>Rename',
+            confirmButtonColor: '#6366f1',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true,
+            preConfirm: ()=>{
+                const title = document.getElementById('swalNewTitle')?.value?.trim();
+                if(!title){ Swal.showValidationMessage('Please enter a course title'); return false; }
+                if(title.length < 3){ Swal.showValidationMessage('Title must be at least 3 characters'); return false; }
+                if(title.length > 120){ Swal.showValidationMessage('Title must be under 120 characters'); return false; }
+                return title;
+            },
+            didOpen: ()=>{
+                const inp = document.getElementById('swalNewTitle');
+                if(inp){ inp.value = c.title; inp.select(); }
+            }
+        }).then(res=>{
+            if(!res.isConfirmed || !res.value) return;
+            const newTitle = res.value;
+
+            Swal.fire({
+                title: 'Renaming…',
+                html: '<p class="text-muted small mb-0">Updating database and Bunny.net storage…</p>',
+                allowOutsideClick: false,
+                didOpen: ()=>Swal.showLoading()
+            });
+
+            fetch('ajax/ajax_rename_course.php',{
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({course_id: courseId, title: newTitle})
+            })
+            .then(r=>r.json())
+            .then(r=>{
+                if(r.status === 'success'){
+                    const allGood = r.stream_updated && r.storage_updated;
+                    let detail = '';
+                    if(!r.stream_updated)
+                        detail += `<li class="text-start"><i class="bi bi-broadcast me-1 text-warning"></i>Stream rename: ${(r.stream_message||'failed').replace(/</g,'&lt;')}</li>`;
+                    if(!r.storage_updated)
+                        detail += `<li class="text-start"><i class="bi bi-folder2 me-1 text-warning"></i>Storage rename: ${(r.storage_message||'failed').replace(/</g,'&lt;')}</li>`;
+                    if(r.storage_errors && r.storage_errors.length)
+                        detail += `<li class="text-start"><i class="bi bi-exclamation-triangle me-1 text-warning"></i>Storage partial: ${r.storage_errors.length} file(s) had errors</li>`;
+
+                    Swal.fire({
+                        icon: allGood ? 'success' : 'warning',
+                        title: allGood ? 'Renamed!' : 'Renamed with warnings',
+                        html: allGood
+                            ? `<p class="small text-muted mb-0">Database, Bunny.net Stream, and Storage all updated.</p>`
+                            : `<p class="small mb-2">Database updated. Issues with Bunny.net:</p><ul class="small mb-0">${detail}</ul>`,
+                        confirmButtonColor: '#6366f1',
+                        timer: allGood ? 1800 : 0,
+                        showConfirmButton: !allGood
+                    });
+                    loadAnalytics();
+                } else {
+                    Swal.fire('Error', r.message || 'Rename failed', 'error');
+                }
+            })
+            .catch(()=>Swal.fire('Error','Network error. Please try again.','error'));
+        });
+    };
 
     /* ── Toggle status (unpublish only — publish goes through review) ── */
     window.toggleStatus = function(course_id, status){

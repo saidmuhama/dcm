@@ -57,6 +57,15 @@ if($user_id){
     }
 }
 
+// Free courses are accessible without enrollment
+if (!$is_paid) {
+    $price_q = mysqli_query($db, "SELECT price FROM tbl_courses WHERE id='$course_id' AND status='active' AND deleted_at IS NULL LIMIT 1");
+    $price_row = mysqli_fetch_assoc($price_q);
+    if ($price_row && (float)$price_row['price'] === 0.0) {
+        $is_paid = true;
+    }
+}
+
 /* =========================
    ✅ FETCH CHAPTERS
 ========================= */
@@ -88,6 +97,12 @@ while($chapter = mysqli_fetch_assoc($chapters_q)){
     $lessons = [];
 
     while($lesson = mysqli_fetch_assoc($lessons_q)){
+        // Redact content URLs server-side for lessons the user cannot access
+        if (!$is_paid && !intval($lesson['isFreePreviewLesson'])) {
+            $lesson['file_path']  = null;
+            $lesson['video_id']   = null;
+            $lesson['library_id'] = null;
+        }
         $lessons[] = $lesson;
     }
 

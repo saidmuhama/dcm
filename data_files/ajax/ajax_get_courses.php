@@ -41,8 +41,24 @@ $stmt->execute();
 
 $courses = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
+/* Attach assigned category names for each course */
+$catStmt = $db->prepare("
+    SELECT m.course_id, cat.id AS category_id, cat.category_title, cat.icon, cat.category_code
+    FROM tbl_course_category_map m
+    JOIN tbl_course_categories cat ON cat.id = m.category_id
+    WHERE m.course_id IN (" . implode(',', array_column($courses, 'id') ?: [0]) . ")
+    ORDER BY cat.sort_order, cat.id
+");
+$catStmt->execute();
+$catRows   = $catStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$catByCourse = [];
+foreach ($catRows as $row) {
+    $catByCourse[$row['course_id']][] = $row;
+}
+
 foreach ($courses as &$c) {
     $c['course_token'] = encryptURLId((int)$c['id'], ctx: 'course');
+    $c['categories']   = $catByCourse[$c['id']] ?? [];
 }
 unset($c);
 

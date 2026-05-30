@@ -198,7 +198,7 @@ async function orInit() {
     orLoad();
 }
 
-async function orLoad() {
+window.orLoad = async function() {
     orShowLoading();
 
     const params = new URLSearchParams({
@@ -340,7 +340,7 @@ function orRenderDepts(depts) {
     }).join('');
 }
 
-function orSwitchTab(name, el) {
+window.orSwitchTab = function(name, el) {
     orActiveTab = name;
     document.querySelectorAll('.or-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.or-tab-pane').forEach(p => p.classList.remove('active'));
@@ -348,7 +348,7 @@ function orSwitchTab(name, el) {
     document.getElementById(`orPane-${name}`).classList.add('active');
 }
 
-function orExport() {
+window.orExport = function() {
     const members = orData.members ?? [];
     if (!members.length) {
         orToast('No member data to export', 'warning');

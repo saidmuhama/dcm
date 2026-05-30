@@ -20,6 +20,19 @@ $_ring_off = round(100 - $_pct, 1);
 
 /* ── Categories ───────────────────────────────────────────── */
 $_cats = $db->query("SELECT id, category_title FROM tbl_course_categories WHERE status=1 ORDER BY `order`, id")->fetch_all(MYSQLI_ASSOC) ?: [];
+
+/* ── Interest check ────────────────────────────────────────── */
+$_hasInterests  = false;
+$_interestCats  = [];
+$_interestColors= ['#6366f1','#10b981','#f59e0b','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#84cc16','#06b6d4','#a855f7','#ef4444'];
+if ($_usr) {
+    $__ic = $db->query("SELECT COUNT(*) FROM tbl_student_interests WHERE student_id='".$db->real_escape_string($_usr)."'");
+    $_hasInterests = (int)$__ic->fetch_row()[0] > 0;
+    if (!$_hasInterests) {
+        $__cr = $db->query("SELECT id, category_title, icon, category_code FROM tbl_course_categories WHERE status=1 ORDER BY sort_order, id");
+        if ($__cr) $_interestCats = $__cr->fetch_all(MYSQLI_ASSOC);
+    }
+}
 ?>
 <style>
 /* ══ Student Dashboard (sd-*) ════════════════════════════════ */
@@ -123,12 +136,20 @@ $_cats = $db->query("SELECT id, category_title FROM tbl_course_categories WHERE 
 .sd-brow-price-tag { position:absolute;bottom:.55rem;left:.55rem;
                      background:rgba(15,23,42,.8);color:#fff;font-size:.7rem;font-weight:800;
                      border-radius:8px;padding:.2rem .55rem;backdrop-filter:blur(4px); }
-.sd-brow-wish  { position:absolute;top:.55rem;right:.55rem;width:30px;height:30px;border-radius:50%;
-                 background:rgba(255,255,255,.9);border:none;cursor:pointer;display:flex;
-                 align-items:center;justify-content:center;font-size:.85rem;color:#dc2626;
-                 transition:all .15s;box-shadow:0 2px 6px rgba(0,0,0,.15); }
-.sd-brow-wish:hover { background:#fee2e2; }
-.sd-brow-wish.active { background:#fee2e2;color:#dc2626; }
+.sd-brow-wish  { position:absolute;top:.55rem;right:.55rem;width:32px;height:32px;border-radius:50%;
+                 background:rgba(255,255,255,.92);border:none;cursor:pointer;display:flex;
+                 align-items:center;justify-content:center;font-size:.88rem;
+                 color:#94a3b8;   /* grey when NOT wishlisted */
+                 transition:color .2s,background .2s,transform .2s,box-shadow .2s;
+                 box-shadow:0 2px 8px rgba(0,0,0,.15); }
+.sd-brow-wish:hover { background:#fff;color:#dc2626;transform:scale(1.12); }
+/* Red filled heart with glow when wishlisted */
+.sd-brow-wish.active {
+    background:#fff0f0;
+    color:#dc2626;
+    box-shadow:0 2px 10px rgba(220,38,38,.35);
+}
+.sd-brow-wish.active:hover { transform:scale(1.12);box-shadow:0 4px 16px rgba(220,38,38,.45); }
 .sd-brow-body  { padding:.85rem .95rem 1rem;flex:1;display:flex;flex-direction:column; }
 .sd-brow-cat   { font-size:.65rem;font-weight:800;color:#4f46e5;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem; }
 .sd-brow-title { font-size:.83rem;font-weight:700;color:#0f172a;margin-bottom:.3rem;
@@ -278,6 +299,8 @@ $_cats = $db->query("SELECT id, category_title FROM tbl_course_categories WHERE 
 
 <!-- ── Panel: Browse Courses ── -->
 <div class="sd-panel active" id="sdPanelBrowse">
+
+  <!-- Filter bar -->
   <div class="sd-filter-bar">
     <input type="text" id="sdSearch" placeholder="Search courses…" autocomplete="off" oninput="sdDebounceBrowse()">
     <select id="sdFilterCat" onchange="sdDoBrowse()">
@@ -292,16 +315,48 @@ $_cats = $db->query("SELECT id, category_title FROM tbl_course_categories WHERE 
       <option value="paid">Paid</option>
     </select>
   </div>
-  <div class="sd-browse-grid" id="sdBrowseGrid">
-    <?php for ($i=0;$i<6;$i++): ?>
-    <div class="sd-brow-card"><div class="sd-brow-thumb sd-skel" style="border-radius:0;height:130px"></div>
-      <div class="sd-brow-body"><div class="sd-skel" style="height:10px;width:40%;margin-bottom:8px"></div>
-        <div class="sd-skel" style="height:14px;width:90%;margin-bottom:4px"></div>
-        <div class="sd-skel" style="height:14px;width:60%;margin-bottom:16px"></div>
-        <div class="sd-skel" style="height:34px;border-radius:9px"></div></div></div>
-    <?php endfor; ?>
+
+  <!-- ══ Section 1: Recommended / For You ══ -->
+  <div id="sdForYouSection">
+    <div class="sd-sec-head" style="margin-bottom:.75rem">
+      <div class="sd-sec-title">
+        <i class="bi bi-stars me-2" style="color:#f59e0b"></i>
+        <span id="sdForYouLabel">Recommended For You</span>
+      </div>
+      <span id="sdForYouCount" style="font-size:.75rem;font-weight:700;color:#94a3b8;background:#f1f5f9;padding:.2rem .7rem;border-radius:20px"></span>
+    </div>
+    <div class="sd-browse-grid" id="sdForYouGrid">
+      <?php for ($i=0;$i<3;$i++): ?>
+      <div class="sd-brow-card"><div class="sd-brow-thumb sd-skel" style="border-radius:0;height:130px"></div>
+        <div class="sd-brow-body"><div class="sd-skel" style="height:10px;width:40%;margin-bottom:8px"></div>
+          <div class="sd-skel" style="height:14px;margin-bottom:4px"></div>
+          <div class="sd-skel" style="height:34px;border-radius:9px;margin-top:12px"></div></div></div>
+      <?php endfor; ?>
+    </div>
   </div>
-  <div id="sdBrowsePager" style="text-align:center;margin-top:1.2rem"></div>
+
+  <!-- Divider -->
+  <div id="sdExploreDivider" style="display:flex;align-items:center;gap:.75rem;margin:1.5rem 0 .75rem">
+    <div style="flex:1;height:1px;background:linear-gradient(90deg,#e0e7ff,transparent)"></div>
+    <span style="font-size:.7rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">
+      <i class="bi bi-compass me-1"></i>Explore More Courses
+    </span>
+    <div style="flex:1;height:1px;background:linear-gradient(270deg,#e0e7ff,transparent)"></div>
+  </div>
+
+  <!-- ══ Section 2: Explore More ══ -->
+  <div id="sdExploreSection">
+    <div class="sd-browse-grid" id="sdBrowseGrid">
+      <?php for ($i=0;$i<6;$i++): ?>
+      <div class="sd-brow-card"><div class="sd-brow-thumb sd-skel" style="border-radius:0;height:130px"></div>
+        <div class="sd-brow-body"><div class="sd-skel" style="height:10px;width:40%;margin-bottom:8px"></div>
+          <div class="sd-skel" style="height:14px;margin-bottom:4px"></div>
+          <div class="sd-skel" style="height:34px;border-radius:9px;margin-top:12px"></div></div></div>
+      <?php endfor; ?>
+    </div>
+    <div id="sdBrowsePager" style="text-align:center;margin-top:1.2rem"></div>
+  </div>
+
 </div>
 
 <!-- ── Panel: My Exams ── -->
@@ -474,35 +529,129 @@ function sdDebounceBrowse() {
   sdBrowseTimer = setTimeout(sdDoBrowse, 380);
 }
 
+/* ── Skeletons helper ── */
+function sdSkel(n, h) {
+  return Array(n).fill(`<div class="sd-brow-card">
+    <div class="sd-brow-thumb sd-skel" style="border-radius:0;height:${h||130}px"></div>
+    <div class="sd-brow-body">
+      <div class="sd-skel" style="height:10px;width:40%;margin-bottom:8px"></div>
+      <div class="sd-skel" style="height:14px;margin-bottom:4px"></div>
+      <div class="sd-skel" style="height:34px;border-radius:9px;margin-top:12px"></div>
+    </div></div>`).join('');
+}
+
 function sdDoBrowse() {
   const search = (document.getElementById('sdSearch')?.value || '').trim();
   const price  = document.getElementById('sdFilterPrice')?.value || '';
   const cat    = document.getElementById('sdFilterCat')?.value   || '';
+  const hasFilter = search || price || cat;
 
-  const grid = document.getElementById('sdBrowseGrid');
-  grid.innerHTML = Array(6).fill(`<div class="sd-brow-card">
-    <div class="sd-brow-thumb sd-skel" style="border-radius:0;height:130px"></div>
-    <div class="sd-brow-body"><div class="sd-skel" style="height:10px;width:40%;margin-bottom:8px"></div>
-    <div class="sd-skel" style="height:14px;margin-bottom:4px"></div><div class="sd-skel" style="height:34px;border-radius:9px;margin-top:12px"></div></div></div>`).join('');
+  const fyGrid   = document.getElementById('sdForYouGrid');
+  const exGrid   = document.getElementById('sdBrowseGrid');
+  const divider  = document.getElementById('sdExploreDivider');
+  const fySection= document.getElementById('sdForYouSection');
+  const fyLabel  = document.getElementById('sdForYouLabel');
+  const fyCount  = document.getElementById('sdForYouCount');
 
-  fetch(`ajax/ajax_get_published_courses.php?search=${encodeURIComponent(search)}&price=${encodeURIComponent(price)}&category=${encodeURIComponent(cat)}`)
-    .then(r => r.json())
-    .then(res => {
-      const courses = res.data || res || [];
-      const arr = Array.isArray(courses) ? courses : [];
-      document.getElementById('sdCntBrw').textContent = arr.length;
-      if (!arr.length) {
-        grid.innerHTML = `<div class="sd-empty" style="grid-column:1/-1">
-          <span class="sd-empty-icon"><i class="bi bi-search"></i></span>
-          <div class="sd-empty-title">No courses found</div>
-          <div class="sd-empty-sub">Try a different search or filter.</div></div>`;
-        return;
-      }
-      grid.innerHTML = arr.map(c => sdBrowseCard(c)).join('');
-    })
-    .catch(() => {
-      grid.innerHTML = `<div class="sd-empty" style="grid-column:1/-1"><div class="sd-empty-title">Could not load courses</div></div>`;
-    });
+  /* Show skeletons */
+  fyGrid.innerHTML = sdSkel(3);
+  exGrid.innerHTML = sdSkel(6);
+
+  if (hasFilter) {
+    /* ── FILTER MODE: collapse "For You" section, show flat search results below ── */
+    fySection.style.display = 'none';
+    divider.style.display   = 'none';
+
+    fetch(`ajax/ajax_get_published_courses.php?search=${encodeURIComponent(search)}&price=${encodeURIComponent(price)}&category=${encodeURIComponent(cat)}`)
+      .then(r => r.json())
+      .then(res => {
+        const arr = Array.isArray(res.data || res) ? (res.data || res) : [];
+        document.getElementById('sdCntBrw').textContent = arr.length;
+        if (!arr.length) {
+          exGrid.innerHTML = `<div class="sd-empty" style="grid-column:1/-1">
+            <span class="sd-empty-icon"><i class="bi bi-search"></i></span>
+            <div class="sd-empty-title">No courses found</div>
+            <div class="sd-empty-sub">Try a different search or filter.</div></div>`;
+          return;
+        }
+        exGrid.innerHTML = arr.map(c => sdBrowseCard(c)).join('');
+      })
+      .catch(() => {
+        exGrid.innerHTML = `<div class="sd-empty" style="grid-column:1/-1"><div class="sd-empty-title">Could not load courses</div></div>`;
+      });
+    return;
+  }
+
+  /* ── DISCOVERY MODE: two sections ── */
+  fySection.style.display = '';
+  divider.style.display   = '';
+
+  /* Fetch recommended (interest + level matched) and explore (everything else) in parallel */
+  Promise.all([
+    fetch('ajax/ajax_recommendations.php?action=recommended&limit=12').then(r => r.json()).catch(() => ({status:'error',data:[]})),
+    fetch('ajax/ajax_recommendations.php?action=explore&limit=18').then(r => r.json()).catch(() => ({status:'error',data:[]})),
+  ]).then(function([recRes, expRes]) {
+
+    var recCourses = recRes.data  || [];
+    var expCourses = expRes.data  || [];
+    var hasInterests = recRes.has_interests !== false;
+
+    /* Update total tab count */
+    document.getElementById('sdCntBrw').textContent = recCourses.length + expCourses.length;
+
+    /* ── For You section ── */
+    if (!hasInterests || recCourses.length === 0) {
+      /* No interests set — show prompt */
+      fyLabel.textContent = 'Popular Courses';
+      fySection.innerHTML = `
+        <div class="sd-sec-head" style="margin-bottom:.75rem">
+          <div class="sd-sec-title">
+            <i class="bi bi-fire me-2" style="color:#f97316"></i>
+            <span>Popular Courses</span>
+          </div>
+        </div>
+        <div class="sd-browse-grid" id="sdForYouGrid">
+          ${recCourses.length ? recCourses.map(c => sdRecCard(c)).join('') :
+            `<div class="sd-empty" style="grid-column:1/-1">
+              <span class="sd-empty-icon"><i class="bi bi-stars"></i></span>
+              <div class="sd-empty-title">Set your interests</div>
+              <div class="sd-empty-sub">
+                <a href="?view=student_interests" style="color:#4f46e5;font-weight:700">
+                  <i class="bi bi-pencil-fill me-1"></i>Choose what you love
+                </a> and we'll recommend the perfect courses.
+              </div>
+            </div>`
+          }
+        </div>`;
+    } else {
+      fyLabel.textContent = 'Recommended For You';
+      fyCount.textContent = recCourses.length + ' courses';
+      fyGrid.innerHTML    = recCourses.map(c => sdRecCard(c)).join('');
+    }
+
+    /* ── Explore section ── */
+    if (!expCourses.length) {
+      divider.style.display = 'none';
+      document.getElementById('sdExploreSection').style.display = 'none';
+    } else {
+      divider.style.display = '';
+      document.getElementById('sdExploreSection').style.display = '';
+      exGrid.innerHTML = expCourses.map(c => sdBrowseCard(c)).join('');
+    }
+  });
+}
+
+/* ── Recommendation card (slightly enhanced style) ── */
+function sdRecCard(c) {
+  /* Recommendation cards get a coloured interest badge + slight visual differentiation */
+  const base = sdBrowseCard(c);
+  /* Inject a "★ Matches your interests" ribbon on the card thumb */
+  const catCode = c.category_code || '';
+  const badge   = c.category_title
+    ? `<div style="position:absolute;top:8px;left:8px;background:rgba(79,70,229,.92);color:#fff;font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:20px;backdrop-filter:blur(4px);z-index:2;display:flex;align-items:center;gap:.3rem"><i class="bi bi-stars" style="font-size:.65rem"></i>${sdEsc(c.category_title)}</div>`
+    : '';
+  /* Inject badge after the first <div class="sd-brow-thumb"> */
+  return base.replace('<div class="sd-brow-thumb">', '<div class="sd-brow-thumb" style="position:relative">' + badge);
 }
 
 function sdBrowseCard(c) {
@@ -556,8 +705,18 @@ function sdToggleWish(id, btn) {
     body: JSON.stringify({course_id: id})
   }).then(r => r.json()).then(res => {
     if (res.status === 'success') {
-      if (sdWishlisted.has(id)) { sdWishlisted.delete(id); btn.classList.remove('active'); btn.innerHTML = '<i class="bi bi-heart"></i>'; }
-      else { sdWishlisted.add(id); btn.classList.add('active'); btn.innerHTML = '<i class="bi bi-heart-fill"></i>'; }
+      if (sdWishlisted.has(id)) {
+        sdWishlisted.delete(id);
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="bi bi-heart"></i>';
+      } else {
+        sdWishlisted.add(id);
+        btn.classList.add('active');
+        btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+        /* pop animation */
+        btn.style.transform = 'scale(1.35)';
+        setTimeout(function(){ btn.style.transform = ''; }, 220);
+      }
     } else { Swal.fire({ icon:'info', title: res.message||'Login to save wishlist', timer:2000, showConfirmButton:false }); }
   }).catch(() => {});
 }
@@ -678,4 +837,234 @@ Object.assign(window, {
   sdSwitch, sdStart, sdView, sdDoBrowse, sdDebounceBrowse,
   sdToggleWish, sdAddCart, sdEnrollFree, sdResumeExam, sdLoadCartCount
 });
+
+/* ── Interest onboarding check ── */
+<?php if (!$_hasInterests && !empty($_interestCats)): ?>
+(function() {
+  /* Only show once per browser session */
+  if (sessionStorage.getItem('dcm_int_seen')) return;
+  sessionStorage.setItem('dcm_int_seen', '1');
+  setTimeout(function() {
+    var m = document.getElementById('sdInterestModal');
+    if (m) new bootstrap.Modal(m, {backdrop:'static', keyboard:false}).show();
+  }, 1200);
+})();
+<?php endif; ?>
 </script>
+
+<?php if (!$_hasInterests && !empty($_interestCats)): ?>
+<!-- ══ Interest Onboarding Modal ═══════════════════════════════ -->
+<style>
+@keyframes int-pop{0%{transform:scale(.85) translateY(20px);opacity:0}60%{transform:scale(1.02)}100%{transform:scale(1);opacity:1}}
+@keyframes int-orb1{from{transform:translate(0,0) scale(1)}to{transform:translate(-16px,12px) scale(1.2)}}
+@keyframes int-orb2{from{transform:translate(0,0) scale(1)}to{transform:translate(14px,-16px) scale(1.15)}}
+@keyframes int-card{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes int-check{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+
+#sdInterestModal .modal-dialog{max-width:680px;animation:int-pop .45s cubic-bezier(.34,1.56,.64,1) both}
+#sdInterestModal .modal-content{border:none;border-radius:24px;overflow:hidden;box-shadow:0 32px 100px rgba(0,0,0,.25)}
+
+/* Header */
+.int-hdr{position:relative;overflow:hidden;background:linear-gradient(135deg,#050510 0%,#0f0c29 40%,#1e1040 70%,#2d1b69 100%);padding:1.85rem 1.75rem 1.5rem;color:#fff}
+.int-orb{position:absolute;border-radius:50%;filter:blur(45px);pointer-events:none}
+.int-orb-1{width:180px;height:180px;background:rgba(99,102,241,.32);top:-60px;right:-30px;animation:int-orb1 7s ease-in-out infinite alternate}
+.int-orb-2{width:120px;height:120px;background:rgba(139,92,246,.25);bottom:-30px;right:160px;animation:int-orb2 9s ease-in-out infinite alternate}
+.int-hdr-inner{position:relative;z-index:2}
+.int-hdr-icon{width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.55rem;margin-bottom:1rem;box-shadow:0 6px 24px rgba(99,102,241,.4)}
+.int-hdr-title{font-size:1.25rem;font-weight:900;letter-spacing:-.02em;line-height:1.1}
+.int-hdr-title span{background:linear-gradient(90deg,#a5b4fc,#f9a8d4,#6ee7b7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.int-hdr-sub{font-size:.82rem;opacity:.55;margin-top:.3rem}
+.int-hdr-skip{position:absolute;top:.9rem;right:.9rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.7);font-size:.73rem;font-weight:700;border-radius:20px;padding:.25rem .8rem;cursor:pointer;transition:all .2s;z-index:3}
+.int-hdr-skip:hover{background:rgba(255,255,255,.2);color:#fff}
+
+/* Count badge */
+.int-count{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;box-shadow:0 2px 8px rgba(99,102,241,.35);transition:all .2s}
+
+/* Search */
+.int-search{border:1.5px solid #e0e7ff;border-radius:12px;padding:.45rem .85rem .45rem 2.2rem;font-size:.83rem;background:#f8f7ff;transition:all .2s;width:100%}
+.int-search:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1);background:#fff}
+
+/* Category grid */
+.int-cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:.55rem;max-height:280px;overflow-y:auto;padding:.1rem .05rem}
+.int-cat-grid::-webkit-scrollbar{width:4px}
+.int-cat-grid::-webkit-scrollbar-thumb{background:rgba(99,102,241,.2);border-radius:4px}
+.int-cat-tile{border:2px solid #e0e7ff;border-radius:13px;padding:.6rem .45rem;cursor:pointer;text-align:center;transition:all .2s;user-select:none;background:#fff;position:relative;animation:int-card .3s ease both}
+.int-cat-tile:nth-child(1){animation-delay:.03s}.int-cat-tile:nth-child(2){animation-delay:.06s}
+.int-cat-tile:nth-child(3){animation-delay:.09s}.int-cat-tile:nth-child(4){animation-delay:.12s}
+.int-cat-tile:nth-child(5){animation-delay:.15s}.int-cat-tile:nth-child(6){animation-delay:.18s}
+.int-cat-tile:hover{border-color:#a5b4fc;box-shadow:0 4px 14px rgba(99,102,241,.13);transform:translateY(-3px)}
+.int-cat-tile.selected{border-color:#6366f1;background:linear-gradient(135deg,#ede9fe,#eff6ff)}
+.int-cat-tile.selected .int-tile-name{color:#4f46e5}
+.int-tile-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1rem;margin:0 auto .4rem;transition:transform .2s;pointer-events:none}
+.int-cat-tile:hover .int-tile-icon,.int-cat-tile.selected .int-tile-icon{transform:scale(1.12) rotate(-6deg)}
+.int-tile-name{font-size:.66rem;font-weight:700;color:#334155;line-height:1.25;pointer-events:none;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical}
+.int-cat-tile.selected::after{content:'\F26E';font-family:'bootstrap-icons';position:absolute;top:3px;right:5px;font-size:.62rem;color:#6366f1;pointer-events:none;animation:int-check .22s cubic-bezier(.34,1.56,.64,1) both}
+
+/* Footer */
+.int-footer{background:#f8f7ff;border-top:1px solid #e0e7ff;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+.int-save-btn{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:12px;padding:.58rem 1.5rem;font-size:.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.45rem;transition:all .2s;box-shadow:0 4px 16px rgba(99,102,241,.4)}
+.int-save-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(99,102,241,.55)}
+.int-save-btn:disabled{opacity:.55;transform:none}
+.int-later-btn{font-size:.8rem;color:#94a3b8;background:none;border:none;cursor:pointer;font-weight:600;transition:color .2s;padding:.4rem}
+.int-later-btn:hover{color:#6366f1}
+</style>
+
+<div class="modal fade" id="sdInterestModal" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
+<div class="modal-dialog modal-dialog-centered">
+<div class="modal-content">
+
+    <!-- Header -->
+    <div class="int-hdr">
+        <div class="int-orb int-orb-1"></div>
+        <div class="int-orb int-orb-2"></div>
+        <button class="int-hdr-skip" id="intSkipBtn">Skip for now</button>
+        <div class="int-hdr-inner">
+            <div class="int-hdr-icon"><i class="bi bi-stars"></i></div>
+            <div class="int-hdr-title">Welcome, <span><?= $_fname ?></span>! 🎉</div>
+            <div class="int-hdr-title" style="-webkit-text-fill-color:#fff;background:none;font-size:.95rem;font-weight:700;margin-top:.25rem">Tell us what you love to learn</div>
+            <div class="int-hdr-sub">Pick your subjects — we'll personalise every course recommendation just for you</div>
+        </div>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body" style="padding:1.4rem;background:#fafbff">
+        <!-- Top row -->
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="small fw-semibold text-muted">Choose your areas of interest</span>
+            <span class="int-count ms-auto" id="intSelCount">0 selected</span>
+        </div>
+        <!-- Search -->
+        <div class="position-relative mb-3">
+            <i class="bi bi-search position-absolute" style="left:.72rem;top:50%;transform:translateY(-50%);color:#a5b4fc;font-size:.82rem;pointer-events:none"></i>
+            <input class="int-search" id="intSearch" placeholder="Search subjects…" autocomplete="off">
+        </div>
+        <!-- Category grid -->
+        <div class="int-cat-grid" id="intCatGrid">
+            <?php foreach ($_interestCats as $ci => $cat):
+                $cc = $_interestColors[$ci % count($_interestColors)]; ?>
+            <div class="int-cat-tile"
+                 data-id="<?= $cat['id'] ?>"
+                 data-name="<?= htmlspecialchars($cat['category_title']) ?>"
+                 data-search="<?= strtolower(htmlspecialchars($cat['category_title'])) ?>">
+                <div class="int-tile-icon" style="background:<?= $cc ?>18;color:<?= $cc ?>">
+                    <i class="bi <?= htmlspecialchars($cat['icon'] ?? 'bi-grid') ?>"></i>
+                </div>
+                <div class="int-tile-name"><?= htmlspecialchars($cat['category_title']) ?></div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <!-- Tip -->
+        <div class="d-flex align-items-start gap-2 mt-3 p-3 rounded-3" style="background:#f0f6ff;border:1.5px solid #c7d9fc">
+            <i class="bi bi-lightbulb-fill text-primary mt-1" style="font-size:.85rem;flex-shrink:0"></i>
+            <p class="mb-0 text-muted" style="font-size:.75rem;line-height:1.5">
+                Select <strong>3 or more</strong> subjects for the best recommendations. You can always update these from <strong>My Interests</strong> in the menu.
+            </p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="int-footer">
+        <button class="int-later-btn" id="intLaterBtn"><i class="bi bi-clock me-1"></i>Remind me later</button>
+        <button class="int-save-btn" id="intSaveBtn" disabled>
+            <i class="bi bi-check-lg"></i> Save My Interests
+        </button>
+    </div>
+
+</div>
+</div>
+</div>
+
+<script>
+(function() {
+    var _intSel  = new Set();
+    var _intModal = null;
+
+    function getModal() {
+        if (!_intModal) _intModal = bootstrap.Modal.getInstance(document.getElementById('sdInterestModal'))
+                                 || new bootstrap.Modal(document.getElementById('sdInterestModal'), {backdrop:'static', keyboard:false});
+        return _intModal;
+    }
+
+    /* ── Tile grid delegation ── */
+    var grid = document.getElementById('intCatGrid');
+    if (grid) {
+        grid.addEventListener('click', function(e) {
+            var tile = e.target.closest('.int-cat-tile');
+            if (!tile) return;
+            var id = tile.dataset.id;
+            if (_intSel.has(id)) { _intSel.delete(id); tile.classList.remove('selected'); }
+            else                  { _intSel.add(id);    tile.classList.add('selected'); }
+            updateCount();
+        });
+    }
+
+    /* ── Search ── */
+    var srch = document.getElementById('intSearch');
+    if (srch) {
+        srch.addEventListener('input', function() {
+            var lq = this.value.toLowerCase();
+            document.querySelectorAll('.int-cat-tile').forEach(function(t) {
+                t.style.display = (t.dataset.search||'').includes(lq) ? '' : 'none';
+            });
+        });
+    }
+
+    function updateCount() {
+        var n = _intSel.size;
+        var badge = document.getElementById('intSelCount');
+        var btn   = document.getElementById('intSaveBtn');
+        if (badge) badge.textContent = n + ' selected';
+        if (btn) btn.disabled = n === 0;
+    }
+
+    /* ── Skip / Later ── */
+    function dismiss() {
+        sessionStorage.setItem('dcm_int_seen', '1');
+        getModal().hide();
+    }
+    var skipBtn  = document.getElementById('intSkipBtn');
+    var laterBtn = document.getElementById('intLaterBtn');
+    if (skipBtn)  skipBtn.addEventListener('click',  dismiss);
+    if (laterBtn) laterBtn.addEventListener('click', function() {
+        /* Remove the session flag so it will show again next visit */
+        sessionStorage.removeItem('dcm_int_seen');
+        getModal().hide();
+    });
+
+    /* ── Save ── */
+    var saveBtn = document.getElementById('intSaveBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async function() {
+            var ids = Array.from(_intSel);
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+            var fd = new FormData();
+            fd.append('action', 'save_interests');
+            ids.forEach(function(id) { fd.append('category_ids[]', id); });
+            try {
+                var res = await fetch('ajax/ajax_recommendations.php', {method:'POST', body:fd}).then(function(r){ return r.json(); });
+                if (res.status === 'success') {
+                    getModal().hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'All set! 🎯',
+                        html: '<p>We\'ve saved <strong>' + ids.length + ' interest' + (ids.length!==1?'s':'') + '</strong>.<br>Your dashboard will now show personalised recommendations!</p>',
+                        confirmButtonText: 'Let\'s go!',
+                        confirmButtonColor: '#6366f1',
+                        timer: 4000
+                    });
+                } else {
+                    Swal.fire({icon:'error', title:'Error', text:res.message});
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save My Interests';
+                }
+            } catch(e) {
+                Swal.fire({icon:'error', title:'Network Error', text:'Please try again.'});
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save My Interests';
+            }
+        });
+    }
+})();
+</script>
+<?php endif; ?>

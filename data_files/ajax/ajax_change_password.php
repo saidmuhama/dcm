@@ -49,10 +49,11 @@ if(!password_verify($current, $user['user_password'])){
 $newHash = password_hash($new, PASSWORD_DEFAULT);
 
 // ================= UPDATE PASSWORD =================
-$stmt = $db->prepare("UPDATE tbl_all_users SET user_password=? WHERE usr_code=?");
+$stmt = $db->prepare("UPDATE tbl_all_users SET user_password=?, force_pw_change=0 WHERE usr_code=?");
 $stmt->bind_param("ss", $newHash, $user_code);
 
 if($stmt->execute()){
+    unset($_SESSION['force_pw_change']);
     echo json_encode([
         "status" => "success",
         "message" => "Password changed successfully"

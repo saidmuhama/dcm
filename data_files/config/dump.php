@@ -176,50 +176,42 @@ class App
         $remotePath = trim($remotePath, "/");
 
         // ✅ BUILD URL
-        $url = "https://storage.bunnycdn.com/{$storageZoneName}/{$remotePath}/{$fileName}";
+        $url      = "https://storage.bunnycdn.com/{$storageZoneName}/{$remotePath}/{$fileName}";
+        $fileSize = filesize($filePath);
+        $fh       = fopen($filePath, 'r');
 
-        // ✅ READ FILE CONTENT
-        $fileData = file_get_contents($filePath);
-
-        // ✅ INIT CURL
+        // ✅ INIT CURL — stream file directly, no file_get_contents
         $curl = curl_init();
 
         curl_setopt_array($curl, [
             CURLOPT_URL            => $url,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING       => "",
-            CURLOPT_MAXREDIRS      => 10,
-            CURLOPT_TIMEOUT        => 60,
+            CURLOPT_UPLOAD         => true,
+            CURLOPT_INFILE         => $fh,
+            CURLOPT_INFILESIZE     => $fileSize,
+            CURLOPT_TIMEOUT        => 3600,
             CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST  => "PUT",
-            CURLOPT_POSTFIELDS     => $fileData,
             CURLOPT_HTTPHEADER     => [
                 "AccessKey: {$apiKey}",
                 "Content-Type: application/octet-stream",
-                "Content-Length: " . filesize($filePath)
             ],
         ]);
 
         // ✅ EXECUTE
         $response = curl_exec($curl);
+        $errno    = curl_errno($curl);
+        $errStr   = $errno ? curl_error($curl) : '';
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+        fclose($fh);
 
         // ❌ CURL ERROR
-        if (curl_errno($curl)) {
-
-            $error = curl_error($curl);
-
-            curl_close($curl);
-
+        if ($errno) {
             return [
                 "status"  => "error",
-                "message" => "Curl error: " . $error
+                "message" => "Curl error: " . $errStr
             ];
         }
-
-        // ✅ HTTP STATUS
-        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-
-        curl_close($curl);
 
         // ✅ SUCCESS
         if ($httpCode == 201 || $httpCode == 200) {
@@ -743,6 +735,116 @@ class App
             "http_code" => $httpCode,
             "response" => $result
         ];
+    }
+
+    /**
+     * Rename a Bunny Storage folder by copying every file to the new path
+     * then deleting the originals. Returns a status report.
+     *
+     * Because Bunny Storage has no native rename/move API, this downloads
+     * each file via the storage API and re-uploads it to the new path.
+     */
+    public static function renameBunnyStorageFolder(
+        $storageZone, $oldFolder, $newFolder, $storageKey
+    ) {
+        $oldFolder = trim($oldFolder, '/');
+        $newFolder = trim($newFolder, '/');
+
+        if ($oldFolder === $newFolder) {
+            return ['status'=>'success','message'=>'Folder names are identical — no action needed','moved'=>0];
+        }
+
+        // List objects in old folder
+        $listUrl = "https://storage.bunnycdn.com/{$storageZone}/{$oldFolder}/";
+        $ch = curl_init($listUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_HTTPHEADER     => ["AccessKey: {$storageKey}", "Accept: application/json"],
+        ]);
+        $listJson = curl_exec($ch);
+        $listCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if (curl_errno($ch)) {
+            $e = curl_error($ch); curl_close($ch);
+            return ['status'=>'error','message'=>"cURL listing error: {$e}"];
+        }
+        curl_close($ch);
+
+        // 404 means no files were ever uploaded to this folder — nothing to move
+        if ($listCode === 404) {
+            return ['status'=>'success','message'=>'Old folder did not exist — nothing to move','moved'=>0];
+        }
+        if ($listCode !== 200) {
+            return ['status'=>'error','message'=>"Could not list old storage folder (HTTP {$listCode})"];
+        }
+
+        $items = json_decode($listJson, true);
+        if (!is_array($items)) {
+            return ['status'=>'error','message'=>'Invalid folder listing response from Bunny Storage'];
+        }
+
+        $moved  = 0;
+        $errors = [];
+
+        foreach ($items as $item) {
+            if (!empty($item['IsDirectory'])) continue; // skip sub-folders
+
+            $name = $item['ObjectName'];
+
+            // Download from old path via Storage API
+            $dlUrl = "https://storage.bunnycdn.com/{$storageZone}/{$oldFolder}/{$name}";
+            $dlCh  = curl_init($dlUrl);
+            curl_setopt_array($dlCh, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 180,
+                CURLOPT_HTTPHEADER     => ["AccessKey: {$storageKey}"],
+            ]);
+            $fileData = curl_exec($dlCh);
+            $dlCode   = curl_getinfo($dlCh, CURLINFO_HTTP_CODE);
+            if (curl_errno($dlCh) || $dlCode !== 200 || $fileData === false) {
+                $errors[] = "Download failed: {$name} (HTTP {$dlCode})";
+                curl_close($dlCh);
+                continue;
+            }
+            curl_close($dlCh);
+
+            // Upload to new path
+            $ulUrl = "https://storage.bunnycdn.com/{$storageZone}/{$newFolder}/{$name}";
+            $ulCh  = curl_init($ulUrl);
+            curl_setopt_array($ulCh, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CUSTOMREQUEST  => "PUT",
+                CURLOPT_POSTFIELDS     => $fileData,
+                CURLOPT_TIMEOUT        => 180,
+                CURLOPT_HTTPHEADER     => [
+                    "AccessKey: {$storageKey}",
+                    "Content-Type: application/octet-stream",
+                    "Content-Length: " . strlen($fileData),
+                ],
+            ]);
+            $ulCode = curl_getinfo($ulCh, CURLINFO_HTTP_CODE);
+            curl_exec($ulCh);
+            curl_close($ulCh);
+            unset($fileData); // free memory between iterations
+
+            if (in_array($ulCode, [200, 201])) {
+                self::deleteBunnyStorageFile($storageZone, "{$oldFolder}/{$name}", $storageKey);
+                $moved++;
+            } else {
+                $errors[] = "Upload failed: {$name} (HTTP {$ulCode})";
+            }
+        }
+
+        if (!empty($errors)) {
+            return [
+                'status'  => 'partial',
+                'message' => "Moved {$moved} file(s) with " . count($errors) . " error(s)",
+                'moved'   => $moved,
+                'errors'  => $errors,
+            ];
+        }
+
+        return ['status'=>'success','message'=>"Moved {$moved} file(s) to new folder",'moved'=>$moved];
     }
 
     //get selcom Private Key

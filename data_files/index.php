@@ -37,6 +37,14 @@ if(!isset($_SESSION['usr_code'])){
 // Force light mode before any HTML output so the Set-Cookie header is sent correctly
 setcookie('adminuiuxlayoutmode', 'light-mode', time() + 86400 * 365, '/');
 
+// ── Force password change intercept ───────────────────────────
+if (!empty($_SESSION['force_pw_change'])) {
+    $v = $_GET['view'] ?? '';
+    if ($v !== 'change-password-request' && $v !== 'kill-session-user') {
+        $_GET['view'] = 'change-password-request';
+    }
+}
+
 // ── AJAX fragment mode (lazy navigation) ──────────────────────
 if (!empty($_GET['_dcm_ajax'])) {
     include('pages/controller.php');
@@ -140,16 +148,15 @@ if ($signup_success !== 'Completed' && ($user_role=='1')): ?>
     <footer class="adminuiux-footer has-adminuiux-sidebar mt-auto">
         <div class="container-fluid">
             <div class="row">
-                <div class="col-12 col-md col-lg py-2"><span class="small">Copyright @<?php echo date('Y'); ?>, <a
+                <div class="col-12 col-md col-lg py-2"><span class="small">Copyright &copy; <?php echo date('Y'); ?>, <a
                             href="https://digitalclassmedia.com/" target="_blank">Digital Class</a></span></div>
                 <div class="col-12 col-md-auto col-lg-auto align-self-center">
                     <ul class="nav small">
-                        <li class="nav-item"><a class="nav-link" href="../data_files/?view=help_instrauctions">Help</a></li>
+                        <li class="nav-item"><a class="nav-link" href="?view=help_instrauctions">Help</a></li>
                         <li class="nav-item">|</li>
-                        <li class="nav-item"><a class="nav-link" href="../data_files/?view=terms_of_use">Terms of Use</a></li>
+                        <li class="nav-item"><a class="nav-link" href="?view=terms_of_use">Terms of Use</a></li>
                         <li class="nav-item">|</li>
-                        <li class="nav-item"><a class="nav-link" href="../data_files/?view=privacy_policy">Privacy Policy</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="?view=privacy_policy">Privacy Policy</a></li>
                     </ul>
                 </div>
             </div>

@@ -43,6 +43,10 @@ switch ($view) {
         include('pages/learning_student_home.php');
         break;
 
+    case 'student_interests':
+        include('pages/student_interests.php');
+        break;
+
     case 'student_profile':
         include('pages/student_profile.php');
         break;
@@ -136,6 +140,14 @@ switch ($view) {
         include('pages/admin_org_detail.php');
         break;
 
+    case 'admin_categories':
+        include('pages/admin_categories.php');
+        break;
+
+    case 'admin_combinations':
+        include('pages/admin_combinations.php');
+        break;
+
     // ── ORG ADMIN ─────────────────────────────────────────────
     case 'org_dashboard':
         echo "<script>window.location.replace('?view=3002');</script>";
@@ -208,16 +220,37 @@ switch ($view) {
         break;
 
     // ── STUDENT EXAM MODULE ────────────────────────────────────
+    // Restricted to Pre-School / Primary / Secondary / High School students
     case 'student_exams':
-        include('pages/student_exams.php');
-        break;
-
     case 'student_take_exam':
-        include('pages/student_take_exam.php');
-        break;
-
     case 'student_exam_results':
-        include('pages/student_exam_results.php');
+        /* Gate: only students (role=1) who are NOT at university/professional level */
+        $__examOk = true;
+        if ((int)($user_role ?? 0) === 1 && isset($db)) {
+            $__eUsr  = $usr_code ?? '';
+            $__eLvlQ = $db->query("
+                SELECT mal.level_title
+                FROM tbl_students s
+                JOIN tbl_main_academic_levels mal ON mal.id = s.main_academic_level
+                WHERE s.usr_code = '" . $db->real_escape_string($__eUsr) . "' LIMIT 1
+            ");
+            if ($__eLvlQ && $__eLvlRow = $__eLvlQ->fetch_assoc()) {
+                $__eLvl = strtolower(trim($__eLvlRow['level_title']));
+                if (str_contains($__eLvl, 'undergraduate') || str_contains($__eLvl, 'university') || str_contains($__eLvl, 'degree') || $__eLvl === 'courses') {
+                    $__examOk = false;
+                }
+            }
+            if ($__examOk) {
+                $__eProfQ = $db->query("SELECT education_level FROM tbl_student_profiles WHERE student_id='" . $db->real_escape_string($__eUsr) . "' LIMIT 1");
+                if ($__eProfQ && $__ePRow = $__eProfQ->fetch_assoc()) {
+                    if (in_array($__ePRow['education_level'] ?? '', ['university','professional'])) $__examOk = false;
+                }
+            }
+        }
+        if (!$__examOk) { include('pages/403.php'); break; }
+        if ($view === 'student_exams')        { include('pages/student_exams.php');        break; }
+        if ($view === 'student_take_exam')    { include('pages/student_take_exam.php');    break; }
+        if ($view === 'student_exam_results') { include('pages/student_exam_results.php'); break; }
         break;
 
     case 'qb_question_media':

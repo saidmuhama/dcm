@@ -726,20 +726,27 @@ const dcmAlert = {
   }
 };
 
-let qbModal, allRows = [], searchQuery = '';
+/* qbModal and allRows on window so closures across SPA navigations always reach them */
+window.qbModal    = null;
+window.allRows    = [];
+var allRows       = window.allRows;   // local alias
+var searchQuery   = '';
 
 function _qbtInit() {
-  qbModal = new bootstrap.Modal(document.getElementById('qbModal'));
-  loadData();
-  if (QB_FIELDS.some(f=>f.type==='select_subjects')) loadOpts('subjects','field_subject_id','subject_id','subject_name');
-  if (QB_FIELDS.some(f=>f.type==='select_levels'))   loadOpts('levels',  'field_level_id',  'level_id',  'level_name');
-  if (QB_FIELDS.some(f=>f.type==='select_chapters')) loadOpts('chapters','field_chapter_id','chapter_id','chapter_name');
-}
-// DOMContentLoaded already fired in SPA navigation — call immediately if DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _qbtInit);
-} else {
-  _qbtInit();
+    try {
+        /* Safely get or reuse the Bootstrap modal instance — avoids the
+           "stale instance" error that blocks loadData() on SPA re-navigation */
+        var el = document.getElementById('qbModal');
+        if (!el) throw new Error('qbModal element not found');
+        window.qbModal = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el, {backdrop:'static'});
+    } catch(e) {
+        console.warn('[qbtInit] Modal init skipped:', e.message);
+    }
+    /* loadData() ALWAYS runs even if modal init failed */
+    loadData();
+    if (QB_FIELDS.some(function(f){ return f.type==='select_subjects'; })) loadOpts('subjects','field_subject_id','subject_id','subject_name');
+    if (QB_FIELDS.some(function(f){ return f.type==='select_levels'; }))   loadOpts('levels',  'field_level_id',  'level_id',  'level_name');
+    if (QB_FIELDS.some(function(f){ return f.type==='select_chapters'; })) loadOpts('chapters','field_chapter_id','chapter_id','chapter_name');
 }
 
 function loadOpts(entity, elId, vk, lk) {
@@ -931,7 +938,7 @@ window.openAddModal = function() {
     const el = document.getElementById(`field_${f.name}`);
     if (el) { el.value=''; el.classList.remove('is-invalid'); }
   });
-  qbModal.show();
+  if (window.qbModal) window.qbModal.show();
 };
 
 window.editRecord = function(row) {
@@ -941,7 +948,7 @@ window.editRecord = function(row) {
     const el = document.getElementById(`field_${f.name}`);
     if (el) { el.value = row[f.name]??''; el.classList.remove('is-invalid'); }
   });
-  qbModal.show();
+  if (window.qbModal) window.qbModal.show();
 };
 
 window.saveRecord = function() {
@@ -962,7 +969,7 @@ window.saveRecord = function() {
     .then(res=>{
       Swal.close();
       if (res.status==='success') {
-        qbModal.hide();
+        if (window.qbModal) window.qbModal.hide();
         dcmAlert.success(id ? `${QB_TITLE} updated!` : `${QB_TITLE} added!`, res.message||'Record saved.');
         loadData();
       } else dcmAlert.error('Could not save', res.message);
@@ -989,4 +996,7 @@ window.deleteRecord = function(id) {
     }
   });
 };
+
+/* ── Init — called LAST so every window.* assignment above is already in place ── */
+_qbtInit();
 </script>

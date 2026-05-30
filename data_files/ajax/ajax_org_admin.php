@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('../config/db.php');
+include('../config/dump.php');
 include('../config/url_crypt_config.php');
 header('Content-Type: application/json');
 
@@ -59,7 +60,8 @@ case 'dashboard':
     // Members enrolled in at least one org course
     $enrolled = $db->query("
         SELECT COUNT(DISTINCT m.usr_code) FROM tbl_org_members m
-        JOIN tbl_course_enrollments e ON e.user_id=m.usr_code
+        JOIN tbl_all_users u ON u.usr_code=m.usr_code
+        JOIN tbl_course_enrollments e ON e.user_id=u.id
         JOIN tbl_org_course_access ca ON ca.course_id=e.course_id AND ca.org_code='$orgCode' AND ca.is_active=1
         WHERE m.org_code='$orgCode'
     ")->fetch_row()[0];
@@ -225,7 +227,7 @@ case 'create_member':
 
     $db->begin_transaction();
     try {
-        $us = $db->prepare("INSERT INTO tbl_all_users (usr_code,first_name,last_name,email_address,phone_number,user_role,user_password,user_status,signup_success) VALUES (?,?,?,?,?,?,?,'Active','Completed')");
+        $us = $db->prepare("INSERT INTO tbl_all_users (usr_code,first_name,last_name,email_address,phone_number,user_role,user_password,user_status,signup_success,force_pw_change) VALUES (?,?,?,?,?,?,?,'Active','Completed',1)");
         $us->bind_param('sssssss', $usrCode,$fname,$lname,$email,$phone,$sysRole,$pwHash);
         $us->execute();
 
@@ -234,7 +236,27 @@ case 'create_member':
 
         $db->commit();
         orgLog($db, $orgCode, $me, 'member_created', 'user', $usrCode, ['name'=>"$fname $lname", 'role'=>$role]);
-        echo json_encode(['status'=>'success','message'=>'Member account created successfully']);
+
+        $smsSent = false;
+        if (!empty($phone)) {
+            $orgName = $myOrg['org_name'] ?? 'DigitalClass';
+            $smsMsg  = "Welcome to $orgName!\nEmail: $email\nPassword: $pass\nYou will be required to change your password on first login.";
+            $smsResult = App::sendSMS($phone, $smsMsg);
+            $smsSent   = !empty($smsResult['status']);
+        }
+
+        echo json_encode([
+            'status'      => 'success',
+            'message'     => 'Member account created successfully',
+            'sms_sent'    => $smsSent,
+            'credentials' => [
+                'name'     => trim("$fname $lname"),
+                'email'    => $email,
+                'password' => $pass,
+                'phone'    => $phone,
+                'usr_code' => $usrCode,
+            ]
+        ]);
     } catch (Exception $e) {
         $db->rollback();
         echo json_encode(['status'=>'error','message'=>'Failed: '.$e->getMessage()]);
@@ -280,7 +302,7 @@ case 'reset_password':
     if ($check->num_rows === 0) { echo json_encode(['status'=>'error','message'=>'Member not found in your organization']); exit; }
 
     $hash = password_hash('DigitalClass@123', PASSWORD_BCRYPT);
-    $db->query("UPDATE tbl_all_users SET user_password='$hash' WHERE usr_code='$usrCode'");
+    $db->query("UPDATE tbl_all_users SET user_password='$hash', force_pw_change=1 WHERE usr_code='$usrCode'");
     orgLog($db, $orgCode, $me, 'password_reset', 'user', $usrCode);
     echo json_encode(['status'=>'success','message'=>'Password reset to default (DigitalClass@123)']);
     break;
@@ -320,7 +342,7 @@ case 'import_members':
             $sysRole = match($role) { 'instructor' => 3, 'admin','coordinator' => 4, default => 1 };
             $fn      = $db->real_escape_string($fname);
             $ln      = $db->real_escape_string($lname);
-            $ph      = $db->real_escape_string($phone);
+            $ph      = '';
             $db->query("INSERT INTO tbl_all_users (usr_code,first_name,last_name,email_address,phone_number,user_role,user_password,user_status,signup_success)
                         VALUES ('$usrCode','$fn','$ln','$esc','$ph',$sysRole,'$defPass','Active','Completed')");
         }
@@ -405,7 +427,8 @@ case 'list_courses':
         SELECT ca.*, c.title, c.thumbnail, c.status AS course_status, c.price,
                CONCAT(u.first_name,' ',u.last_name) AS instructor_name,
                (SELECT COUNT(DISTINCT e.user_id) FROM tbl_course_enrollments e
-                JOIN tbl_org_members m ON m.usr_code=e.user_id AND m.org_code='$orgCode'
+                JOIN tbl_all_users eu ON eu.id=e.user_id
+                JOIN tbl_org_members m ON m.usr_code=eu.usr_code AND m.org_code='$orgCode'
                 WHERE e.course_id=ca.course_id) AS enrolled_members
         FROM tbl_org_course_access ca
         JOIN tbl_courses c ON c.id=ca.course_id
@@ -421,33 +444,69 @@ case 'get_reports':
     $deptId  = (int)($_GET['dept']   ?? 0);
     $period  = max(0, (int)($_GET['period'] ?? 30));
     $deptWhere = $deptId ? "AND m.dept_id=$deptId" : '';
-    $dateWhere = $period > 0 ? "AND p.updated_at >= DATE_SUB(NOW(), INTERVAL $period DAY)" : '';
+    $dateWhere = $period > 0 ? "AND p.created_at >= DATE_SUB(NOW(), INTERVAL $period DAY)" : '';
 
-    $activeLearners = $db->query("SELECT COUNT(DISTINCT m.usr_code) FROM tbl_org_members m JOIN tbl_course_progress p ON p.user_id=m.usr_code WHERE m.org_code='$orgCode' AND m.status='active' $deptWhere $dateWhere")->fetch_row()[0];
-    $totalEnrolled  = $db->query("SELECT COUNT(*) FROM tbl_course_enrollments e JOIN tbl_org_members m ON m.usr_code=e.user_id WHERE m.org_code='$orgCode' $deptWhere")->fetch_row()[0];
+    $activeLearners = $db->query("
+        SELECT COUNT(DISTINCT m.usr_code) FROM tbl_org_members m
+        JOIN tbl_course_progress p ON p.user_id=m.usr_code
+        JOIN tbl_course_chapter_lessons lp ON lp.id=p.lesson_id AND lp.status='active'
+        JOIN tbl_course_chapters chp ON chp.id=lp.chapter_id
+        JOIN tbl_org_course_access ocap ON ocap.course_id=chp.course_id AND ocap.org_code='$orgCode' AND ocap.is_active=1
+        WHERE m.org_code='$orgCode' AND m.status='active' $deptWhere $dateWhere
+    ")->fetch_row()[0];
+    // Count distinct (member, course) pairs where member has watched at least one lesson
+    $totalEnrolled = $db->query("
+        SELECT COUNT(DISTINCT CONCAT(m.usr_code,'|',chp.course_id))
+        FROM tbl_org_members m
+        JOIN tbl_course_progress p ON p.user_id=m.usr_code AND p.watched=1
+        JOIN tbl_course_chapter_lessons lp ON lp.id=p.lesson_id AND lp.status='active'
+        JOIN tbl_course_chapters chp ON chp.id=lp.chapter_id
+        JOIN tbl_org_course_access oca ON oca.course_id=chp.course_id AND oca.org_code='$orgCode' AND oca.is_active=1
+        WHERE m.org_code='$orgCode' $deptWhere
+    ")->fetch_row()[0];
 
-    // Member progress
+    // All member counts (enrolled, completed, avg_progress, last_active) are progress-based,
+    // so members who access org courses without a formal enrollment record are counted correctly.
     $members = $db->query("
         SELECT m.usr_code, m.org_role,
                u.first_name, u.last_name, u.email_address AS email,
                d.dept_name,
-               COUNT(DISTINCT e.course_id) AS enrolled_courses,
-               COUNT(DISTINCT CASE WHEN prog_pct.pct >= 100 THEN e.course_id END) AS completed_courses,
-               ROUND(100 * COUNT(DISTINCT CASE WHEN p.watched=1 THEN p.lesson_id END) / GREATEST(COUNT(DISTINCT l.id),1),1) AS avg_progress,
-               MAX(p.updated_at) AS last_active
+               (
+                   SELECT COUNT(DISTINCT oca2.course_id)
+                   FROM tbl_org_course_access oca2
+                   JOIN tbl_course_chapter_lessons l2 ON l2.course_id=oca2.course_id AND l2.status='active'
+                   JOIN tbl_course_progress p2 ON p2.lesson_id=l2.id AND p2.user_id=m.usr_code AND p2.watched=1
+                   WHERE oca2.org_code='$orgCode' AND oca2.is_active=1
+               ) AS enrolled_courses,
+               (
+                   SELECT COUNT(DISTINCT oca2.course_id)
+                   FROM tbl_org_course_access oca2
+                   WHERE oca2.org_code='$orgCode' AND oca2.is_active=1
+                   AND (
+                       SELECT ROUND(100 * SUM(CASE WHEN p2.watched=1 THEN 1 ELSE 0 END) / GREATEST(COUNT(*),1), 1)
+                       FROM tbl_course_chapter_lessons l2
+                       LEFT JOIN tbl_course_progress p2 ON p2.lesson_id=l2.id AND p2.user_id=m.usr_code
+                       WHERE l2.course_id=oca2.course_id AND l2.status='active'
+                   ) >= 100
+               ) AS completed_courses,
+               COALESCE((
+                   SELECT ROUND(100 * COUNT(DISTINCT CASE WHEN p2.watched=1 THEN p2.lesson_id END) / GREATEST(COUNT(DISTINCT l2.id),1), 1)
+                   FROM tbl_org_course_access oca2
+                   JOIN tbl_course_chapter_lessons l2 ON l2.course_id=oca2.course_id AND l2.status='active'
+                   LEFT JOIN tbl_course_progress p2 ON p2.lesson_id=l2.id AND p2.user_id=m.usr_code
+                   WHERE oca2.org_code='$orgCode' AND oca2.is_active=1
+               ), 0) AS avg_progress,
+               (
+                   SELECT MAX(p3.created_at)
+                   FROM tbl_course_progress p3
+                   JOIN tbl_course_chapter_lessons l3 ON l3.id=p3.lesson_id
+                   JOIN tbl_course_chapters ch3 ON ch3.id=l3.chapter_id
+                   JOIN tbl_org_course_access oca3 ON oca3.course_id=ch3.course_id AND oca3.org_code='$orgCode' AND oca3.is_active=1
+                   WHERE p3.user_id=m.usr_code
+               ) AS last_active
         FROM tbl_org_members m
         JOIN tbl_all_users u ON u.usr_code=m.usr_code
         LEFT JOIN tbl_org_departments d ON d.id=m.dept_id
-        LEFT JOIN tbl_course_enrollments e ON CAST(e.user_id AS CHAR)=m.usr_code
-        LEFT JOIN tbl_org_course_access oca ON oca.course_id=e.course_id AND oca.org_code='$orgCode' AND oca.is_active=1
-        LEFT JOIN tbl_course_chapter_lessons l ON l.course_id=oca.course_id AND l.status='active'
-        LEFT JOIN tbl_course_progress p ON p.lesson_id=l.id AND p.user_id=m.usr_code
-        LEFT JOIN (
-            SELECT p2.user_id, p2.course_id,
-                   ROUND(100*SUM(p2.watched)/GREATEST(COUNT(*),1),1) AS pct
-            FROM tbl_course_progress p2
-            GROUP BY p2.user_id, p2.course_id
-        ) prog_pct ON prog_pct.user_id=m.usr_code AND prog_pct.course_id=e.course_id
         WHERE m.org_code='$orgCode' AND m.status='active' $deptWhere
         GROUP BY m.usr_code
         ORDER BY avg_progress DESC, enrolled_courses DESC
@@ -465,12 +524,13 @@ case 'get_reports':
         FROM tbl_org_course_access oca
         JOIN tbl_courses c ON c.id=oca.course_id
         LEFT JOIN tbl_course_enrollments e ON e.course_id=oca.course_id
-        LEFT JOIN tbl_org_members m ON CAST(m.usr_code AS CHAR)=CAST(e.user_id AS CHAR) AND m.org_code='$orgCode' $deptWhere
+        LEFT JOIN tbl_all_users eu ON eu.id=e.user_id
+        LEFT JOIN tbl_org_members m ON m.usr_code=eu.usr_code AND m.org_code='$orgCode' $deptWhere
         LEFT JOIN (
             SELECT p2.user_id, p2.course_id,
                    ROUND(100*SUM(p2.watched)/GREATEST(COUNT(*),1),1) AS pct
             FROM tbl_course_progress p2 GROUP BY p2.user_id, p2.course_id
-        ) prog_pct ON prog_pct.user_id=e.user_id AND prog_pct.course_id=e.course_id
+        ) prog_pct ON prog_pct.user_id=eu.usr_code AND prog_pct.course_id=e.course_id
         WHERE oca.org_code='$orgCode' AND oca.is_active=1
         GROUP BY c.id
         ORDER BY enrolled DESC
@@ -485,7 +545,8 @@ case 'get_reports':
                ROUND(AVG(COALESCE(dprog.pct,0)),1) AS avg_completion
         FROM tbl_org_departments d
         LEFT JOIN tbl_org_members m ON m.dept_id=d.id AND m.status='active'
-        LEFT JOIN tbl_course_enrollments e ON e.user_id=m.usr_code
+        LEFT JOIN tbl_all_users eu ON eu.usr_code=m.usr_code
+        LEFT JOIN tbl_course_enrollments e ON e.user_id=eu.id
         LEFT JOIN tbl_org_course_access oca ON oca.course_id=e.course_id AND oca.org_code='$orgCode' AND oca.is_active=1
         LEFT JOIN tbl_course_chapter_lessons l ON l.course_id=oca.course_id AND l.status='active'
         LEFT JOIN (
@@ -544,7 +605,8 @@ case 'browse_courses':
                oca.granted_at,
                oca.expires_at,
                (SELECT COUNT(DISTINCT e.user_id) FROM tbl_course_enrollments e
-                JOIN tbl_org_members m ON CAST(m.usr_code AS CHAR)=CAST(e.user_id AS CHAR)
+                JOIN tbl_all_users eu ON eu.id=e.user_id
+                JOIN tbl_org_members m ON m.usr_code=eu.usr_code
                 WHERE e.course_id=c.id AND m.org_code='$orgCode') AS enrolled_members
         FROM tbl_courses c
         LEFT JOIN tbl_all_users u ON u.usr_code=c.instructor_id
@@ -592,6 +654,56 @@ case 'list_categories':
         WHERE status=1 ORDER BY category_title ASC
     ")->fetch_all(MYSQLI_ASSOC);
     echo json_encode(['status'=>'success','categories'=>$rows]);
+    break;
+
+/* ── Org subscribed courses (lightweight, for member create preview) ── */
+case 'org_course_list':
+    $rows = $db->query("
+        SELECT c.id, c.title, c.thumbnail
+        FROM tbl_org_course_access ca
+        JOIN tbl_courses c ON c.id = ca.course_id
+        WHERE ca.org_code = '$orgCode' AND ca.is_active = 1
+          AND (ca.expires_at IS NULL OR ca.expires_at >= CURDATE())
+        ORDER BY c.title ASC
+    ")->fetch_all(MYSQLI_ASSOC);
+    echo json_encode(['status'=>'success','courses'=>$rows]);
+    break;
+
+/* ── Send login credentials via SMS ──────────────────────────── */
+case 'send_credentials':
+    $body    = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $usrCode = $db->real_escape_string($body['usr_code'] ?? '');
+    if (!$usrCode) { echo json_encode(['status'=>'error','message'=>'Invalid member']); exit; }
+
+    $chk = $db->query("SELECT id FROM tbl_org_members WHERE org_code='$orgCode' AND usr_code='$usrCode' AND status='active' LIMIT 1");
+    if ($chk->num_rows === 0) { echo json_encode(['status'=>'error','message'=>'Member not in your organization']); exit; }
+
+    $u = $db->query("SELECT first_name, phone_number, email_address FROM tbl_all_users WHERE usr_code='$usrCode' LIMIT 1")->fetch_assoc();
+    if (!$u)                       { echo json_encode(['status'=>'error','message'=>'Member not found']); exit; }
+    if (empty($u['phone_number'])) { echo json_encode(['status'=>'error','message'=>'No phone number on record for this member']); exit; }
+
+    /* generate a readable temp password and reset it in DB */
+    $tempPass = strtoupper(bin2hex(random_bytes(4))) . rand(10, 99);
+    $tempHash = password_hash($tempPass, PASSWORD_BCRYPT);
+    $db->query("UPDATE tbl_all_users SET user_password='$tempHash', force_pw_change=1 WHERE usr_code='$usrCode'");
+
+    $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $loginUrl = $scheme . '://' . $_SERVER['HTTP_HOST'];
+    $orgName  = $myOrg['org_name'];
+
+    $msg = "Hello {$u['first_name']}, you have been added to {$orgName}.\n"
+         . "Login at: {$loginUrl}\n"
+         . "Email: {$u['email_address']}\n"
+         . "Password: {$tempPass}\n"
+         . "Please change your password after first login.";
+
+    try {
+        App::sendSMS($u['phone_number'], $msg);
+        orgLog($db, $orgCode, $me, 'credentials_sent', 'user', $usrCode, ['via'=>'sms']);
+        echo json_encode(['status'=>'success','message'=>'Credentials sent via SMS to '.$u['phone_number'],'temp_password'=>$tempPass]);
+    } catch (Throwable $e) {
+        echo json_encode(['status'=>'error','message'=>'SMS failed: '.$e->getMessage()]);
+    }
     break;
 
 default:

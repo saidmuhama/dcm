@@ -150,7 +150,13 @@ if ($action === 'create') {
     if (!$stmt) send_json(['status'=>'error','message'=>$db->error]);
     $stmt->bind_param(implode('',$types), ...$params);
     if ($stmt->execute()) {
-        send_json(['status'=>'success','message'=>'Record created','id'=>$db->insert_id]);
+        $newId = $db->insert_id;
+        /* ── Mirror qb_levels → tbl_main_academic_levels ── */
+        if ($entity === 'levels' && !empty($body['level_name'])) {
+            $lname = $db->real_escape_string(trim($body['level_name']));
+            $db->query("INSERT IGNORE INTO tbl_main_academic_levels (level_title) VALUES ('$lname')");
+        }
+        send_json(['status'=>'success','message'=>'Record created','id'=>$newId]);
     } else {
         $msg = str_contains($stmt->error,'Duplicate') ? 'This record already exists.' : $stmt->error;
         send_json(['status'=>'error','message'=>$msg]);
@@ -174,6 +180,19 @@ if ($action === 'update') {
     $stmt = $db->prepare("UPDATE $table SET ".implode(',',$sets)." WHERE $pk = ?");
     $stmt->bind_param(implode('',$types), ...$params);
     if ($stmt->execute()) {
+        /* ── Mirror qb_levels update → tbl_main_academic_levels ── */
+        if ($entity === 'levels' && !empty($body['level_name'])) {
+            /* Find the old level_title for this qb_level id, then update it */
+            $lname = $db->real_escape_string(trim($body['level_name']));
+            $oldRow = $db->query("SELECT level_name FROM qb_levels WHERE level_id=$id")->fetch_assoc();
+            if ($oldRow) {
+                $oldName = $db->real_escape_string($oldRow['level_name']);
+                /* Update matching main academic level if exists */
+                $db->query("UPDATE tbl_main_academic_levels SET level_title='$lname' WHERE level_title='$oldName' LIMIT 1");
+                /* Insert if it doesn't exist yet */
+                $db->query("INSERT IGNORE INTO tbl_main_academic_levels (level_title) VALUES ('$lname')");
+            }
+        }
         send_json(['status'=>'success','message'=>'Record updated']);
     } else {
         send_json(['status'=>'error','message'=>$stmt->error]);
@@ -184,9 +203,25 @@ if ($action === 'update') {
 if ($action === 'delete') {
     $id = (int)($body['id'] ?? 0);
     if (!$id) send_json(['status'=>'error','message'=>'ID missing']);
+    /* Capture level name BEFORE deleting (for sync) */
+    $deletedLevelName = '';
+    if ($entity === 'levels') {
+        $preRow = $db->query("SELECT level_name FROM qb_levels WHERE level_id=$id LIMIT 1")->fetch_assoc();
+        $deletedLevelName = $preRow['level_name'] ?? '';
+    }
     $stmt = $db->prepare("DELETE FROM $table WHERE $pk = ?");
     $stmt->bind_param('i', $id);
     if ($stmt->execute()) {
+        /* ── Mirror qb_levels delete → tbl_main_academic_levels ── */
+        if ($entity === 'levels' && $deletedLevelName) {
+            $delName = $db->real_escape_string($deletedLevelName);
+            /* Only remove from student levels if no student is currently assigned to it */
+            $malId = (int)($db->query("SELECT id FROM tbl_main_academic_levels WHERE level_title='$delName' LIMIT 1")->fetch_row()[0] ?? 0);
+            if ($malId) {
+                $inUse = (int)$db->query("SELECT COUNT(*) FROM tbl_students WHERE main_academic_level=$malId")->fetch_row()[0];
+                if (!$inUse) $db->query("DELETE FROM tbl_main_academic_levels WHERE id=$malId LIMIT 1");
+            }
+        }
         send_json(['status'=>'success','message'=>'Record deleted']);
     } else {
         $msg = str_contains($stmt->error,'foreign key') ? 'Cannot delete — this record is used by questions or other data.' : $stmt->error;

@@ -36,6 +36,7 @@
 .pill-tab.t-approved.active{background:#16a34a}
 .pill-tab.t-rejected.active{background:#dc2626}
 .pill-tab.t-revision.active{background:#9333ea}
+.pill-tab.t-chapterdel.active{background:#92400e}
 .tab-count{background:rgba(255,255,255,.3);border-radius:100px;padding:.05rem .4rem;font-size:.65rem;min-width:16px;text-align:center;line-height:1.5}
 .pill-tab:not(.active) .tab-count{background:rgba(0,0,0,.08);color:#475569}
 
@@ -206,6 +207,9 @@
           <button class="pill-tab t-revision" data-s="revision_needed">
             <i class="bi bi-arrow-repeat"></i>Revision <span class="tab-count" id="tc-revision">—</span>
           </button>
+          <button class="pill-tab t-chapterdel" data-mode="chapter_del" data-s="" style="border-left:1.5px solid #e2e8f0;margin-left:.25rem">
+            <i class="bi bi-folder-x"></i>Chapter Del. <span class="tab-count" id="tc-chdel">—</span>
+          </button>
         </div>
         <div class="search-wrap">
           <i class="bi bi-search"></i>
@@ -221,6 +225,76 @@
 
     <!-- RIGHT: detail -->
     <div>
+      <!-- Chapter deletion detail panel -->
+      <div class="detail-panel" id="cdPanel" style="display:none">
+        <div class="dp-hero position-relative" style="z-index:1;background:linear-gradient(135deg,#1c1917 0%,#292524 55%,#1c1917 100%)">
+          <div class="d-flex align-items-start gap-3">
+            <div style="width:54px;height:54px;border-radius:12px;background:rgba(245,158,11,.18);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fbbf24;flex-shrink:0">
+              <i class="bi bi-folder-x"></i>
+            </div>
+            <div class="flex-grow-1 min-w-0">
+              <div class="dp-title" id="cd_chapter_title"></div>
+              <div class="dp-instructor" id="cd_course_name"></div>
+              <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                <span id="cd_sbadge" class="sbadge pending"><i class="bi bi-hourglass-split" style="font-size:.45rem"></i> Pending</span>
+                <span style="color:rgba(255,255,255,.38);font-size:.71rem" id="cd_time"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="dp-section">
+          <div class="dp-label">Request Overview</div>
+          <div class="d-flex gap-2">
+            <div class="dp-stat-box">
+              <div class="num" style="color:#f59e0b" id="cd_lessons">—</div>
+              <div class="lbl">Lessons</div>
+            </div>
+            <div class="dp-stat-box">
+              <div class="num" style="color:#6366f1" id="cd_instructor">—</div>
+              <div class="lbl">Instructor</div>
+            </div>
+            <div class="dp-stat-box">
+              <div class="num" style="color:#0891b2" id="cd_course_status">—</div>
+              <div class="lbl">Course Status</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Instructor note -->
+        <div class="dp-section" id="cd_note_sec" style="display:none">
+          <div class="dp-label">Instructor's Reason</div>
+          <div class="note-box" id="cd_note"></div>
+        </div>
+
+        <!-- Previous admin comment -->
+        <div class="dp-section" id="cd_prev_sec" style="display:none">
+          <div class="dp-label">Admin Response</div>
+          <div class="note-box admin-note" id="cd_prev_comment"></div>
+        </div>
+
+        <!-- Decided banner -->
+        <div class="dp-section" id="cd_decided_sec" style="display:none">
+          <div class="decided-banner" id="cd_decided_banner"></div>
+        </div>
+
+        <!-- Admin comment -->
+        <div class="dp-section" id="cd_action_sec">
+          <div class="dp-label mb-2" id="cd_action_label">Admin Comment <span class="fw-normal text-muted" style="font-size:.68rem;text-transform:none;letter-spacing:0">(required when rejecting)</span></div>
+          <textarea id="cd_comment" class="comment-ta" rows="3"
+            placeholder="Add a note to the instructor (optional for approval, required for rejection)…"></textarea>
+          <div class="acr-actions mt-3" id="cd_btn_row">
+            <button class="action-btn ab-approve" id="cdBtnApprove" onclick="decideChDel('approve_del')">
+              <i class="bi bi-trash3-fill"></i>Approve &amp; Delete
+            </button>
+            <button class="action-btn ab-reject" id="cdBtnReject" onclick="decideChDel('reject_del')">
+              <i class="bi bi-x-circle-fill"></i>Reject
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Empty placeholder -->
       <div class="detail-panel acr-empty" id="detailEmpty">
         <div style="font-size:3.5rem;color:#e2e8f0"><i class="bi bi-shield-check"></i></div>
@@ -325,6 +399,7 @@
 const AJAX = 'ajax/ajax_course_review.php';
 let curPage = 1, curFilter = '', curSearch = '', activeId = null;
 let tabCounts = { all:0, pending:0, approved:0, rejected:0, revision_needed:0 };
+let curMode = 'reviews', curChDelFilter = 'pending', activeChDelId = null;
 
 /* ══ Stats ══ */
 function loadStats() {
@@ -605,9 +680,22 @@ document.querySelectorAll('.pill-tab').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.pill-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    curFilter = btn.dataset.s;
-    curPage = 1;
-    loadList(1);
+
+    if (btn.dataset.mode === 'chapter_del') {
+      curMode = 'chapter_del';
+      document.getElementById('acrSearch').value = '';
+      document.getElementById('reviewPager').style.display = 'none';
+      loadChapterDelList('pending');
+    } else {
+      curMode = 'reviews';
+      curFilter = btn.dataset.s;
+      curPage = 1;
+      document.getElementById('cdPanel').style.display = 'none';
+      document.getElementById('detailPanel').style.display = 'none';
+      document.getElementById('detailEmpty').style.display = '';
+      activeChDelId = null;
+      loadList(1);
+    }
   });
 });
 
@@ -615,6 +703,7 @@ document.querySelectorAll('.pill-tab').forEach(btn => {
 let st;
 document.getElementById('acrSearch').addEventListener('input', function(){
   clearTimeout(st);
+  if (curMode === 'chapter_del') return; /* search does not apply to chapter del mode */
   st = setTimeout(() => { curSearch = this.value; loadList(1); }, 350);
 });
 
@@ -631,7 +720,200 @@ function timeAgo(d){
   return Math.floor(s/86400)+'d ago';
 }
 
+/* ══ Chapter Deletion List ══ */
+function loadChapterDelList(filter) {
+  curChDelFilter = filter || 'pending';
+  document.getElementById('reviewList').innerHTML = '<div class="acr-empty py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
+  document.getElementById('cdPanel').style.display = 'none';
+  document.getElementById('detailPanel').style.display = 'none';
+  document.getElementById('detailEmpty').style.display = '';
+
+  fetch(`ajax/ajax_delete_chapter.php?action=list_del&filter=${encodeURIComponent(curChDelFilter)}`)
+  .then(r => r.json()).then(r => {
+    if (r.status !== 'success') {
+      document.getElementById('reviewList').innerHTML = `<div class="acr-empty"><i class="bi bi-exclamation-circle fs-2 d-block mb-2"></i>${r.message||'Error'}</div>`;
+      return;
+    }
+
+    document.getElementById('tc-chdel').textContent = r.pending || 0;
+
+    if (!r.data.length) {
+      document.getElementById('reviewList').innerHTML = '<div class="acr-empty"><i class="bi bi-inbox fs-1 d-block mb-2"></i>No deletion requests</div>';
+      return;
+    }
+
+    document.getElementById('reviewList').innerHTML = r.data.map(req => {
+      const thumb = req.course_thumb ? `../uploads/${req.course_thumb}` : '../assets/img/logo.svg';
+      return `
+      <div class="rcard${activeChDelId==req.id?' active':''}" id="cdcard_${req.id}" onclick="openChapterDelDetail(${req.id})">
+        <img src="${thumb}" class="rcard-thumb" onerror="this.src='../assets/img/logo.svg'">
+        <div class="flex-grow-1 min-w-0">
+          <div class="rcard-title">${esc(req.chapter_title)}</div>
+          <div class="rcard-meta">${esc(req.course_title)} · ${esc(req.first_name)} ${esc(req.last_name)}</div>
+          <div class="rcard-foot">
+            <span class="sbadge ${req.status}"><i class="bi bi-folder-x" style="font-size:.55rem"></i> ${badgeLabel(req.status)}</span>
+            <span class="rcard-meta"><i class="bi bi-file-earmark-play me-1"></i>${req.lesson_count} lesson${req.lesson_count==1?'':'s'}</span>
+            <span class="rcard-meta ms-auto"><i class="bi bi-clock me-1"></i>${timeAgo(req.requested_at)}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  })
+  .catch(() => {
+    document.getElementById('reviewList').innerHTML = '<div class="acr-empty"><i class="bi bi-wifi-off fs-2 d-block mb-2"></i>Network error</div>';
+  });
+}
+
+/* ══ Chapter Deletion Detail ══ */
+function openChapterDelDetail(id) {
+  activeChDelId = id;
+  document.querySelectorAll('.rcard').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById('cdcard_' + id);
+  if (card) card.classList.add('active');
+
+  document.getElementById('detailEmpty').style.display = 'none';
+  document.getElementById('detailPanel').style.display = 'none';
+  document.getElementById('cdPanel').style.display = 'block';
+
+  /* reset all sub-sections to a clean "loading" state before the fetch */
+  document.getElementById('cd_chapter_title').textContent = 'Loading…';
+  document.getElementById('cd_course_name').textContent   = '';
+  document.getElementById('cd_time').textContent          = '';
+  document.getElementById('cd_comment').value             = '';
+  document.getElementById('cd_note_sec').style.display    = 'none';
+  document.getElementById('cd_prev_sec').style.display    = 'none';
+  document.getElementById('cd_decided_sec').style.display = 'none';
+  document.getElementById('cd_action_sec').style.display  = '';   /* show approve/reject while loading */
+  document.getElementById('cdBtnApprove').disabled        = false;
+  document.getElementById('cdBtnReject').disabled         = false;
+
+  fetch(`ajax/ajax_delete_chapter.php?action=get_del&id=${id}`)
+  .then(r => r.json()).then(r => {
+    if (r.status !== 'success' || !r.data) return;
+    const d = r.data;
+
+    document.getElementById('cd_chapter_title').textContent = d.chapter_title;
+    document.getElementById('cd_course_name').textContent   = `${d.first_name} ${d.last_name} · ${d.course_title}`;
+    document.getElementById('cd_time').textContent          = 'Requested ' + fmtDate(d.requested_at);
+    document.getElementById('cd_lessons').textContent       = d.lesson_count;
+    document.getElementById('cd_instructor').textContent    = d.first_name + ' ' + d.last_name;
+    const cst = d.course_status || '';
+    document.getElementById('cd_course_status').textContent = cst ? cst.charAt(0).toUpperCase() + cst.slice(1) : '—';
+
+    const sb = document.getElementById('cd_sbadge');
+    sb.className = 'sbadge ' + d.status;
+    const sbIcons = { pending:'bi-hourglass-split', approved:'bi-check-circle-fill', rejected:'bi-x-circle-fill' };
+    sb.innerHTML = `<i class="bi ${sbIcons[d.status]||'bi-circle'}" style="font-size:.45rem"></i> ${badgeLabel(d.status)}`;
+
+    if (d.instructor_note) {
+      document.getElementById('cd_note').textContent = d.instructor_note;
+      document.getElementById('cd_note_sec').style.display = '';
+    } else {
+      document.getElementById('cd_note_sec').style.display = 'none';
+    }
+
+    if (d.admin_comment) {
+      document.getElementById('cd_prev_comment').textContent = d.admin_comment;
+      document.getElementById('cd_prev_sec').style.display = '';
+    } else {
+      document.getElementById('cd_prev_sec').style.display = 'none';
+    }
+
+    const isPending = d.status === 'pending';
+    const decBanner = document.getElementById('cd_decided_banner');
+    const decSec    = document.getElementById('cd_decided_sec');
+    const actionSec = document.getElementById('cd_action_sec');
+
+    if (!isPending) {
+      decBanner.className = 'decided-banner ' + d.status;
+      decBanner.innerHTML = d.status === 'approved'
+        ? '<i class="bi bi-check-circle-fill me-1"></i>Chapter and all its lessons were deleted.'
+        : '<i class="bi bi-x-circle-fill me-1"></i>This deletion request was rejected.';
+      decSec.style.display = '';
+      actionSec.style.display = 'none';
+    } else {
+      decSec.style.display = 'none';
+      actionSec.style.display = '';
+    }
+  });
+}
+
+/* ══ Decide Chapter Deletion ══ */
+function decideChDel(action) {
+  const comment = document.getElementById('cd_comment').value.trim();
+
+  if (action === 'reject_del' && !comment) {
+    swalWarn('Comment Required', 'Please provide a reason for rejecting the deletion request.');
+    document.getElementById('cd_comment').focus();
+    return;
+  }
+
+  const cfgMap = {
+    approve_del: {
+      iconClass: 'bi-trash3-fill', iconColor: '#dc2626',
+      title: 'Approve &amp; Delete Chapter?',
+      body: 'This will permanently delete the chapter and all its lessons. This action cannot be undone.',
+      confirmText: '<i class="bi bi-trash3-fill me-1"></i>Delete Permanently',
+      confirmColor: 'linear-gradient(135deg,#dc2626,#9f1239)'
+    },
+    reject_del: {
+      iconClass: 'bi-x-circle-fill', iconColor: '#d97706',
+      title: 'Reject Deletion Request?',
+      body: null,
+      confirmText: '<i class="bi bi-x-circle-fill me-1"></i>Reject Request',
+      confirmColor: 'linear-gradient(135deg,#d97706,#b45309)'
+    }
+  };
+  const cfg = cfgMap[action];
+  const bodyHtml = (cfg.body ? `<div class="dcm-swal-txt">${cfg.body}</div>` : '') +
+    (comment ? `<div class="dcm-swal-quote">"${esc(comment.substring(0,140))}${comment.length>140?'…':''}"</div>` : '');
+
+  swalConfirm({ ...cfg, body: bodyHtml, cancelText: 'Cancel' }).then(res => {
+    if (!res.isConfirmed) return;
+
+    document.getElementById('cdBtnApprove').disabled = true;
+    document.getElementById('cdBtnReject').disabled  = true;
+
+    fetch('ajax/ajax_delete_chapter.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, id: activeChDelId, comment })
+    })
+    .then(r => r.json())
+    .then(r => {
+      document.getElementById('cdBtnApprove').disabled = false;
+      document.getElementById('cdBtnReject').disabled  = false;
+      if (r.status === 'success') {
+        swalSuccess('Done!', r.message);
+        loadChapterDelList(curChDelFilter);
+      } else {
+        swalError('Action Failed', r.message);
+      }
+    })
+    .catch(() => {
+      document.getElementById('cdBtnApprove').disabled = false;
+      document.getElementById('cdBtnReject').disabled  = false;
+      swalError('Network Error', 'Could not reach the server. Please try again.');
+    });
+  });
+}
+
 /* ══ Init ══ */
 loadStats();
-loadList(1);
+
+/* auto-select tab from URL param (e.g. notifications link ?tab=chapter_del) */
+(function(){
+  const tab = new URLSearchParams(window.location.search).get('tab');
+  if (tab === 'chapter_del') {
+    const btn = document.querySelector('.pill-tab.t-chapterdel');
+    if (btn) { btn.click(); return; }
+  }
+  loadList(1);
+})();
+
+/* pre-load chapter del pending count (only when not already loading the tab) */
+fetch('ajax/ajax_delete_chapter.php?action=list_del&filter=pending')
+  .then(r => r.json()).then(r => {
+    if (r.status === 'success') document.getElementById('tc-chdel').textContent = r.pending || 0;
+  });
 </script>

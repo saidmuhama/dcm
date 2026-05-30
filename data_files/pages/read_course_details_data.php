@@ -10,6 +10,58 @@ $_cs->execute();
 $_course = $_cs->get_result()->fetch_assoc();
 if (!$_course) { echo '<div class="p-4 text-center text-danger">Course not found.</div>'; return; }
 
+/* ── Enrollment / access gate ────────────────────────────────── */
+$_crIsFree = (float)($_course['price'] ?? 0) === 0.0;
+$_crAccess = $_crIsFree; // free courses are open to all logged-in users
+if (!$_crAccess) {
+    // Check direct purchase (free enroll creates a paid order too)
+    $_aeq = $db->prepare("SELECT 1 FROM tbl_orders o JOIN tbl_order_items oi ON oi.order_id=o.id WHERE o.user_id=? AND o.payment_status='paid' AND oi.course_id=? LIMIT 1");
+    $_aeq->bind_param('si', $usr_code, $_cid);
+    $_aeq->execute();
+    $_crAccess = $_aeq->get_result()->num_rows > 0;
+}
+if (!$_crAccess) {
+    // Check org subscription
+    $_aoq = $db->prepare("SELECT 1 FROM tbl_org_course_access oca JOIN tbl_org_members m ON m.org_code=oca.org_code WHERE m.usr_code=? AND m.status='active' AND oca.course_id=? AND oca.is_active=1 AND (oca.expires_at IS NULL OR oca.expires_at >= CURDATE()) LIMIT 1");
+    $_aoq->bind_param('si', $usr_code, $_cid);
+    $_aoq->execute();
+    $_crAccess = $_aoq->get_result()->num_rows > 0;
+}
+if (!$_crAccess) {
+    $_encCid = encryptURLId($_cid, ctx: 'course');
+    $_crPrice = (float)($_course['price'] ?? 0);
+    $_crDisc  = (float)($_course['discount'] ?? 0);
+    $_crFinal = $_crPrice > 0 ? round($_crPrice - ($_crPrice * $_crDisc / 100)) : 0;
+    ?>
+    <div style="min-height:70vh;display:flex;align-items:center;justify-content:center;background:#f8fafc;padding:2rem">
+      <div style="max-width:440px;width:100%;text-align:center">
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#ede9fe,#c7d2fe);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.8rem;color:#4f46e5">
+          <i class="bi bi-lock-fill"></i>
+        </div>
+        <h4 style="font-weight:800;color:#0f172a;margin-bottom:.5rem">Enrollment Required</h4>
+        <p style="color:#64748b;font-size:.9rem;margin-bottom:1.5rem">
+          You need to enroll in <strong><?= htmlspecialchars($_course['title']) ?></strong> before you can access its lessons.
+        </p>
+        <?php if ($_crPrice > 0): ?>
+        <p style="font-size:.85rem;color:#4f46e5;font-weight:700;margin-bottom:1rem">
+          TZS <?= number_format($_crFinal) ?>
+          <?php if ($_crDisc > 0): ?><s style="color:#94a3b8;font-weight:400;margin-left:.3rem">TZS <?= number_format($_crPrice) ?></s><?php endif; ?>
+        </p>
+        <?php endif; ?>
+        <a href="?view=view_course_details&course_id=<?= htmlspecialchars($_encCid) ?>"
+           style="display:inline-flex;align-items:center;gap:.45rem;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:.65rem 1.4rem;border-radius:10px;font-weight:700;font-size:.88rem;text-decoration:none;box-shadow:0 4px 14px rgba(79,70,229,.3)">
+          <i class="bi bi-arrow-right-circle-fill"></i>
+          <?= $_crPrice > 0 ? 'Go to Course Page' : 'Enroll for Free' ?>
+        </a>
+        <div style="margin-top:1.25rem">
+          <a href="?view=3002" style="font-size:.8rem;color:#94a3b8;text-decoration:none"><i class="bi bi-arrow-left me-1"></i>Back to Dashboard</a>
+        </div>
+      </div>
+    </div>
+    <?php
+    return;
+}
+
 /* ── Instructor ───────────────────────────────────────────────── */
 $_ti = $db->prepare("SELECT first_name, last_name, image, course FROM tbl_tutors WHERE usr_code = ? LIMIT 1");
 $_ti->bind_param('s', $_course['instructor_id']);
@@ -83,9 +135,10 @@ $_final     = $_price > 0 ? $_price - ($_price * $_disc / 100) : 0;
 /* ── Custom Audio Player ── */
 #crAP { position:relative;width:100%;height:100%;background:#0d0d1a;overflow:hidden;display:flex;flex-direction:column; }
 #crAP-bg { position:absolute;inset:-20px;background-size:cover;background-position:center;filter:blur(32px) brightness(.3);z-index:0; }
-#crAP-art { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;z-index:2;padding:1.25rem 1.5rem .5rem;gap:.75rem;min-height:0; }
-#crAP-cover { width:130px;height:130px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;box-shadow:0 16px 48px rgba(0,0,0,.6);flex-shrink:0; }
-#crAP-cover img { width:100%;height:100%;object-fit:cover; }
+#crAP-art { flex:1;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;position:relative;z-index:2;padding:0 0 .5rem;gap:0;min-height:0;overflow:hidden; }
+#crAP-cover { position:relative;width:100%;padding-top:56.25%;/* 16:9 */background:linear-gradient(135deg,#4f46e5,#7c3aed);flex-shrink:0; }
+#crAP-cover img { position:absolute;inset:0;width:100%;height:100%;object-fit:cover; }
+#crAP-meta { padding:.75rem 1.5rem .25rem;text-align:center; }
 #crAP-title { font-size:.86rem;font-weight:700;color:#fff;text-align:center;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 #crAP-sub { font-size:.68rem;color:rgba(255,255,255,.4);letter-spacing:.03em; }
 #crAP-ctrl { position:relative;z-index:2;padding:.7rem 1.25rem 1rem;background:rgba(0,0,0,.35);backdrop-filter:blur(8px); }
@@ -104,7 +157,7 @@ $_final     = $_price > 0 ? $_price - ($_price * $_disc / 100) : 0;
 .crAP-fs-btn:hover { background:rgba(255,255,255,.2);color:#fff; }
 /* Fullscreen overrides */
 #crAP:fullscreen,#crAP:-webkit-full-screen { background:#0d0d1a; }
-#crAP:fullscreen #crAP-cover,#crAP:-webkit-full-screen #crAP-cover { width:220px;height:220px; }
+#crAP:fullscreen #crAP-cover,#crAP:-webkit-full-screen #crAP-cover { padding-top:56.25%; }
 #crAP:fullscreen #crAP-title,#crAP:-webkit-full-screen #crAP-title { font-size:1.1rem;max-width:500px; }
 #crAP:fullscreen #crAP-ctrl,#crAP:-webkit-full-screen #crAP-ctrl { padding:1rem 3rem 1.75rem; }
 #crAP:fullscreen .crAP-btn.crAP-play,#crAP:-webkit-full-screen .crAP-btn.crAP-play { width:66px;height:66px;font-size:1.7rem; }
@@ -290,6 +343,55 @@ $_final     = $_price > 0 ? $_price - ($_price * $_disc / 100) : 0;
                      background:rgba(10,10,20,.85);backdrop-filter:blur(4px);color:#fff; }
 .cr-locked-overlay i { font-size:3rem;color:rgba(255,255,255,.5); }
 .cr-locked-overlay p { font-size:.85rem;font-weight:700;color:rgba(255,255,255,.8);margin:0; }
+
+/* ── Audio viewer — compact fixed height instead of 16/9 ── */
+.cr-viewer-inner.is-audio {
+    aspect-ratio: unset !important;
+    height: 380px;
+    max-height: 380px;
+}
+
+/* ── Mobile media improvements ── */
+@media (max-width: 640px) {
+    /* Video viewer: reduce max height so it doesn't eat the whole screen */
+    .cr-viewer-inner { max-height: 220px; }
+    .cr-viewer-inner.is-audio { height: 340px; max-height: 340px; }
+
+    /* Audio cover art: full-width 16:9 on phone too */
+    #crAP-cover { width: 100% !important; padding-top: 56.25% !important; height: auto !important; border-radius: 0 !important; }
+    #crAP-meta  { padding: .5rem 1rem .2rem !important; }
+    #crAP-art   { padding: 0 !important; gap: 0 !important; }
+    #crAP-title { font-size: .78rem !important; }
+    #crAP-sub   { font-size: .62rem !important; }
+    #crAP-ctrl  { padding: .5rem 1rem .8rem !important; }
+
+    /* Touch-friendly play/nav buttons */
+    .crAP-btn.crAP-play { width: 46px !important; height: 46px !important; font-size: 1.25rem !important; }
+    .crAP-btn { font-size: 1rem !important; padding: .4rem !important; }
+
+    /* Volume slider too small for fingers — hide it, keep mute icon */
+    .crAP-vol-row input[type=range] { display: none !important; }
+    /* Re-anchor volume row so it doesn't overflow */
+    .crAP-vol-row { right: .75rem !important; bottom: .7rem !important; gap: .25rem !important; }
+
+    /* Fullscreen btn: slightly bigger tap target on mobile */
+    .crAP-fs-btn { padding: .45rem .55rem !important; font-size: 1rem !important; }
+
+    /* Viewer label: wrap on small screens */
+    .cr-viewer-label { flex-wrap: wrap; gap: .3rem; padding: .4rem .85rem; }
+    .cr-vl-title { font-size: .75rem; }
+
+    /* Tabs: smaller text so they fit in one row */
+    .cr-tab { padding: .65rem .7rem; font-size: .74rem; gap: .3rem; }
+}
+
+@media (max-width: 400px) {
+    /* Extra-small phones */
+    .cr-viewer-inner.is-audio { height: 300px; max-height: 300px; }
+    #crAP-cover { width: 100% !important; padding-top: 56.25% !important; height: auto !important; }
+    .crAP-btn.crAP-play { width: 40px !important; height: 40px !important; font-size: 1.1rem !important; }
+    .cr-tab .cr-tab-badge { display: none; }
+}
 </style>
 
 <div class="cr-wrap">
@@ -375,7 +477,7 @@ $_final     = $_price > 0 ? $_price - ($_price * $_disc / 100) : 0;
         <?php endif; ?>
 
         <?php if (!empty($_course['description'])): ?>
-        <div class="cr-desc-box"><?= nl2br(htmlspecialchars($_course['description'])) ?></div>
+        <div class="cr-desc-box"><?= preg_replace(['/<script\b[^>]*>.*?<\/script>/is','/\son\w+\s*=/i','/javascript\s*:/i'],['','','void:'], $_course['description'] ?? '') ?></div>
         <?php else: ?>
         <div class="cr-desc-box" style="color:#94a3b8;font-style:italic">No description provided for this course.</div>
         <?php endif; ?>
@@ -453,6 +555,7 @@ let crSnNotes       = [];
 let crSnTab         = 'all';
 let crSnSearch      = '';
 let crDiscussions   = [];
+const crLessonMap   = new Map(); // id → lesson object (avoids JSON-in-onclick encoding issues)
 
 /* ════════════════════════════════════════════════════════════
    INIT
@@ -535,16 +638,20 @@ function crRenderSidebar(chapters) {
   }
 
   let num = 0;
+  crLessonMap.clear();
   list.innerHTML = chapters.map((ch, ci) => {
     const isOpen = ci === 0 || ch.lessons.some(l => crCurrentLesson && l.id == crCurrentLesson.id);
     const chDone = ch.lessons.filter(l => crCompleted.has(parseInt(l.id))).length;
     const lessons = ch.lessons.map(l => {
       num++;
+      crLessonMap.set(parseInt(l.id), l); // store in registry — avoids JSON-in-onclick encoding issues
       const isFree   = parseInt(l.isFreePreviewLesson) === 1;
       const canPlay  = crIsPaid || isFree;
       const isDone   = crCompleted.has(parseInt(l.id));
       const isActive = crCurrentLesson && l.id == crCurrentLesson.id;
-      const ct       = (l.content_type || 'video').toLowerCase();
+      let ct         = (l.content_type || '').toLowerCase();
+      if ((!ct || ct === 'video') && /\.(mp3|m4a|ogg|wav|aac|flac)($|\?)/i.test(l.file_path || '')) ct = 'audio';
+      if (!ct) ct = 'video';
       const ctIcon   = ct === 'pdf' ? 'bi-file-earmark-pdf' : ct === 'audio' ? 'bi-music-note-beamed' : 'bi-play-circle-fill';
       let iconCls = 'idle', iconI = ctIcon;
       if (!canPlay)    { iconCls = 'locked'; iconI = 'bi-lock-fill'; }
@@ -554,7 +661,6 @@ function crRenderSidebar(chapters) {
 
       const dur = l.video_duration ? `<span>${l.video_duration}</span>` : '';
       const freeTag = isFree && !crIsPaid ? '<span class="cr-l-badge">Free</span>' : '';
-      const lJson   = JSON.stringify(l).replace(/"/g, '&quot;');
       const markBtn = canPlay && !isDone
         ? `<div class="cr-l-actions" id="crMkWrap_${l.id}">
              <button class="cr-mark-btn" id="crMkBtn_${l.id}" data-lid="${l.id}" onclick="crMarkComplete(${l.id})">
@@ -563,7 +669,7 @@ function crRenderSidebar(chapters) {
            </div>` : '';
 
       return `<div class="cr-lesson${isActive?' active':''}${!canPlay?' locked':''}" id="crL_${l.id}"
-                   onclick="${canPlay ? `crPlayLesson('${lJson}')` : ''}">
+                   onclick="${canPlay ? `crPlayLessonById(${parseInt(l.id)})` : ''}">
         <div class="cr-l-icon ${iconCls}"><i class="bi ${iconI}"></i></div>
         <div class="cr-l-info">
           <div class="cr-l-title">${crEsc(l.lesson_title)}</div>
@@ -593,9 +699,15 @@ function crToggleCh(ci) {
    VIDEO URL RESOLVER
 ════════════════════════════════════════════════════════════ */
 function crResolveEmbed(lesson) {
-  const ct      = (lesson.content_type || 'video').toLowerCase();
+  let ct        = (lesson.content_type || '').toLowerCase();
   const storage = (lesson.storage || 'upload').toLowerCase();
   const fp      = (lesson.file_path || '').trim();
+
+  // Fallback: detect audio by file extension when content_type was not saved to DB
+  if (!ct || ct === 'video') {
+    if (/\.(mp3|m4a|ogg|wav|aac|flac)($|\?)/i.test(fp)) ct = 'audio';
+  }
+  if (!ct) ct = 'video';
 
   // PDF
   if (ct === 'pdf') {
@@ -665,13 +777,17 @@ function crResolveEmbed(lesson) {
 /* ════════════════════════════════════════════════════════════
    LESSON PLAYER
 ════════════════════════════════════════════════════════════ */
+function crPlayLessonById(id) {
+  const lesson = crLessonMap.get(parseInt(id));
+  if (lesson) crPlayLesson(lesson);
+}
+
 function crPlayLesson(lesson) {
   if (typeof lesson === 'string') lesson = JSON.parse(lesson);
   crCurrentLesson = lesson;
 
   const inner = document.getElementById('crViewerInner');
   const label = document.getElementById('crViewerLabel');
-  const ct    = (lesson.content_type || 'video').toLowerCase();
 
   const embed = crResolveEmbed(lesson);
   let viewerHtml = '';
@@ -694,8 +810,10 @@ function crPlayLesson(lesson) {
         </button>
         <div id="crAP-art">
           <div id="crAP-cover">${coverInner}</div>
-          <div id="crAP-title">${crEsc(lesson.lesson_title||'')}</div>
-          <div id="crAP-sub">Audio Lesson</div>
+          <div id="crAP-meta">
+            <div id="crAP-title">${crEsc(lesson.lesson_title||'')}</div>
+            <div id="crAP-sub">Audio Lesson</div>
+          </div>
         </div>
         <div id="crAP-ctrl">
           <div class="crAP-seek-wrap">
@@ -723,11 +841,13 @@ function crPlayLesson(lesson) {
     viewerHtml = `<video controls autoplay src="${crEsc(embed.src)}" style="width:100%;height:100%;background:#000"></video>`;
   }
 
+  inner.classList.toggle('is-audio', embed?.type === 'audio');
   inner.innerHTML = viewerHtml;
   if (embed && embed.type === 'audio') crInitAudioPlayer();
 
   // Label bar
-  const ctLabel = { pdf:'PDF Document', audio:'Audio', video:'Video' }[ct] || 'Video';
+  const resolvedCt = embed?.type === 'audio' ? 'audio' : embed?.type === 'pdf' ? 'pdf' : 'video';
+  const ctLabel = { pdf:'PDF Document', audio:'Audio Lesson', video:'Video' }[resolvedCt] || 'Video';
   document.getElementById('crViewerTitle').textContent = lesson.lesson_title || '';
   document.getElementById('crViewerType').textContent  = ctLabel;
   label.style.display = 'flex';
@@ -1091,7 +1211,7 @@ function crToast(msg, type) {
 }
 
 Object.assign(window, {
-  crTab, crPlayLesson, crMarkComplete, crRefreshMarkBtns, crToggleCh,
+  crTab, crPlayLesson, crPlayLessonById, crMarkComplete, crRefreshMarkBtns, crToggleCh,
   crSnToggle, crSnBookmark, crSnSearchInput, crSnSetTab,
   crDToggle, crPostQuestion, crSubmitAnswer, crLike
 });

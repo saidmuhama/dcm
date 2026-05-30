@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('../config/db.php');
+include('../config/dump.php');
 include('../config/url_crypt_config.php');
 header('Content-Type: application/json');
 
@@ -8,8 +9,10 @@ if (($_SESSION['user_role'] ?? 0) != 5) {
     echo json_encode(['status'=>'error','message'=>'Access denied']); exit;
 }
 
-$me     = $_SESSION['usr_code'] ?? '';
-$action = $_POST['action'] ?? $_GET['action'] ?? '';
+$me          = $_SESSION['usr_code'] ?? '';
+$_raw_body   = file_get_contents('php://input');
+$_json_body  = json_decode($_raw_body, true) ?? [];
+$action      = $_POST['action'] ?? $_GET['action'] ?? ($_json_body['action'] ?? '');
 
 // ── Helpers ──────────────────────────────────────────────────────
 function genOrgCode(): string {
@@ -80,7 +83,8 @@ case 'list':
     $total = $db->query("SELECT COUNT(*) FROM tbl_organizations o $where")->fetch_row()[0];
     $rows  = $db->query("
         SELECT o.id, o.org_code, o.org_name, o.org_type, o.logo, o.email, o.phone,
-               o.country, o.status, o.license_expires_at, o.max_users, o.admin_usr_code,
+               o.address, o.country, o.domain, o.plan_id, o.notes,
+               o.status, o.license_expires_at, o.max_users, o.admin_usr_code,
                o.created_at,
                p.plan_name,
                CONCAT(u.first_name,' ',u.last_name) AS admin_name,
@@ -109,7 +113,7 @@ case 'plans':
 
 /* ── Create ───────────────────────────────────────────────────── */
 case 'create':
-    $body    = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $body    = $_json_body ?: $_POST;
     $name    = trim($body['org_name']  ?? '');
     $type    = $body['org_type']       ?? 'school';
     $email   = trim($body['email']     ?? '');
@@ -198,7 +202,7 @@ case 'get':
 
 /* ── Update ───────────────────────────────────────────────────── */
 case 'update':
-    $body    = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $body    = $_json_body ?: $_POST;
     $oid     = decryptURLId($body['oid'] ?? '', ctx: 'org');
     if (!$oid) { echo json_encode(['status'=>'error','message'=>'Invalid ID']); exit; }
 
@@ -232,7 +236,7 @@ case 'update':
 
 /* ── Toggle status ────────────────────────────────────────────── */
 case 'toggle_status':
-    $body   = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $body   = $_json_body ?: $_POST;
     $oid    = decryptURLId($body['oid'] ?? '', ctx: 'org');
     $newSt  = $db->real_escape_string($body['status'] ?? 'suspended');
     if (!$oid || !in_array($newSt, ['active','suspended','expired'])) {
@@ -246,7 +250,7 @@ case 'toggle_status':
 
 /* ── Delete (soft) ────────────────────────────────────────────── */
 case 'delete':
-    $body = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $body = $_json_body ?: $_POST;
     $oid  = decryptURLId($body['oid'] ?? '', ctx: 'org');
     if (!$oid) { echo json_encode(['status'=>'error','message'=>'Invalid ID']); exit; }
     $db->query("UPDATE tbl_organizations SET deleted_at=NOW() WHERE id=$oid AND deleted_at IS NULL");
@@ -255,7 +259,7 @@ case 'delete':
 
 /* ── Grant course access ──────────────────────────────────────── */
 case 'grant_course': {
-    $body    = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $body    = $_json_body ?: $_POST;
     $oid     = decryptURLId($body['oid'] ?? '', ctx: 'org');
     if (!$oid) { echo json_encode(['status'=>'error','message'=>'Invalid org']); exit; }
     $orgRow  = $db->query("SELECT org_code FROM tbl_organizations WHERE id=$oid AND deleted_at IS NULL LIMIT 1")->fetch_assoc();
@@ -279,7 +283,7 @@ case 'grant_course': {
 
 /* ── Revoke course access ─────────────────────────────────────── */
 case 'revoke_course': {
-    $body     = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $body     = $_json_body ?: $_POST;
     $oid      = decryptURLId($body['oid'] ?? '', ctx: 'org');
     $courseId = (int)($body['course_id'] ?? 0);
     if (!$oid || !$courseId) { echo json_encode(['status'=>'error','message'=>'Missing data']); exit; }
@@ -338,7 +342,7 @@ case 'list_members': {
 
 /* ── Remove member (super admin) ──────────────────────────────── */
 case 'remove_member': {
-    $body    = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $body    = $_json_body ?: $_POST;
     $oid     = decryptURLId($body['oid'] ?? '', ctx: 'org');
     $usrCode = $db->real_escape_string($body['usr_code'] ?? '');
     if (!$oid || !$usrCode) { echo json_encode(['status'=>'error','message'=>'Missing data']); exit; }
@@ -399,6 +403,57 @@ case 'all_courses':
     ")->fetch_all(MYSQLI_ASSOC);
     echo json_encode(['status'=>'success','courses'=>$rows]);
     break;
+
+/* ── Reset org-admin password (super admin) ───────────────────── */
+case 'reset_admin_password': {
+    $body   = $_json_body ?: $_POST;
+    $oid    = decryptURLId($body['oid'] ?? '', ctx: 'org');
+    if (!$oid) { echo json_encode(['status'=>'error','message'=>'Invalid org ID']); exit; }
+
+    $org = $db->query("
+        SELECT o.org_name, o.org_code, o.admin_usr_code,
+               u.first_name, u.last_name, u.phone_number, u.email_address
+        FROM tbl_organizations o
+        LEFT JOIN tbl_all_users u ON u.usr_code = o.admin_usr_code
+        WHERE o.id = $oid AND o.deleted_at IS NULL LIMIT 1
+    ")->fetch_assoc();
+    if (!$org)                   { echo json_encode(['status'=>'error','message'=>'Organization not found']); exit; }
+    if (!$org['admin_usr_code']) { echo json_encode(['status'=>'error','message'=>'No admin account is linked to this organization']); exit; }
+    if (!$org['first_name'])     { echo json_encode(['status'=>'error','message'=>'Admin account not found in the system']); exit; }
+
+    $usrCode   = $org['admin_usr_code'];
+    $phone     = $org['phone_number'] ?? '';
+    $orgName   = $org['org_name'];
+    $orgCode   = $org['org_code'];
+    $adminName = trim($org['first_name'] . ' ' . $org['last_name']);
+
+    // Alphanumeric-only temp password (no special characters)
+    $tempPass = strtoupper(bin2hex(random_bytes(4))) . rand(10, 99);
+    $tempHash = password_hash($tempPass, PASSWORD_BCRYPT);
+
+    $esc = $db->real_escape_string($usrCode);
+    $db->query("UPDATE tbl_all_users SET user_password='$tempHash', force_pw_change=1 WHERE usr_code='$esc'");
+
+    orgLog($db, $orgCode, $me, 'admin_password_reset', 'user', $usrCode);
+
+    $smsSent = false;
+    if (!empty($phone)) {
+        $smsMsg  = "Hi $adminName, your $orgName admin password has been reset.\nNew Password: $tempPass\nPlease log in and change it immediately.";
+        $smsResult = App::sendSMS($phone, $smsMsg);
+        $smsSent   = !empty($smsResult['status']);
+    }
+
+    echo json_encode([
+        'status'        => 'success',
+        'message'       => 'Password reset successfully',
+        'temp_password' => $tempPass,
+        'sms_sent'      => $smsSent,
+        'admin_name'    => $adminName,
+        'phone'         => $phone,
+        'email'         => $org['email_address'],
+    ]);
+    break;
+}
 
 default:
     echo json_encode(['status'=>'error','message'=>'Unknown action']);
