@@ -785,6 +785,240 @@ INSERT IGNORE INTO `tbl_combinations` (combination_code,combination_name,stream_
 ('BAM','Business, Accounting & Mathematics', 'business','Business,Accounting,Mathematics','Quantitative business');
 
 -- =============================================================================
+-- SECTION 7: INSTITUTIONAL COMMERCE & COMMUNITIES (2026-05-30)
+-- =============================================================================
+
+-- ── Column extensions on existing tables ──────────────────────────────────
+
+CALL _dcm_add_col('tbl_courses', 'org_price',      "DECIMAL(10,2) DEFAULT NULL COMMENT 'institutional base price override'");
+CALL _dcm_add_col('tbl_courses', 'org_discount',   "TINYINT UNSIGNED DEFAULT 0 COMMENT 'default % discount for orgs'");
+CALL _dcm_add_col('tbl_courses', 'min_seats',      "SMALLINT UNSIGNED DEFAULT 1");
+CALL _dcm_add_col('tbl_courses', 'max_seats',      "SMALLINT UNSIGNED DEFAULT NULL");
+CALL _dcm_add_col('tbl_courses', 'pricing_notes',  "TEXT DEFAULT NULL");
+CALL _dcm_add_col('tbl_courses', 'bundle_eligible',"TINYINT(1) DEFAULT 1");
+
+CALL _dcm_add_col('tbl_org_course_access', 'seats_purchased',     "SMALLINT UNSIGNED DEFAULT NULL");
+CALL _dcm_add_col('tbl_org_course_access', 'seats_used',          "SMALLINT UNSIGNED DEFAULT 0");
+CALL _dcm_add_col('tbl_org_course_access', 'purchase_request_id', "INT UNSIGNED DEFAULT NULL");
+CALL _dcm_add_col('tbl_org_course_access', 'access_type',         "ENUM('open','seat_limited','dept_restricted') DEFAULT 'open'");
+CALL _dcm_add_col('tbl_org_course_access', 'bundle_id',           "INT UNSIGNED DEFAULT NULL");
+
+CALL _dcm_add_col('tbl_chat_conversations', 'linked_type',  "ENUM('course','org_group','announcement') DEFAULT NULL");
+CALL _dcm_add_col('tbl_chat_conversations', 'linked_id',    "INT DEFAULT NULL");
+CALL _dcm_add_col('tbl_chat_conversations', 'auto_managed', "TINYINT(1) DEFAULT 0 COMMENT 'auto-add/remove on enroll/unenroll'");
+CALL _dcm_add_col('tbl_chat_conversations', 'org_code',     "VARCHAR(50) DEFAULT NULL");
+CALL _dcm_add_col('tbl_chat_conversations', 'dept_id',      "INT DEFAULT NULL");
+
+CALL _dcm_add_col('tbl_course_discussions', 'status',      "ENUM('open','closed','pinned') DEFAULT 'open'");
+CALL _dcm_add_col('tbl_course_discussions', 'views',       "INT DEFAULT 0");
+CALL _dcm_add_col('tbl_course_discussions', 'is_resolved', "TINYINT(1) DEFAULT 0");
+CALL _dcm_add_col('tbl_course_discussions', 'pinned_by',   "VARCHAR(200) DEFAULT NULL");
+
+CALL _dcm_add_col('tbl_course_discussion_answers', 'is_accepted', "TINYINT(1) DEFAULT 0");
+CALL _dcm_add_col('tbl_course_discussion_answers', 'accepted_by', "VARCHAR(200) DEFAULT NULL");
+
+CALL _dcm_add_col('tbl_order_items', 'bundle_id', "INT DEFAULT NULL COMMENT 'set when item is part of a bundle purchase'");
+
+-- ── New indexes ──────────────────────────────────────────────────────────
+CALL _dcm_add_index('tbl_chat_conversations', 'idx_linked',  '`linked_type`, `linked_id`');
+CALL _dcm_add_index('tbl_chat_conversations', 'idx_cc_org',  '`org_code`');
+
+-- ── Course pricing tiers (volume breaks per course) ──────────────────────
+CREATE TABLE IF NOT EXISTS `tbl_course_pricing_tiers` (
+  `id`            INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  `course_id`     BIGINT UNSIGNED  NOT NULL,
+  `min_seats`     SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  `max_seats`     SMALLINT UNSIGNED DEFAULT NULL COMMENT 'NULL = unlimited',
+  `price`         DECIMAL(10,2)    NOT NULL,
+  `label`         VARCHAR(100)     DEFAULT NULL COMMENT 'e.g. 11-25 Staff',
+  `is_active`     TINYINT(1)       DEFAULT 1,
+  `sort_order`    TINYINT UNSIGNED DEFAULT 0,
+  `created_at`    TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_cpt_course` (`course_id`),
+  KEY `idx_cpt_seats`  (`course_id`, `min_seats`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ── Discount rules ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `tbl_discounts` (
+  `id`            INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  `discount_code` VARCHAR(50)      DEFAULT NULL,
+  `discount_type` ENUM('percentage','fixed','promo') NOT NULL DEFAULT 'percentage',
+  `value`         DECIMAL(10,2)    NOT NULL,
+  `scope`         ENUM('course','bundle','org','global') NOT NULL DEFAULT 'course',
+  `scope_id`      INT UNSIGNED     DEFAULT NULL COMMENT 'course_id, bundle_id, or NULL for org/global',
+  `org_code`      VARCHAR(50)      DEFAULT NULL COMMENT 'restrict to specific org if set',
+  `valid_from`    DATE             DEFAULT NULL,
+  `valid_until`   DATE             DEFAULT NULL,
+  `max_uses`      INT UNSIGNED     DEFAULT NULL,
+  `used_count`    INT UNSIGNED     DEFAULT 0,
+  `is_active`     TINYINT(1)       DEFAULT 1,
+  `created_by`    VARCHAR(50)      NOT NULL,
+  `notes`         TEXT             DEFAULT NULL,
+  `created_at`    TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_disc_code` (`discount_code`),
+  KEY `idx_disc_org`  (`org_code`),
+  KEY `idx_disc_scope` (`scope`, `scope_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ── Institutional purchase requests ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `tbl_org_purchase_requests` (
+  `id`               INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  `request_code`     VARCHAR(30)      NOT NULL COMMENT 'e.g. PR-2026-001',
+  `org_code`         VARCHAR(50)      NOT NULL,
+  `course_id`        BIGINT UNSIGNED  DEFAULT NULL,
+  `bundle_id`        INT UNSIGNED     DEFAULT NULL,
+  `request_type`     ENUM('course','bundle','custom_quote') NOT NULL DEFAULT 'course',
+  `seats_requested`  SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  `expected_start`   DATE             DEFAULT NULL,
+  `status`           ENUM('pending','reviewed','awaiting_payment','paid','active','rejected','cancelled') NOT NULL DEFAULT 'pending',
+  `original_price`   DECIMAL(10,2)    DEFAULT NULL,
+  `discount_id`      INT UNSIGNED     DEFAULT NULL,
+  `discount_value`   DECIMAL(10,2)    DEFAULT 0,
+  `final_price`      DECIMAL(10,2)    DEFAULT NULL,
+  `admin_remarks`    TEXT             DEFAULT NULL,
+  `org_notes`        TEXT             DEFAULT NULL,
+  `custom_staff_count` INT            DEFAULT NULL COMMENT 'for custom quote requests',
+  `custom_budget`    VARCHAR(200)     DEFAULT NULL,
+  `custom_requirements` TEXT          DEFAULT NULL,
+  `reviewed_by`      VARCHAR(50)      DEFAULT NULL,
+  `reviewed_at`      TIMESTAMP        NULL DEFAULT NULL,
+  `paid_at`          TIMESTAMP        NULL DEFAULT NULL,
+  `activated_at`     TIMESTAMP        NULL DEFAULT NULL,
+  `expires_at`       DATE             DEFAULT NULL,
+  `submitted_by`     VARCHAR(50)      NOT NULL,
+  `created_at`       TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`       TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_req_code` (`request_code`),
+  KEY `idx_pr_org`    (`org_code`),
+  KEY `idx_pr_status` (`status`),
+  KEY `idx_pr_course` (`course_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ── Purchase request audit trail ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `tbl_org_request_history` (
+  `id`          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `request_id`  INT UNSIGNED  NOT NULL,
+  `old_status`  VARCHAR(30)   DEFAULT NULL,
+  `new_status`  VARCHAR(30)   NOT NULL,
+  `changed_by`  VARCHAR(50)   NOT NULL,
+  `note`        TEXT          DEFAULT NULL,
+  `created_at`  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_rh_request` (`request_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ── Seat assignments ──────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `tbl_org_seat_assignments` (
+  `id`          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `access_id`   INT UNSIGNED  NOT NULL COMMENT 'tbl_org_course_access.id',
+  `org_code`    VARCHAR(50)   NOT NULL,
+  `course_id`   BIGINT UNSIGNED NOT NULL,
+  `usr_code`    VARCHAR(50)   NOT NULL,
+  `assigned_by` VARCHAR(50)   NOT NULL,
+  `assigned_at` TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `revoked_at`  TIMESTAMP     NULL DEFAULT NULL,
+  `is_active`   TINYINT(1)    DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_sa_active` (`access_id`, `usr_code`, `is_active`),
+  KEY `idx_sa_org`    (`org_code`),
+  KEY `idx_sa_course` (`course_id`),
+  KEY `idx_sa_user`   (`usr_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ── Course bundles ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `tbl_course_bundles` (
+  `id`               INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `bundle_code`      VARCHAR(50)   NOT NULL,
+  `bundle_name`      VARCHAR(255)  NOT NULL,
+  `bundle_type`      ENUM('subject','institutional','promotional') DEFAULT 'subject',
+  `description`      TEXT          DEFAULT NULL,
+  `thumbnail`        VARCHAR(500)  DEFAULT NULL,
+  `individual_price` DECIMAL(10,2) DEFAULT NULL COMMENT 'override; NULL = sum of courses',
+  `org_price`        DECIMAL(10,2) DEFAULT NULL,
+  `status`           ENUM('active','inactive','draft') DEFAULT 'draft',
+  `target_level`     VARCHAR(50)   DEFAULT NULL COMMENT 'primary, o_level, a_level etc.',
+  `created_by`       VARCHAR(50)   NOT NULL,
+  `sort_order`       TINYINT       DEFAULT 0,
+  `created_at`       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_bundle_code` (`bundle_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ── Bundle courses (many-to-many) ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `tbl_bundle_courses` (
+  `id`         INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+  `bundle_id`  INT UNSIGNED    NOT NULL,
+  `course_id`  BIGINT UNSIGNED NOT NULL,
+  `sort_order` TINYINT         DEFAULT 0,
+  `added_at`   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_bc` (`bundle_id`, `course_id`),
+  KEY `idx_bc_bundle` (`bundle_id`),
+  KEY `idx_bc_course` (`course_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ── Instructor announcements ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `tbl_announcements` (
+  `id`              INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `course_id`       BIGINT UNSIGNED NOT NULL,
+  `sender_code`     VARCHAR(50)   NOT NULL,
+  `subject`         VARCHAR(255)  NOT NULL,
+  `body`            LONGTEXT      NOT NULL,
+  `ann_type`        ENUM('announcement','reminder','assignment_notice','assessment_notice','discussion') DEFAULT 'announcement',
+  `audience`        ENUM('all','org_only','selected') DEFAULT 'all',
+  `org_code`        VARCHAR(50)   DEFAULT NULL COMMENT 'restrict to specific org if audience=org_only',
+  `attachment_path` VARCHAR(500)  DEFAULT NULL,
+  `sent_at`         TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `scheduled_at`    TIMESTAMP     NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_ann_course` (`course_id`),
+  KEY `idx_ann_sender` (`sender_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ── Announcement recipients (delivery tracking) ───────────────────────────
+CREATE TABLE IF NOT EXISTS `tbl_announcement_recipients` (
+  `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `announcement_id` INT UNSIGNED NOT NULL,
+  `usr_code`        VARCHAR(50)  NOT NULL,
+  `is_read`         TINYINT(1)   DEFAULT 0,
+  `read_at`         TIMESTAMP    NULL DEFAULT NULL,
+  `delivered_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_ar` (`announcement_id`, `usr_code`),
+  KEY `idx_ar_user` (`usr_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ── Notification templates ────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `tbl_notification_templates` (
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `template_key` VARCHAR(80) NOT NULL,
+  `title_tpl`  VARCHAR(255) NOT NULL,
+  `body_tpl`   TEXT         NOT NULL,
+  `icon`       VARCHAR(80)  DEFAULT 'bi-bell',
+  `color`      VARCHAR(20)  DEFAULT '#6366f1',
+  `channels`   VARCHAR(100) DEFAULT 'in_app' COMMENT 'in_app,sms,email comma-separated',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_tmpl_key` (`template_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- seed notification templates
+INSERT IGNORE INTO `tbl_notification_templates` (`template_key`,`title_tpl`,`body_tpl`,`icon`,`color`,`channels`) VALUES
+('purchase_request_new',       'New Purchase Request',         'Organisation {{org_name}} submitted a request for {{course_title}}.','bi-cart-plus','#f59e0b','in_app'),
+('purchase_request_reviewed',  'Request Reviewed',             'Your purchase request for {{course_title}} has been {{status}}.','bi-clipboard-check','#6366f1','in_app'),
+('purchase_request_payment_due','Payment Due',                 'Invoice ready for {{course_title}}. Amount: {{amount}} TZS.','bi-receipt','#d97706','in_app'),
+('purchase_request_paid',      'Payment Confirmed',            'Payment confirmed for {{course_title}}.','bi-check-circle','#16a34a','in_app'),
+('course_access_granted',      'Course Access Granted',        '{{course_title}} is now available for your organisation.','bi-unlock','#16a34a','in_app'),
+('license_expiring_soon',      'License Expiring Soon',        'Your license for {{course_title}} expires on {{expiry_date}}.','bi-clock-history','#dc2626','in_app'),
+('announcement_received',      '{{subject}}',                  '{{preview}}','bi-megaphone','#8b5cf6','in_app'),
+('seat_assigned',              'Course Seat Assigned',         'You have been assigned a seat for {{course_title}}.','bi-person-check','#16a34a','in_app'),
+('seat_revoked',               'Course Seat Revoked',          'Your seat for {{course_title}} has been removed.','bi-person-x','#dc2626','in_app'),
+('bundle_purchased',           'Bundle Purchase Complete',     'You now have access to all courses in {{bundle_name}}.','bi-collection','#6366f1','in_app');
+
+-- =============================================================================
 -- CLEANUP  (moved to end so all sections can use the helper procedures)
 -- =============================================================================
 DROP PROCEDURE IF EXISTS _dcm_add_col;

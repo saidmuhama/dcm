@@ -67,4 +67,21 @@ $enr = $db->prepare("
 $enr->bind_param('iis', $order_id, $course_id, $usr);
 $enr->execute();
 
+/* ── Auto-join course community chat ─────────────────────────────────── */
+try {
+    $enroll_usr = $db->real_escape_string($usr);
+    $enroll_cid = $course_id;
+    $commRow = $db->query("SELECT id FROM tbl_chat_conversations WHERE linked_type='course' AND linked_id=$enroll_cid AND auto_managed=1 LIMIT 1")->fetch_assoc();
+    if (!$commRow) {
+        $cTitle = $db->real_escape_string(($db->query("SELECT title FROM tbl_courses WHERE id=$enroll_cid LIMIT 1")->fetch_row()[0] ?? 'Course') . ' Community');
+        $db->query("INSERT INTO tbl_chat_conversations (type,name,linked_type,linked_id,auto_managed,created_by,last_message_at) VALUES ('group','$cTitle','course',$enroll_cid,1,'system',NOW())");
+        $commId = (int)$db->insert_id;
+    } else {
+        $commId = (int)$commRow['id'];
+    }
+    if ($commId) {
+        $db->query("INSERT IGNORE INTO tbl_chat_participants (conv_id,usr_code,role,joined_at) VALUES ($commId,'$enroll_usr','member',NOW())");
+    }
+} catch (Throwable $ce) { /* non-fatal — enrollment still succeeds */ }
+
 _j(['status' => 'success', 'message' => 'Enrolled successfully! Start learning now.']);

@@ -55,6 +55,10 @@ switch ($view) {
         include('pages/teacher_profile_completion.php');
         break;
 
+    case 'instructor_announcements':
+        include('pages/instructor_announcements.php');
+        break;
+
     case 'my_courses_online_contents_list_view':
         include('pages/my_courses_online_contents_list_view.php');
         break;
@@ -108,6 +112,14 @@ switch ($view) {
         include('pages/admin_course_detail.php');
         break;
 
+    case 'admin_course_pricing':
+        include('pages/admin_course_pricing.php');
+        break;
+
+    case 'admin_bundles':
+        include('pages/admin_bundles.php');
+        break;
+
     case 'admin_users':
         include('pages/admin_users.php');
         break;
@@ -148,6 +160,18 @@ switch ($view) {
         include('pages/admin_combinations.php');
         break;
 
+    case 'admin_reports':
+        include('pages/admin_reports.php');
+        break;
+
+    case 'org_purchase_requests':
+        include('pages/org_purchase_requests.php');
+        break;
+
+    case 'admin_purchase_requests':
+        include('pages/admin_purchase_requests.php');
+        break;
+
     // ── ORG ADMIN ─────────────────────────────────────────────
     case 'org_dashboard':
         echo "<script>window.location.replace('?view=3002');</script>";
@@ -167,6 +191,10 @@ switch ($view) {
 
     case 'org_courses':
         include('pages/org_courses.php');
+        break;
+
+    case 'org_license_management':
+        include('pages/org_license_management.php');
         break;
 
     // ── QUESTION BANK ─────────────────────────────────────────

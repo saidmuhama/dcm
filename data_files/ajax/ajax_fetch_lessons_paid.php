@@ -55,6 +55,21 @@ if($user_id){
             $is_paid = true;
         }
     }
+
+    // Check seat-limited org access — user must have an active seat assignment
+    if (!$is_paid) {
+        $seat_q = $db->prepare("
+            SELECT sa.id FROM tbl_org_seat_assignments sa
+            INNER JOIN tbl_org_course_access oca ON oca.id = sa.access_id
+            WHERE sa.usr_code = ? AND oca.course_id = ? AND sa.is_active = 1
+              AND oca.is_active = 1 AND (oca.expires_at IS NULL OR oca.expires_at >= CURDATE())
+              AND oca.access_type = 'seat_limited'
+            LIMIT 1
+        ");
+        $seat_q->bind_param('si', $user_id, $course_id);
+        $seat_q->execute();
+        if ($seat_q->get_result()->num_rows > 0) $is_paid = true;
+    }
 }
 
 // Free courses are accessible without enrollment

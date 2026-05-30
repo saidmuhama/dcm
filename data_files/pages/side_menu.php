@@ -49,9 +49,9 @@ if ((int)($user_role ?? 0) === 1 && isset($db)) {
 }
 
 $groups = [
-    'menuAdmin'      => ['admin_dashboard','admin_users','admin_roles','admin_permissions','admin_courses','admin_course_detail','admin_payment_settings','admin_course_reviews','admin_organizations','admin_org_detail'],
-    'menuOrgAdmin'   => ['org_members','org_departments','org_reports','org_courses'],
-    'menuCourseMgmt' => ['my_courses_online_contents_list_view','course_contents_management','view_course_details','teacher_study_notes','study_notes_manager'],
+    'menuAdmin'      => ['admin_dashboard','admin_users','admin_roles','admin_permissions','admin_courses','admin_course_detail','admin_course_pricing','admin_payment_settings','admin_course_reviews','admin_organizations','admin_org_detail','admin_bundles','admin_purchase_requests','admin_reports'],
+    'menuOrgAdmin'   => ['org_members','org_departments','org_reports','org_courses','org_purchase_requests','org_license_management'],
+    'menuCourseMgmt' => ['my_courses_online_contents_list_view','course_contents_management','view_course_details','teacher_study_notes','study_notes_manager','instructor_announcements'],
     'menuTaxonomy'   => ['qb_subjects','qb_levels','qb_chapters','qb_subtopics','qb_bloom_levels','qb_difficulty_levels','qb_sections'],
     'menuQuestions'  => ['qb_all_questions','qb_add_question','qb_bulk_upload','qb_draft_questions','qb_review_queue','qb_approved_questions','qb_published_questions','qb_archived_questions','qb_question_media'],
     'menuExamBuilder'=> ['qb_create_exam','qb_exam_templates','qb_random_exam','qb_cbt_exams','qb_print_exams'],
@@ -141,6 +141,11 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="../data_files/?view=admin_bundles" class="<?= $lc('admin_bundles') ?>">
+                        <i class="bi bi-collection-fill"></i><span>Course Bundles</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="../data_files/?view=admin_categories" class="<?= $lc('admin_categories') ?>">
                         <i class="bi bi-grid-3x3-gap-fill"></i><span>Categories</span>
                     </a>
@@ -148,6 +153,18 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
                 <li class="nav-item">
                     <a href="../data_files/?view=admin_combinations" class="<?= $lc('admin_combinations') ?>">
                         <i class="bi bi-diagram-3-fill"></i><span>Combinations</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="../data_files/?view=admin_reports" class="<?= $lc('admin_reports') ?>">
+                        <i class="bi bi-graph-up-arrow"></i><span>Reports</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="../data_files/?view=admin_purchase_requests" class="<?= $lc('admin_purchase_requests') ?>" id="sidePurchaseLink">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Purchase Requests</span>
+                        <span id="sidePurchaseBadge" style="display:none;margin-left:auto;background:#6366f1;color:#fff;border-radius:20px;font-size:.62rem;font-weight:700;padding:.1rem .45rem;line-height:1.6"></span>
                     </a>
                 </li>
             </ul>
@@ -185,6 +202,16 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
                         <i class="bi bi-bar-chart-line"></i><span>Reports</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="../data_files/?view=org_purchase_requests" class="<?= $lc('org_purchase_requests') ?>">
+                        <i class="bi bi-cart-fill"></i><span>Purchases</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="../data_files/?view=org_license_management" class="<?= $lc('org_license_management') ?>">
+                        <i class="bi bi-key-fill"></i><span>Licenses</span>
+                    </a>
+                </li>
             </ul>
         </div>
     </li>
@@ -201,6 +228,13 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
             if (total > 0) {
                 const b = document.getElementById('sideReviewBadge');
                 if (b) { b.textContent = total; b.style.display = 'inline'; }
+            }
+        });
+        // Purchase request pending badge (super admin only)
+        fetch('../data_files/ajax/ajax_purchase_requests.php?action=get_stats').then(r=>r.json()).catch(()=>null).then(r => {
+            if (r && r.status === 'success' && r.pending > 0) {
+                const b = document.getElementById('sidePurchaseBadge');
+                if (b) { b.textContent = r.pending; b.style.display = 'inline'; }
             }
         });
     })();
@@ -226,6 +260,13 @@ $lc   = fn(string $view) => 'nav-link' . ($cv === $view ? ' active' : '');
                         <i class="bi bi-journal-bookmark"></i><span>Manage Study Notes</span>
                     </a>
                 </li>
+                <?php if (in_array(($user_role ?? 0), [3, 5])): ?>
+                <li class="nav-item">
+                    <a href="../data_files/?view=instructor_announcements" class="<?= $lc('instructor_announcements') ?>">
+                        <i class="bi bi-megaphone-fill"></i><span>Announcements</span>
+                    </a>
+                </li>
+                <?php endif; ?>
             </ul>
         </div>
     </li>
