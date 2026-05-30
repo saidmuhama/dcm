@@ -614,12 +614,6 @@ CREATE TABLE IF NOT EXISTS `tbl_chat_presence` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- =============================================================================
--- CLEANUP
--- =============================================================================
-DROP PROCEDURE IF EXISTS _dcm_add_col;
-DROP PROCEDURE IF EXISTS _dcm_add_index;
-
--- =============================================================================
 -- SECTION 6: CATEGORISATION, INTERESTS & COMBINATIONS (2026-05-30)
 -- =============================================================================
 
@@ -789,6 +783,12 @@ INSERT IGNORE INTO `tbl_combinations` (combination_code,combination_name,stream_
 ('CBA','Commerce, Book-keeping & Accounting','business','Commerce,Book-keeping,Accounting','Practical business'),
 ('ECG','Economics, Commerce & Geography',    'business','Economics,Commerce,Geography', 'Business geography'),
 ('BAM','Business, Accounting & Mathematics', 'business','Business,Accounting,Mathematics','Quantitative business');
+
+-- =============================================================================
+-- CLEANUP  (moved to end so all sections can use the helper procedures)
+-- =============================================================================
+DROP PROCEDURE IF EXISTS _dcm_add_col;
+DROP PROCEDURE IF EXISTS _dcm_add_index;
 
 SET foreign_key_checks = 1;
 
